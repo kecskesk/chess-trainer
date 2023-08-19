@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { DebugObjectService } from './debug-object.service';
+import { GlobalVariablesService } from './global-variables.service';
 
 @Injectable()
 export class ChessRulesService {
@@ -24,8 +24,8 @@ export class ChessRulesService {
       const sourceLocSplit = sourceLocation.split('field');
       const sourceRow = Number(sourceLocSplit[1][0]);
       const sourceCell = Number(sourceLocSplit[1][1]);
-      if (DebugObjectService.CHESS_FIELD) {
-        sourceObj = DebugObjectService.CHESS_FIELD[sourceRow][sourceCell];
+      if (GlobalVariablesService.CHESS_FIELD) {
+        sourceObj = GlobalVariablesService.CHESS_FIELD[sourceRow][sourceCell];
         if (sourceObj && sourceObj[0]) {
           sourceColor = sourceObj[0].color;
           sourcePiece = sourceObj[0].piece;
@@ -101,19 +101,19 @@ export class ChessRulesService {
         default:
           break;
       }
-      if (DebugObjectService.DEBUG_OBJECT && canDrop) {
+      if (GlobalVariablesService.DEBUG_OBJECT && canDrop) {
         // DebugObjectService.DEBUG_OBJECT.debugText += `source c${sourceCell}r${sourceRow}`
         const letterChar = String.fromCharCode('a'.charCodeAt(0) + targetCell);
         const numberChar = (8 - targetRow);
-        if (!DebugObjectService.DEBUG_OBJECT.possibles) {
-          DebugObjectService.DEBUG_OBJECT.possibles = [];
+        if (!GlobalVariablesService.DEBUG_OBJECT.possibles) {
+          GlobalVariablesService.DEBUG_OBJECT.possibles = [];
         }
-        DebugObjectService.DEBUG_OBJECT.possibles.push(targetLocation)
+        GlobalVariablesService.DEBUG_OBJECT.possibles.push(targetLocation)
         if (canHit) {
-          if (!DebugObjectService.DEBUG_OBJECT.hits) {
-            DebugObjectService.DEBUG_OBJECT.hits = [];
+          if (!GlobalVariablesService.DEBUG_OBJECT.hits) {
+            GlobalVariablesService.DEBUG_OBJECT.hits = [];
           }
-          DebugObjectService.DEBUG_OBJECT.hits.push(targetLocation)
+          GlobalVariablesService.DEBUG_OBJECT.hits.push(targetLocation)
         }
       }
       return canDrop;

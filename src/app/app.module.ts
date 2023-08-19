@@ -6,7 +6,7 @@ import { AppComponent } from './app.component';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ChessPieceComponent } from './components/chess-piece/chess-piece.component';
 import { ChessRulesService } from './services/chess-rules.service';
-import { DebugObjectService } from './services/debug-object.service';
+import { GlobalVariablesService } from './services/global-variables.service';
 import { ChessBoardComponent } from './components/chess-board/chess-board.component';
 
 
@@ -23,7 +23,7 @@ import { ChessBoardComponent } from './components/chess-board/chess-board.compon
   ],
   providers: [
     ChessRulesService,
-    DebugObjectService
+    GlobalVariablesService
   ],
   bootstrap: [AppComponent]
 })

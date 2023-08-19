@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
-import { DebugObjectService } from '../../services/debug-object.service';
+import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
 
 @Component({
@@ -15,7 +15,6 @@ export class ChessBoardComponent implements AfterViewInit {
 
   dropLists: CdkDropList[] = undefined;
   debugObj = { debugText: '', possibles: [], hits: [] };
-  title = 'chess-trainer';
   field = [
     [[new ChessPieceDto('black', 'rook')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'queen')], [new ChessPieceDto('black', 'king')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'rook')]],
     [[new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')]],
@@ -33,8 +32,8 @@ export class ChessBoardComponent implements AfterViewInit {
     if (this.dropListElements) {
       setTimeout(() => {
         this.dropLists = this.dropListElements.toArray();
-        DebugObjectService.CHESS_FIELD = this.field;
-        DebugObjectService.DEBUG_OBJECT = this.debugObj;
+        GlobalVariablesService.CHESS_FIELD = this.field;
+        GlobalVariablesService.DEBUG_OBJECT = this.debugObj;
       }, 0);
     }
   }
@@ -45,9 +44,9 @@ export class ChessBoardComponent implements AfterViewInit {
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>) {
     // Reset drops and hits
-    DebugObjectService.DEBUG_OBJECT.debugText = '';
-    DebugObjectService.DEBUG_OBJECT.possibles = [];
-    DebugObjectService.DEBUG_OBJECT.hits = [];
+    GlobalVariablesService.DEBUG_OBJECT.debugText = '';
+    GlobalVariablesService.DEBUG_OBJECT.possibles = [];
+    GlobalVariablesService.DEBUG_OBJECT.hits = [];
     // TODO handle hit
     if (event.previousContainer === event.container) {
       moveItemInArray(event.container.data,
