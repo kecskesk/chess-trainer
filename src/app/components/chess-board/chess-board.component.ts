@@ -14,26 +14,13 @@ export class ChessBoardComponent implements AfterViewInit {
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
   dropLists: CdkDropList[] = undefined;
-  debugObj = { debugText: '', possibles: [], hits: [] };
-  field = [
-    [[new ChessPieceDto('black', 'rook')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'queen')], [new ChessPieceDto('black', 'king')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'rook')]],
-    [[new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')]],
-    [[], [], [], [], [], [], [], []],
-    [[], [], [], [], [], [], [], []],
-    [[], [], [], [], [], [], [], []],
-    [[], [], [], [], [], [], [], []],
-    [[new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')]],
-    [[new ChessPieceDto('white', 'rook')], [new ChessPieceDto('white', 'knight')], [new ChessPieceDto('white', 'bishop')], [new ChessPieceDto('white', 'queen')], [new ChessPieceDto('white', 'king')], [new ChessPieceDto('white', 'bishop')], [new ChessPieceDto('white', 'knight')], [new ChessPieceDto('white', 'rook')]]
-  ];
 
-  constructor() {}
+  constructor(public globalVariablesService: GlobalVariablesService) {}
 
   ngAfterViewInit(): void {
     if (this.dropListElements) {
       setTimeout(() => {
         this.dropLists = this.dropListElements.toArray();
-        GlobalVariablesService.CHESS_FIELD = this.field;
-        GlobalVariablesService.DEBUG_OBJECT = this.debugObj;
       }, 0);
     }
   }
@@ -42,32 +29,40 @@ export class ChessBoardComponent implements AfterViewInit {
     return ChessRulesService.canStepThere(drag.dropContainer.id, drop.id, drop.data);
   }
 
-  onDrop(event: CdkDragDrop<ChessPieceDto[]>) {
+  onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
     // Reset drops and hits
-    GlobalVariablesService.DEBUG_OBJECT.debugText = '';
-    GlobalVariablesService.DEBUG_OBJECT.possibles = [];
-    GlobalVariablesService.DEBUG_OBJECT.hits = [];
-    // TODO handle hit
+    this.globalVariablesService.debugObj.debugText = '';
+    this.globalVariablesService.debugObj.possibles = [];
+    this.globalVariablesService.debugObj.hits = [];
     if (event.previousContainer === event.container) {
       moveItemInArray(event.container.data,
         event.previousIndex,
         event.currentIndex);
     } else {
+      // Remove target on hit before moving the item in the container
+      if (event.container && event.container.data && event.container.data[0]) {
+        const targetId = event.container.id;
+        const targetLocSplit = targetId.split('field');
+        const targetRow = Number(targetLocSplit[1][0]);
+        const targetCell = Number(targetLocSplit[1][1]);
+
+        this.globalVariablesService.field[targetRow][targetCell].splice(0,1);
+      }
       transferArrayItem(event.previousContainer.data,
         event.container.data,
         event.previousIndex, event.currentIndex);
     }
   }
 
-  isTarget(id: string) {
-    return this.debugObj.possibles && this.debugObj.possibles.includes(id);
+  isTarget(id: string): boolean {
+    return this.globalVariablesService.debugObj.possibles && this.globalVariablesService.debugObj.possibles.includes(id);
   }
 
-  isHit(id: string) {
-    return this.debugObj.hits && this.debugObj.hits.includes(id);
+  isHit(id: string): boolean {
+    return this.globalVariablesService.debugObj.hits && this.globalVariablesService.debugObj.hits.includes(id);
   }
 
-  translate(idxX: number, idxY: number) {
+  translate(idxX: number, idxY: number): string {
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + idxY);
     // Flip table count bottom-up

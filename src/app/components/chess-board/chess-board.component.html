@@ -1,5 +1,5 @@
 <div class="container" #chessField>
-  <div #row class="field-row" *ngFor="let rowX of field; index as idxX">
+  <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
     <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
       <div class="piece-box">
         <div class="square"
@@ -24,6 +24,6 @@
     </div>
   </div>
 </div>
-<div *ngIf="debugObj">
-  {{debugObj.debugText}}
+<div *ngIf="globalVariablesService.debugObj">
+  {{globalVariablesService.debugObj.debugText}}
 </div>
