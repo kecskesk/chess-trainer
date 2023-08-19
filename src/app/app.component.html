@@ -7,6 +7,7 @@
              cdkDropListOrientation="horizontal"
              [cdkDropListEnterPredicate]="canDrop"
              id="field{{idxX}}{{idxY}}"
+             [class.shaded]="isTarget('field'+idxX+idxY)"
              [cdkDropListData]="cellY"
              [cdkDropListConnectedTo]="dropLists"
              (cdkDropListDropped)="onDrop($event)"
@@ -16,8 +17,12 @@
                [cdkDragDisabled]="!cellY || !cellY[0]">
             <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
           </div>
+          <div class="notation">{{translate(idxX, idxY)}}</div>
         </div>
       </div>
     </div>
   </div>
+</div>
+<div *ngIf="debugObj">
+  {{debugObj.debugText}}
 </div>

@@ -29,6 +29,7 @@
   border: 1px solid black;
 }
 .square {
+  position: relative;
   font-size: 50px;
   width: 60px;
   height: 60px;
@@ -51,4 +52,17 @@
   font-size: 50px;
   width: 60px;
   height: 60px;
+}
+.notation {
+  position: absolute;
+  font-size: 25px;
+  left: 0;
+  bottom: 0;
+  color: red;
+  pointer-events: none;
+  user-select: none;
+}
+.shaded {
+  background-color: rebeccapurple !important;
+  opacity: 0.7;
 }
