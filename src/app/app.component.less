@@ -8,20 +8,34 @@
   flex-wrap: wrap;
   flex-direction: column;
  }
-.piece-box {
+.piece-box-big {
   display: flex;
   flex-direction: row;
   border: 1px solid black;
   margin: 10px;
   padding: 10px;
 }
+.field-cell {
+  display: flex;
+  flex-direction: row;
+}
+.field-row {
+  display: flex;
+  flex-direction: row;
+}
+.piece-box {
+  display: flex;
+  flex-direction: row;
+  border: 1px solid black;
+}
 .square {
   font-size: 50px;
   width: 60px;
   height: 60px;
   display: flex;
+  flex-direction: row;
   text-align: center;
-  margin: 5px;
+  margin: 1px;
   padding: 5px;
   border: 1px solid black;
   align-items: center;
@@ -33,27 +47,8 @@
     background-color: #232323;
   }
 }
-.white-piece {
-  -webkit-text-stroke: 1px black;
-  text-shadow:
-    1px 1px 0 #555,
-      -1px -1px 0 #555,
-      1px -1px 0 #555,
-    -1px 1px 0 #555,
-    1px 1px 0 #555;
-  color: lightsalmon;
-}
-.black-piece {
-  -webkit-text-stroke: 1px white;
-  text-shadow:
-    1px 1px 0 #999,
-      -1px -1px 0 #999,
-      1px -1px 0 #999,
-    -1px 1px 0 #999,
-    1px 1px 0 #999;
-  color: #353535;
-}
-path {
-  stroke: white;
-  stroke-width: 30px;
+.drag-box {
+  font-size: 50px;
+  width: 60px;
+  height: 60px;
 }

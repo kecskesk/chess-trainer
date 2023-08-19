@@ -1,50 +1,21 @@
-<div class="container" cdkDropListGroup>
-  <div class="drop-list"
-      cdkDropList
-      cdkDropListOrientation="horizontal"
-      [cdkDropListEnterPredicate]="canDrop"
-      #whiteList="cdkDropList"
-      [cdkDropListData]="whites"
-      [cdkDropListConnectedTo]="[blackList]"
-      (cdkDropListDropped)="onDrop($event)">
-    <h2>Whites: </h2>
-    <div class="piece-box">
-      <div *ngFor="let piece of whites; index as i" cdkDrag>
-        <div class="square white-square">
-          <i class="fa"
-             [class.black-piece]="piece.color === 'black'"
-             [class.white-piece]="piece.color === 'white'"
-             [class.fa-chess-rook]="piece.piece === 'rook'"
-             [class.fa-chess-bishop]="piece.piece === 'bishop'"
-             [class.fa-chess-king]="piece.piece === 'king'"
-             [class.fa-chess-queen]="piece.piece === 'queen'"
-             [class.fa-chess-pawn]="piece.piece === 'pawn'"
-             [class.fa-chess-knight]="piece.piece === 'knight'"></i>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div
-      cdkDropList
-      cdkDropListOrientation="horizontal"
-      [cdkDropListEnterPredicate]="canDrop"
-      #blackList="cdkDropList"
-      [cdkDropListData]="blacks"
-      [cdkDropListConnectedTo]="[whiteList]"
-      (cdkDropListDropped)="onDrop($event)">
-    <h2>Blacks: </h2>
-    <div class="piece-box">
-      <div *ngFor="let piece of blacks; index as i" cdkDrag>
-        <div class="square white-square">
-          <i class="fa"
-             [class.black-piece]="piece.color === 'black'"
-             [class.white-piece]="piece.color === 'white'"
-             [class.fa-chess-rook]="piece.piece === 'rook'"
-             [class.fa-chess-bishop]="piece.piece === 'bishop'"
-             [class.fa-chess-king]="piece.piece === 'king'"
-             [class.fa-chess-queen]="piece.piece === 'queen'"
-             [class.fa-chess-pawn]="piece.piece === 'pawn'"
-             [class.fa-chess-knight]="piece.piece === 'knight'"></i>
+<div class="container" #chessField>
+  <div #row class="field-row" *ngFor="let rowX of field; index as idxX">
+    <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
+      <div class="piece-box">
+        <div class="square"
+             cdkDropList
+             cdkDropListOrientation="horizontal"
+             [cdkDropListEnterPredicate]="canDrop"
+             id="field{{idxX}}{{idxY}}"
+             [cdkDropListData]="cellY"
+             [cdkDropListConnectedTo]="dropLists"
+             (cdkDropListDropped)="onDrop($event)"
+             [class.white-square]="(idxY + idxX) % 2 === 0"
+             [class.black-square]="(idxY + idxX) % 2 === 1">
+          <div class="drag-box" cdkDrag
+               [cdkDragDisabled]="!cellY || !cellY[0]">
+            <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
+          </div>
         </div>
       </div>
     </div>
