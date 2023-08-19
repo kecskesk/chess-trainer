@@ -1,0 +1,46 @@
+.piece-box {
+  display: flex;
+  width: fit-content;
+  border: 1px solid black;
+  margin: 10px;
+  padding: 10px;
+}
+.square {
+  font-size: 50px;
+  min-width: 50px;
+  min-height: 50px;
+  text-align: center;
+  margin: 5px;
+  padding: 5px;
+  border: 1px solid black;
+  &.white-square {
+    background-color: blanchedalmond;
+  }
+  &.black-square {
+    background-color: #232323;
+  }
+}
+.white-piece {
+  -webkit-text-stroke: 1px black;
+  text-shadow:
+    1px 1px 0 #555,
+      -1px -1px 0 #555,
+      1px -1px 0 #555,
+    -1px 1px 0 #555,
+    1px 1px 0 #555;
+  color: lightsalmon;
+}
+.black-piece {
+  -webkit-text-stroke: 1px white;
+  text-shadow:
+    1px 1px 0 #999,
+      -1px -1px 0 #999,
+      1px -1px 0 #999,
+    -1px 1px 0 #999,
+    1px 1px 0 #999;
+  color: #353535;
+}
+path {
+  stroke: white;
+  stroke-width: 30px;
+}
