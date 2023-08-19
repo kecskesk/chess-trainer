@@ -1,0 +1,29 @@
+<div class="container" #chessField>
+  <div #row class="field-row" *ngFor="let rowX of field; index as idxX">
+    <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
+      <div class="piece-box">
+        <div class="square"
+             cdkDropList
+             cdkDropListOrientation="horizontal"
+             [cdkDropListEnterPredicate]="canDrop"
+             id="field{{idxX}}{{idxY}}"
+             [class.shaded]="isTarget('field'+idxX+idxY) && !isHit('field'+idxX+idxY)"
+             [class.killer]="isHit('field'+idxX+idxY)"
+             [cdkDropListData]="cellY"
+             [cdkDropListConnectedTo]="dropLists"
+             (cdkDropListDropped)="onDrop($event)"
+             [class.white-square]="(idxY + idxX) % 2 === 0"
+             [class.black-square]="(idxY + idxX) % 2 === 1">
+          <div class="drag-box" cdkDrag
+               [cdkDragDisabled]="!cellY || !cellY[0]">
+            <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
+          </div>
+          <div class="notation">{{translate(idxX, idxY)}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div *ngIf="debugObj">
+  {{debugObj.debugText}}
+</div>
