@@ -1,62 +1,52 @@
-<!--The content below is only a placeholder and can be replaced.-->
-<div style="text-align:center">
-  <h1>
-    Welcome to {{ title }}!
-  </h1>
-  <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
+<div class="container" cdkDropListGroup>
+  <div class="drop-list"
+      cdkDropList
+      cdkDropListOrientation="horizontal"
+      [cdkDropListEnterPredicate]="canDrop"
+      #whiteList="cdkDropList"
+      [cdkDropListData]="whites"
+      [cdkDropListConnectedTo]="[blackList]"
+      (cdkDropListDropped)="onDrop($event)">
+    <h2>Whites: </h2>
+    <div class="piece-box">
+      <div *ngFor="let piece of whites; index as i" cdkDrag>
+        <div class="square white-square">
+          <i class="fa"
+             [class.black-piece]="piece.color === 'black'"
+             [class.white-piece]="piece.color === 'white'"
+             [class.fa-chess-rook]="piece.piece === 'rook'"
+             [class.fa-chess-bishop]="piece.piece === 'bishop'"
+             [class.fa-chess-king]="piece.piece === 'king'"
+             [class.fa-chess-queen]="piece.piece === 'queen'"
+             [class.fa-chess-pawn]="piece.piece === 'pawn'"
+             [class.fa-chess-knight]="piece.piece === 'knight'"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+      cdkDropList
+      cdkDropListOrientation="horizontal"
+      [cdkDropListEnterPredicate]="canDrop"
+      #blackList="cdkDropList"
+      [cdkDropListData]="blacks"
+      [cdkDropListConnectedTo]="[whiteList]"
+      (cdkDropListDropped)="onDrop($event)">
+    <h2>Blacks: </h2>
+    <div class="piece-box">
+      <div *ngFor="let piece of blacks; index as i" cdkDrag>
+        <div class="square white-square">
+          <i class="fa"
+             [class.black-piece]="piece.color === 'black'"
+             [class.white-piece]="piece.color === 'white'"
+             [class.fa-chess-rook]="piece.piece === 'rook'"
+             [class.fa-chess-bishop]="piece.piece === 'bishop'"
+             [class.fa-chess-king]="piece.piece === 'king'"
+             [class.fa-chess-queen]="piece.piece === 'queen'"
+             [class.fa-chess-pawn]="piece.piece === 'pawn'"
+             [class.fa-chess-knight]="piece.piece === 'knight'"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-<h2>Whites: </h2>
-<div class="piece-box">
-  <div class="square black-square">
-    <i class="fa fa-chess-rook white-piece"></i>
-  </div>
-  <div class="square white-square">
-    <i class="fa fa-chess-bishop white-piece"></i>
-  </div>
-  <div class="square black-square">
-    <i class="fa fa-chess-king white-piece"></i>
-  </div>
-  <div class="square white-square">
-    <i class="fa fa-chess-pawn white-piece"></i>
-  </div>
-  <div class="square black-square">
-    <i class="fa fa-chess-queen white-piece"></i>
-  </div>
-  <div class="square white-square">
-    <i class="fa fa-chess-knight white-piece"></i>
-  </div>
-</div>
-<h2>Blacks: </h2>
-<div class="piece-box">
-  <div class="square black-square">
-    <i class="fa fa-chess-rook black-piece"></i>
-  </div>
-  <div class="square white-square">
-    <i class="fa fa-chess-bishop black-piece"></i>
-  </div>
-  <div class="square black-square">
-    <i class="fa fa-chess-king black-piece"></i>
-  </div>
-  <div class="square white-square">
-    <i class="fa fa-chess-pawn black-piece"></i>
-  </div>
-  <div class="square black-square">
-    <i class="fa fa-chess-queen black-piece"></i>
-  </div>
-  <div class="square white-square">
-    <i class="fa fa-chess-knight black-piece"></i>
-  </div>
-</div>
-<ul>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://angular.io/tutorial">Tour of Heroes</a></h2>
-  </li>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://angular.io/cli">CLI Documentation</a></h2>
-  </li>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://blog.angular.io/">Angular blog</a></h2>
-  </li>
-</ul>
-
-<router-outlet></router-outlet>
