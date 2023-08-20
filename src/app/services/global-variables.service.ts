@@ -9,6 +9,7 @@ export class GlobalVariablesService {
     debugText: '',
     possibles: [],
     hits: [],
+    checks: [],
     colorTurn: 'white',
     history: [],
     canPromote: null,

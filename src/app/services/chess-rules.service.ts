@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { GlobalVariablesService } from './global-variables.service';
+import { ChessMoveResultDto } from '../model/chess-move-result.dto';
+import { ChessMoveParamsDto } from '../model/chess-move-params.dto';
 
 @Injectable()
 export class ChessRulesService {
 
   constructor() {}
 
-  public static canStepThere(sourceLocation: string, targetLocation: string, targetData: any): boolean {
+  public static canStepThere(targetRow: number, targetCol: number, targetData: any, srcRow: number, srcCol: number): boolean {
       let targetObj = null;
       let targetPiece = null;
       let targetColor = null;
@@ -15,161 +17,181 @@ export class ChessRulesService {
         targetColor = targetObj.color;
         targetPiece = targetObj.piece;
       }
-      const targetLocSplit = targetLocation.split('field');
-      const targetRow = Number(targetLocSplit[1][0]);
-      const targetCell = Number(targetLocSplit[1][1]);
-      let sourceObj = null;
+      let sourceData = null;
       let sourcePiece = null;
       let sourceColor = null;
-      const sourceLocSplit = sourceLocation.split('field');
-      const sourceRow = Number(sourceLocSplit[1][0]);
-      const sourceCell = Number(sourceLocSplit[1][1]);
       if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.DEBUG_OBJECT) {
         return false;
       }
-      const history = GlobalVariablesService.DEBUG_OBJECT.history
-      sourceObj = GlobalVariablesService.CHESS_FIELD[sourceRow][sourceCell];
-      if (!(sourceObj && sourceObj[0])) {
+      const moveHistory = GlobalVariablesService.DEBUG_OBJECT.history
+      sourceData = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
+      if (!(sourceData && sourceData[0])) {
         return false;
       }
-      sourceColor = sourceObj[0].color;
-      sourcePiece = sourceObj[0].piece;
+      sourceColor = sourceData[0].color;
+      sourcePiece = sourceData[0].piece;
       if (sourceColor !== GlobalVariablesService.DEBUG_OBJECT.colorTurn) {
         return false;
       }
-      // Cell occupied
-      let canDrop = targetData.length < 1;
-      let isEmpty = targetData.length < 1;
-      // Can hit
-      let canHit = false;
-      if (targetData.length === 1 && targetData[0].color != sourceColor) {
-        canDrop = true;
-        canHit = true;
+      const cmResult: ChessMoveResultDto = {
+        canDrop: targetData.length < 1,
+        canHit: false,
+        targetEmpty: targetData.length < 1
       }
+      if (targetData.length === 1 && targetData[0].color != sourceColor) {
+        cmResult.canDrop = true;
+        cmResult.canHit = true;
+      }
+      const cmParams = new ChessMoveParamsDto(
+        targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory);
       switch (sourcePiece) {
         case 'pawn': {
-          const stepY = targetRow - sourceRow;
-          const stepX = Math.abs(targetCell - sourceCell);
-          // Can step 1 in direction
-          const targetDirectionStep = sourceColor === 'white' ? -1 : 1;
-          // Pawn on home row
-          const homeRow = sourceColor === 'white' ? 6 : 1;
-          const enemyFirstStep = sourceColor === 'black' ? 5 : 2;
-          // Can step 2 from home row
-          const homeRowStep = sourceColor === 'white' ? -2 : 2;
-          // Cannot step left/right
-          const validStepForward = ((stepY === targetDirectionStep) || (sourceRow === homeRow && stepY === homeRowStep)) && stepX === 0;
-          if (!validStepForward) {
-            canDrop = false;
-          }
-          // Pawn magic 1 (cannot hit straight)
-          if (validStepForward && canHit) {
-            canDrop = false;
-            canHit = false;
-          }
-          // Pawn magic 2 (can hit 1 across)
-          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
-          if (canHit && stepX === 1 && stepY === targetDirectionStep && !piecesInWay) {
-            canDrop = true;
-          }
-          // Pawn magic 3 (en passant)
-          const lastHistory = history[history.length - 1];
-          const epTargetRow = sourceColor === 'white' ? 3 : 4;
-          const epSourceRow = sourceColor === 'white' ? 1 : 6;
-          const possibleEP = GlobalVariablesService.translateNotation(
-            epTargetRow, targetCell, epSourceRow, targetCell, 'pawn', false, false, false, false, null);
-          if (stepX === 1 && stepY === targetDirectionStep && targetRow === enemyFirstStep && lastHistory === possibleEP) {
-            canDrop = true;
-            canHit = true;
-            GlobalVariablesService.DEBUG_OBJECT.justDidEnPassant = { row: epTargetRow, col: targetCell };
-          }
+          ChessRulesService.pawnRules(cmResult, cmParams);
           break;
         }
         case 'knight': {
-          const stepX = Math.abs(targetCell - sourceCell);
-          const stepY = Math.abs(targetRow - sourceRow);
-          // Side 1 and up-down 2 or side 2 and up-down 1
-          if (!(stepX === 2 && stepY === 1) && !(stepX === 1 && stepY === 2)) {
-            canDrop = false;
-          }
+          ChessRulesService.knightRules(cmResult, cmParams);
           break;
         }
         case 'king': {
-          // Side 1 and up-down 1
-          if (Math.abs(targetCell - sourceCell) > 1) {
-            canDrop = false;
-          }
-          if (Math.abs(targetRow - sourceRow) > 1) {
-            canDrop = false;
-          }
-          const castleSourceRow = sourceColor === 'white' ? 7 : 0;
-          const castleSourceCell = 4;
-          const castleTargetRow = castleSourceRow;
-          const castleTargetCell1 = 2;
-          const castleTargetCell2 = 6;
-          const rookInPlace1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][0];
-          const rook1OK = rookInPlace1.length === 1 &&
-            rookInPlace1[0] && rookInPlace1[0].color === sourceColor && rookInPlace1[0].piece === 'rook';
-          const rookInPlace2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][7];
-          const rook2OK = rookInPlace2.length === 1 &&
-            rookInPlace2[0] && rookInPlace2[0].color === sourceColor && rookInPlace2[0].piece === 'rook';
-          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
-          if (isEmpty && sourceRow === castleSourceRow && sourceCell === castleSourceCell &&
-              targetRow === castleTargetRow && targetCell === castleTargetCell1 &&
-              rook1OK && !piecesInWay) {
-            canDrop = true;
-            GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: targetRow, col: targetCell };
-          }
-          if (isEmpty && sourceRow === castleSourceRow && sourceCell === castleSourceCell &&
-              targetRow === castleTargetRow && targetCell === castleTargetCell2 &&
-              rook2OK && !piecesInWay) {
-            canDrop = true;
-            GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: targetRow, col: targetCell };
-          }
+          ChessRulesService.kingRules(cmResult, cmParams);
           break;
         }
         case 'queen': {
-          // invalid IF NOR: Bishop + rook rules
-          const bishopRules = Math.abs(targetCell - sourceCell) !== Math.abs(targetRow - sourceRow);
-          const rookRules = targetCell !== sourceCell && targetRow !== sourceRow;
-          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
-          if ((bishopRules && rookRules) || piecesInWay) {
-            canDrop = false;
-          }
+          ChessRulesService.queenRules(cmResult, cmParams);
           break;
         }
         case 'rook': {
-          // invalid IF: not Same row AND not same col
-          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
-          if ((targetCell !== sourceCell && targetRow !== sourceRow) || piecesInWay) {
-            canDrop = false;
-          }
+          ChessRulesService.rookRules(cmResult, cmParams);
           break;
         }
         case 'bishop': {
-          // invalid IF: not same side as up-down
-          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
-          if ((Math.abs(targetCell - sourceCell) !== Math.abs(targetRow - sourceRow)) || piecesInWay) {
-            canDrop = false;
-          }
+          ChessRulesService.bishopRules(cmResult, cmParams);
           break;
         }
         default:
           break;
       }
-      if (GlobalVariablesService.DEBUG_OBJECT && canDrop) {
+      if (GlobalVariablesService.DEBUG_OBJECT && cmResult.canDrop) {
         if (!GlobalVariablesService.DEBUG_OBJECT.possibles) {
           GlobalVariablesService.DEBUG_OBJECT.possibles = [];
         }
-        GlobalVariablesService.DEBUG_OBJECT.possibles.push(targetLocation)
-        if (canHit) {
+        GlobalVariablesService.DEBUG_OBJECT.possibles.push({ row: targetRow, col: targetCol })
+        if (cmResult.canHit) {
           if (!GlobalVariablesService.DEBUG_OBJECT.hits) {
             GlobalVariablesService.DEBUG_OBJECT.hits = [];
           }
-          GlobalVariablesService.DEBUG_OBJECT.hits.push(targetLocation)
+          GlobalVariablesService.DEBUG_OBJECT.hits.push({ row: targetRow, col: targetCol })
         }
       }
-      return canDrop;
+      return cmResult.canDrop;
+  }
+
+  static knightRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+    const stepX = Math.abs(cmParams.targetCol - cmParams.srcCol);
+    const stepY = Math.abs(cmParams.targetRow - cmParams.srcRow);
+    // Side 1 and up-down 2 or side 2 and up-down 1
+    if (!(stepX === 2 && stepY === 1) && !(stepX === 1 && stepY === 2)) {
+      cmResult.canDrop = false;
+    }
+  }
+
+  static pawnRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+    const stepY = cmParams.targetRow - cmParams.srcRow;
+    const stepX = Math.abs(cmParams.targetCol - cmParams.srcCol);
+    // Can step 1 in direction
+    const targetDirectionStep = cmParams.sourceColor === 'white' ? -1 : 1;
+    // Pawn on home row
+    const homeRow = cmParams.sourceColor === 'white' ? 6 : 1;
+    const enemyFirstStep = cmParams.sourceColor === 'black' ? 5 : 2;
+    // Can step 2 from home row
+    const homeRowStep = cmParams.sourceColor === 'white' ? -2 : 2;
+    // Cannot step left/right
+    const validStepForward = ((stepY === targetDirectionStep) || (cmParams.srcRow === homeRow && stepY === homeRowStep)) && stepX === 0;
+    if (!validStepForward) {
+      cmResult.canDrop = false;
+    }
+    // Pawn magic 1 (cannot hit straight)
+    if (validStepForward && cmResult.canHit) {
+      cmResult.canDrop = false;
+      cmResult.canHit = false;
+    }
+    // Pawn magic 2 (can hit 1 across)
+    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    if (cmResult.canHit && stepX === 1 && stepY === targetDirectionStep && !piecesInWay) {
+      cmResult.canDrop = true;
+    }
+    // Pawn magic 3 (en passant)
+    const lastHistory = cmParams.moveHistory[cmParams.moveHistory.length - 1];
+    const epTargetRow = cmParams.sourceColor === 'white' ? 3 : 4;
+    const epSourceRow = cmParams.sourceColor === 'white' ? 1 : 6;
+    const possibleEP = GlobalVariablesService.translateNotation(
+      epTargetRow, cmParams.targetCol, epSourceRow, cmParams.targetCol, 'pawn', false, false, false, false, null);
+    if (stepX === 1 && stepY === targetDirectionStep && cmParams.targetRow === enemyFirstStep && lastHistory === possibleEP) {
+      cmResult.canDrop = true;
+      cmResult.canHit = true;
+      GlobalVariablesService.DEBUG_OBJECT.justDidEnPassant = { row: epTargetRow, col: cmParams.targetCol };
+    }
+  }
+
+  static kingRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+    // Side 1 and up-down 1
+    if (Math.abs(cmParams.targetCol - cmParams.srcCol) > 1) {
+      cmResult.canDrop = false;
+    }
+    if (Math.abs(cmParams.targetRow - cmParams.srcRow) > 1) {
+      cmResult.canDrop = false;
+    }
+    const castleSourceRow = cmParams.sourceColor === 'white' ? 7 : 0;
+    const castleSourceCell = 4;
+    const castleTargetRow = castleSourceRow;
+    const castleTargetCell1 = 2;
+    const castleTargetCell2 = 6;
+    const rookInPlace1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][0];
+    const rook1OK = rookInPlace1.length === 1 &&
+      rookInPlace1[0] && rookInPlace1[0].color === cmParams.sourceColor && rookInPlace1[0].piece === 'rook';
+    const rookInPlace2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][7];
+    const rook2OK = rookInPlace2.length === 1 &&
+      rookInPlace2[0] && rookInPlace2[0].color === cmParams.sourceColor && rookInPlace2[0].piece === 'rook';
+    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    if (cmResult.targetEmpty && cmParams.srcRow === castleSourceRow && cmParams.srcCol === castleSourceCell &&
+      cmParams.targetRow === castleTargetRow && cmParams.targetCol === castleTargetCell1 &&
+      rook1OK && !piecesInWay) {
+      cmResult.canDrop = true;
+      GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+    }
+    if (cmResult.targetEmpty && cmParams.srcRow === castleSourceRow && cmParams.srcCol === castleSourceCell &&
+      cmParams.targetRow === castleTargetRow && cmParams.targetCol === castleTargetCell2 &&
+      rook2OK && !piecesInWay) {
+      cmResult.canDrop = true;
+      GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+    }
+  }
+
+  static queenRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+    // invalid IF NOR: Bishop + rook rules
+    const bishopRules = Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow);
+    const rookRules = cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow;
+    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    if ((bishopRules && rookRules) || piecesInWay) {
+      cmResult.canDrop = false;
+    }
+  }
+
+  static rookRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+    // invalid IF: not Same row AND not same col
+    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    if ((cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow) || piecesInWay) {
+      cmResult.canDrop = false;
+    }
+  }
+
+  static bishopRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+    // invalid IF: not same side as up-down
+    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    if ((Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow)) || piecesInWay) {
+      cmResult.canDrop = false;
+    }
   }
 
 }

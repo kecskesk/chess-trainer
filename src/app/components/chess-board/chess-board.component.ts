@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
-import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
@@ -26,7 +26,15 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   canDrop(drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean {
-    return ChessRulesService.canStepThere(drag.dropContainer.id, drop.id, drop.data);
+
+    const targetLocSplit = drop.id.split('field');
+    const targetRow = Number(targetLocSplit[1][0]);
+    const targetCol = Number(targetLocSplit[1][1]);
+    const sourceLocSplit = drag.dropContainer.id.split('field');
+    const sourceRow = Number(sourceLocSplit[1][0]);
+    const sourceCol = Number(sourceLocSplit[1][1]);
+
+    return ChessRulesService.canStepThere(targetRow, targetCol, drop.data ,sourceRow, sourceCol);
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
@@ -93,12 +101,19 @@ export class ChessBoardComponent implements AfterViewInit {
     }
   }
 
-  isTarget(id: string): boolean {
-    return this.globalVariablesService.debugObj.possibles && this.globalVariablesService.debugObj.possibles.includes(id);
+  isTarget(targetRow: number, targetCol: number): boolean {
+    return this.globalVariablesService.debugObj.possibles && this.globalVariablesService.debugObj.possibles
+      .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
-  isHit(id: string): boolean {
-    return this.globalVariablesService.debugObj.hits && this.globalVariablesService.debugObj.hits.includes(id);
+  isHit(targetRow: number, targetCol: number): boolean {
+    return this.globalVariablesService.debugObj.hits && this.globalVariablesService.debugObj.hits
+      .some(({row, col}) => row === targetRow && col === targetCol);
+  }
+
+  isCheck(targetRow: number, targetCol: number): boolean {
+    return this.globalVariablesService.debugObj.checks && this.globalVariablesService.debugObj.checks
+      .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
   translateFieldNames(idxX: number, idxY: number): string {
@@ -123,5 +138,24 @@ export class ChessBoardComponent implements AfterViewInit {
     }
   }
 
-  protected readonly GlobalVariablesService = GlobalVariablesService;
+  showPossibleMoves(ofColor: string): void {
+    // Clear
+    this.globalVariablesService.debugObj.possibles = [];
+    this.globalVariablesService.debugObj.hits = [];
+    if (ofColor) {
+      this.globalVariablesService.field.forEach((row, rowIdx) => {
+        row.forEach((cell, cellIdx) => {
+          // All pieces of the color
+          if (cell && cell[0] && cell[0].color === ofColor) {
+            for (let targetRow = 0; targetRow <= 7; targetRow++) {
+              for (let targetCol = 0; targetCol <= 7; targetCol++) {
+                let data = this.globalVariablesService.field[targetRow][targetCol];
+                ChessRulesService.canStepThere(targetRow, targetCol, data, rowIdx, cellIdx);
+              }
+            }
+          }
+        });
+      });
+    }
+  }
 }
