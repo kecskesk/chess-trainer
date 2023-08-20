@@ -15,14 +15,29 @@
              [class.white-square]="(idxY + idxX) % 2 === 0"
              [class.black-square]="(idxY + idxX) % 2 === 1">
           <div class="drag-box" cdkDrag
-               [cdkDragDisabled]="!cellY || !cellY[0]">
+               [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.debugObj.colorTurn">
             <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
           </div>
-          <div class="notation">{{translate(idxX, idxY)}}</div>
+          <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
         </div>
       </div>
     </div>
   </div>
+</div>
+<div *ngIf="globalVariablesService.debugObj.canPromote">
+  <h3>Promote!</h3>
+  <button (click)="promotePiece('rook')">Rook</button>
+  <button (click)="promotePiece('bishop')">Bishop</button>
+  <button (click)="promotePiece('knight')">Knight</button>
+  <button (click)="promotePiece('queen')">Queen</button>
+</div>
+<div>
+  <h3>{{globalVariablesService.debugObj.colorTurn}} to move</h3>
+  <h3>History</h3>
+  <span *ngFor="let histItem of globalVariablesService.debugObj.history; index as histIdx">
+    <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
+    {{histItem}}
+    <br *ngIf="histIdx % 2 === 1" /></span>
 </div>
 <div *ngIf="globalVariablesService.debugObj">
   {{globalVariablesService.debugObj.debugText}}

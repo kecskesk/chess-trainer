@@ -24,35 +24,62 @@ export class ChessRulesService {
       const sourceLocSplit = sourceLocation.split('field');
       const sourceRow = Number(sourceLocSplit[1][0]);
       const sourceCell = Number(sourceLocSplit[1][1]);
-      if (GlobalVariablesService.CHESS_FIELD) {
-        sourceObj = GlobalVariablesService.CHESS_FIELD[sourceRow][sourceCell];
-        if (sourceObj && sourceObj[0]) {
-          sourceColor = sourceObj[0].color;
-          sourcePiece = sourceObj[0].piece;
-        }
+      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.DEBUG_OBJECT) {
+        return false;
+      }
+      const history = GlobalVariablesService.DEBUG_OBJECT.history
+      sourceObj = GlobalVariablesService.CHESS_FIELD[sourceRow][sourceCell];
+      if (!(sourceObj && sourceObj[0])) {
+        return false;
+      }
+      sourceColor = sourceObj[0].color;
+      sourcePiece = sourceObj[0].piece;
+      if (sourceColor !== GlobalVariablesService.DEBUG_OBJECT.colorTurn) {
+        return false;
       }
       // Cell occupied
       let canDrop = targetData.length < 1;
       // Can hit
       let canHit = false;
-      if (targetData.length == 1 && targetData[0].color != sourceColor) {
+      if (targetData.length === 1 && targetData[0].color != sourceColor) {
         canDrop = true;
         canHit = true;
       }
       switch (sourcePiece) {
         case 'pawn': {
           const stepY = targetRow - sourceRow;
+          const stepX = Math.abs(targetCell - sourceCell);
           // Can step 1 in direction
           const targetDirectionStep = sourceColor === 'white' ? -1 : 1;
           // Pawn on home row
           const homeRow = sourceColor === 'white' ? 6 : 1;
+          const enemyFirstStep = sourceColor === 'black' ? 5 : 2;
           // Can step 2 from home row
           const homeRowStep = sourceColor === 'white' ? -2 : 2;
-          // Cannot step left/right **** TODO can hit left right + en passant
-          const sameColumn = targetCell === sourceCell;
-          const validStepForward = (stepY === targetDirectionStep) || (sourceRow == homeRow && stepY === homeRowStep)
-          if (!sameColumn || !validStepForward) {
+          // Cannot step left/right
+          const validStepForward = ((stepY === targetDirectionStep) || (sourceRow === homeRow && stepY === homeRowStep)) && stepX === 0;
+          if (!validStepForward) {
             canDrop = false;
+          }
+          // Pawn magic 1 (cannot hit straight)
+          if (validStepForward && canHit) {
+            canDrop = false;
+            canHit = false;
+          }
+          // Pawn magic 2 (can hit 1 across)
+          if (canHit && stepX === 1 && stepY === targetDirectionStep) {
+            canDrop = true;
+          }
+          // Pawn magic 3 (en passant)
+          const lastHistory = history[history.length - 1];
+          const epTargetRow = sourceColor === 'white' ? 3 : 4;
+          const epSourceRow = sourceColor === 'white' ? 1 : 6;
+          const possibleEP = GlobalVariablesService.translateNotation(
+            epTargetRow, targetCell, epSourceRow, targetCell, 'pawn', false, false, false, false, null);
+          if (stepX === 1 && stepY === targetDirectionStep && targetRow === enemyFirstStep && lastHistory === possibleEP) {
+            canDrop = true;
+            canHit = true;
+            GlobalVariablesService.DEBUG_OBJECT.justDidEnPassant = { row: epTargetRow, col: targetCell };
           }
           break;
         }
@@ -102,9 +129,6 @@ export class ChessRulesService {
           break;
       }
       if (GlobalVariablesService.DEBUG_OBJECT && canDrop) {
-        // DebugObjectService.DEBUG_OBJECT.debugText += `source c${sourceCell}r${sourceRow}`
-        const letterChar = String.fromCharCode('a'.charCodeAt(0) + targetCell);
-        const numberChar = (8 - targetRow);
         if (!GlobalVariablesService.DEBUG_OBJECT.possibles) {
           GlobalVariablesService.DEBUG_OBJECT.possibles = [];
         }

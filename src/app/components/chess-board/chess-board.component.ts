@@ -35,19 +35,42 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.debugObj.possibles = [];
     this.globalVariablesService.debugObj.hits = [];
     if (event.previousContainer === event.container) {
-      moveItemInArray(event.container.data,
-        event.previousIndex,
-        event.currentIndex);
+      return;
     } else {
+      const targetId = event.container.id;
+      const targetLocSplit = targetId.split('field');
+      const targetRow = Number(targetLocSplit[1][0]);
+      const targetCell = Number(targetLocSplit[1][1]);
+
+      const srcId = event.previousContainer.id;
+      const srcLocSplit = srcId.split('field');
+      const srcRow = Number(srcLocSplit[1][0]);
+      const srcCell = Number(srcLocSplit[1][1]);
+      const srcPiece = event.previousContainer.data[0].piece;
+      if (srcPiece === 'pawn' && targetRow === 0) {
+        this.globalVariablesService.debugObj.canPromote = targetCell;
+      }
+
+      let isHit = false;
+      let isCheck = false;
+      let isMatch = false;
+      let isEP = false;
       // Remove target on hit before moving the item in the container
       if (event.container && event.container.data && event.container.data[0]) {
-        const targetId = event.container.id;
-        const targetLocSplit = targetId.split('field');
-        const targetRow = Number(targetLocSplit[1][0]);
-        const targetCell = Number(targetLocSplit[1][1]);
-
         this.globalVariablesService.field[targetRow][targetCell].splice(0,1);
+        isHit = true;
       }
+      const justDidEP = this.globalVariablesService.debugObj.justDidEnPassant;
+      if (justDidEP) {
+        this.globalVariablesService.field[justDidEP.row][justDidEP.col].splice(0,1);
+        isHit = true;
+        isEP = true;
+        this.globalVariablesService.debugObj.justDidEnPassant = null;
+      }
+      const lastNotation = GlobalVariablesService.translateNotation(
+        targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, null);
+      this.globalVariablesService.debugObj.history.push(lastNotation);
+      this.globalVariablesService.debugObj.colorTurn = this.globalVariablesService.debugObj.colorTurn === 'white' ? 'black' : 'white';
       transferArrayItem(event.previousContainer.data,
         event.container.data,
         event.previousIndex, event.currentIndex);
@@ -62,11 +85,27 @@ export class ChessBoardComponent implements AfterViewInit {
     return this.globalVariablesService.debugObj.hits && this.globalVariablesService.debugObj.hits.includes(id);
   }
 
-  translate(idxX: number, idxY: number): string {
+  translateFieldNames(idxX: number, idxY: number): string {
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + idxY);
     // Flip table count bottom-up
     const numberChar = (8 - idxX);
     return `${letterChar}${numberChar}`
   }
+
+  promotePiece(toPiece: string): void {
+    if (this.globalVariablesService.debugObj.canPromote !== null) {
+      const targetCol = Number(this.globalVariablesService.debugObj.canPromote);
+      const targetSquare = this.globalVariablesService.field[0][targetCol];
+      if (targetSquare && targetSquare[0]) {
+        targetSquare[0].piece = toPiece;
+        const history = this.globalVariablesService.debugObj.history
+        let lastHistory = history[history.length - 1];
+        history[history.length - 1] = lastHistory + '=' + GlobalVariablesService.translatePieceNotation(toPiece);
+        this.globalVariablesService.debugObj.canPromote = null;
+      }
+    }
+  }
+
+  protected readonly GlobalVariablesService = GlobalVariablesService;
 }
