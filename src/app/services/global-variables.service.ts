@@ -4,7 +4,7 @@ import { ChessPieceDto } from '../model/chess-piece.dto';
 @Injectable()
 export class GlobalVariablesService {
   public static DEBUG_OBJECT: any = {};
-  public static CHESS_FIELD: any = {};
+  public static CHESS_FIELD: ChessPieceDto[][][] = [];
   debugObj = {
     debugText: '',
     possibles: [],
@@ -56,5 +56,39 @@ export class GlobalVariablesService {
       case 'rook': return 'R';
       case 'knight': return 'N';
     }
+  }
+
+  static pieceIsInWay(targetRow: number, targetCol: number, srcRow: number, srcCol: number): boolean {
+    const stepRow = targetRow - srcRow;
+    const stepCol = targetCol - srcCol;
+    let nextStepRow = srcRow;
+    let nextStepCol = srcCol;
+    if (nextStepRow !== targetRow) {
+      nextStepRow += stepRow > 0 ? 1 : -1;
+    }
+    if (nextStepCol !== targetCol) {
+      nextStepCol += stepCol > 0 ? 1 : -1;
+    }
+    let cntr = 0;
+    while (nextStepRow !== targetRow || nextStepCol !== targetCol) {
+      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.CHESS_FIELD[nextStepRow] ||
+        !GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol]) {
+        return false;
+      }
+      if (GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol].length > 0) {
+        return true;
+      }
+      if (nextStepRow !== targetRow) {
+        nextStepRow += stepRow > 0 ? 1 : -1;
+      }
+      if (nextStepCol !== targetCol) {
+        nextStepCol += stepCol > 0 ? 1 : -1;
+      }
+      cntr++;
+      if (cntr > 7) {
+        return false;
+      }
+    }
+    return false;
   }
 }

@@ -68,7 +68,8 @@ export class ChessRulesService {
             canHit = false;
           }
           // Pawn magic 2 (can hit 1 across)
-          if (canHit && stepX === 1 && stepY === targetDirectionStep) {
+          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
+          if (canHit && stepX === 1 && stepY === targetDirectionStep && !piecesInWay) {
             canDrop = true;
           }
           // Pawn magic 3 (en passant)
@@ -109,23 +110,19 @@ export class ChessRulesService {
           const rookInPlace1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][0];
           const rook1OK = rookInPlace1.length === 1 &&
             rookInPlace1[0] && rookInPlace1[0].color === sourceColor && rookInPlace1[0].piece === 'rook';
-          const knightInWay1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][1];
-          const bishopInWay1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][2];
-          const queenInWay1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][3];
-          const bishopInWay2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][5];
-          const knightInWay2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][6];
           const rookInPlace2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][7];
           const rook2OK = rookInPlace2.length === 1 &&
             rookInPlace2[0] && rookInPlace2[0].color === sourceColor && rookInPlace2[0].piece === 'rook';
+          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
           if (isEmpty && sourceRow === castleSourceRow && sourceCell === castleSourceCell &&
               targetRow === castleTargetRow && targetCell === castleTargetCell1 &&
-              rook1OK && knightInWay1.length === 0 && bishopInWay1.length === 0 && queenInWay1.length === 0) {
+              rook1OK && !piecesInWay) {
             canDrop = true;
             GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: targetRow, col: targetCell };
           }
           if (isEmpty && sourceRow === castleSourceRow && sourceCell === castleSourceCell &&
               targetRow === castleTargetRow && targetCell === castleTargetCell2 &&
-              rook2OK && knightInWay2.length === 0 && bishopInWay2.length === 0) {
+              rook2OK && !piecesInWay) {
             canDrop = true;
             GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: targetRow, col: targetCell };
           }
@@ -135,21 +132,24 @@ export class ChessRulesService {
           // invalid IF NOR: Bishop + rook rules
           const bishopRules = Math.abs(targetCell - sourceCell) !== Math.abs(targetRow - sourceRow);
           const rookRules = targetCell !== sourceCell && targetRow !== sourceRow;
-          if (bishopRules && rookRules) {
+          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
+          if ((bishopRules && rookRules) || piecesInWay) {
             canDrop = false;
           }
           break;
         }
         case 'rook': {
-          // invalid IF not:  Same row OR same col
-          if (targetCell !== sourceCell && targetRow !== sourceRow) {
+          // invalid IF: not Same row AND not same col
+          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
+          if ((targetCell !== sourceCell && targetRow !== sourceRow) || piecesInWay) {
             canDrop = false;
           }
           break;
         }
         case 'bishop': {
-          // invalid IF not: must be same side as up-down
-          if (Math.abs(targetCell - sourceCell) !== Math.abs(targetRow - sourceRow)) {
+          // invalid IF: not same side as up-down
+          const piecesInWay = GlobalVariablesService.pieceIsInWay(targetRow, targetCell, sourceRow, sourceCell);
+          if ((Math.abs(targetCell - sourceCell) !== Math.abs(targetRow - sourceRow)) || piecesInWay) {
             canDrop = false;
           }
           break;
