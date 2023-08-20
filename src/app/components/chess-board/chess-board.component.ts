@@ -55,6 +55,7 @@ export class ChessBoardComponent implements AfterViewInit {
       let isCheck = false;
       let isMatch = false;
       let isEP = false;
+      let castleData = null;
       // Remove target on hit before moving the item in the container
       if (event.container && event.container.data && event.container.data[0]) {
         this.globalVariablesService.field[targetRow][targetCell].splice(0,1);
@@ -67,8 +68,23 @@ export class ChessBoardComponent implements AfterViewInit {
         isEP = true;
         this.globalVariablesService.debugObj.justDidEnPassant = null;
       }
+      const justDidCastle = this.globalVariablesService.debugObj.justDidCastle;
+      if (justDidCastle) {
+        const rookCol = justDidCastle.col === 2 ? 0 : 7;
+        const rookDestCol = justDidCastle.col === 2 ? 3 : 5;
+        const castleRook = this.globalVariablesService.field[justDidCastle.row][rookCol];
+        let sourceColor = '';
+        if (castleRook && castleRook[0]) {
+          sourceColor = castleRook[0].color;
+          this.globalVariablesService.field[justDidCastle.row][rookCol].splice(0,1);
+        }
+        const newCastleRook = new ChessPieceDto(sourceColor, 'rook');
+        this.globalVariablesService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
+        this.globalVariablesService.debugObj.justDidCastle = null;
+        castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
+      }
       const lastNotation = GlobalVariablesService.translateNotation(
-        targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, null);
+        targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
       this.globalVariablesService.debugObj.history.push(lastNotation);
       this.globalVariablesService.debugObj.colorTurn = this.globalVariablesService.debugObj.colorTurn === 'white' ? 'black' : 'white';
       transferArrayItem(event.previousContainer.data,

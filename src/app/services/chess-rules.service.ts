@@ -39,6 +39,7 @@ export class ChessRulesService {
       }
       // Cell occupied
       let canDrop = targetData.length < 1;
+      let isEmpty = targetData.length < 1;
       // Can hit
       let canHit = false;
       if (targetData.length === 1 && targetData[0].color != sourceColor) {
@@ -99,6 +100,34 @@ export class ChessRulesService {
           }
           if (Math.abs(targetRow - sourceRow) > 1) {
             canDrop = false;
+          }
+          const castleSourceRow = sourceColor === 'white' ? 7 : 0;
+          const castleSourceCell = 4;
+          const castleTargetRow = castleSourceRow;
+          const castleTargetCell1 = 2;
+          const castleTargetCell2 = 6;
+          const rookInPlace1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][0];
+          const rook1OK = rookInPlace1.length === 1 &&
+            rookInPlace1[0] && rookInPlace1[0].color === sourceColor && rookInPlace1[0].piece === 'rook';
+          const knightInWay1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][1];
+          const bishopInWay1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][2];
+          const queenInWay1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][3];
+          const bishopInWay2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][5];
+          const knightInWay2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][6];
+          const rookInPlace2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][7];
+          const rook2OK = rookInPlace2.length === 1 &&
+            rookInPlace2[0] && rookInPlace2[0].color === sourceColor && rookInPlace2[0].piece === 'rook';
+          if (isEmpty && sourceRow === castleSourceRow && sourceCell === castleSourceCell &&
+              targetRow === castleTargetRow && targetCell === castleTargetCell1 &&
+              rook1OK && knightInWay1.length === 0 && bishopInWay1.length === 0 && queenInWay1.length === 0) {
+            canDrop = true;
+            GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: targetRow, col: targetCell };
+          }
+          if (isEmpty && sourceRow === castleSourceRow && sourceCell === castleSourceCell &&
+              targetRow === castleTargetRow && targetCell === castleTargetCell2 &&
+              rook2OK && knightInWay2.length === 0 && bishopInWay2.length === 0) {
+            canDrop = true;
+            GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: targetRow, col: targetCell };
           }
           break;
         }
