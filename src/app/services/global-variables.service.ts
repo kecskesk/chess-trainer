@@ -67,8 +67,31 @@ export class GlobalVariablesService {
     this.BOARD_HELPER.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
   }
 
-  static addArrow(arrowParam: ChessArrowDto, idx: number): void {
-    this.BOARD_HELPER.arrows[`${idx}`] = arrowParam;
+  static addArrow(arrowParam: ChessArrowDto): void {
+    this.BOARD_HELPER.arrows[`${arrowParam.left}${arrowParam.top}${arrowParam.rotate}${arrowParam.color}${arrowParam.transform}`] = arrowParam;
+  }
+
+  /**
+   * top: '250px',
+   * left: '130px',
+   * rotate: '45deg',
+   * transform: 'scaleX(5.5)'
+   */
+  static createArrow(from: ChessPositionDto, to: ChessPositionDto, color: string): void {
+    const boxSize = 76;
+    const midX = ((-1 + ((from.col + to.col) / 2)) * boxSize) + 9;
+    const midY = ((8.5 - ((from.row + to.row) / 2)) * boxSize);
+
+    const stepRow = from.row - to.row;
+    const stepCol = to.col - from.col;
+    const deg = Math.atan2(stepRow, stepCol) * (180 / Math.PI);
+
+    const arTop = `${midY}px`;
+    const arLeft = `${midX}px`;
+    const arRot = `${deg}deg`;
+    const arTransf = `scaleX(${0.5 + Math.sqrt(stepCol*stepCol + stepRow*stepRow)}) scaleY(0.25)`;
+    const newArrow = new ChessArrowDto(arTop, arLeft, arRot, color, arTransf);
+    GlobalVariablesService.addArrow(newArrow);
   }
 
   static addHistory(newHistory: string): void {

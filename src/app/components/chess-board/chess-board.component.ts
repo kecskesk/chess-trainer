@@ -3,6 +3,7 @@ import { CdkDrag, CdkDragDrop, CdkDropList, transferArrayItem } from '@angular/c
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
+import { DomSanitizer, SafeScript, SafeStyle } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-chess-board',
@@ -15,7 +16,8 @@ export class ChessBoardComponent implements AfterViewInit {
 
   dropLists: CdkDropList[] = undefined;
 
-  constructor(public globalVariablesService: GlobalVariablesService) {}
+  constructor(public globalVariablesService: GlobalVariablesService,
+              private sanitizer: DomSanitizer) {}
 
   ngAfterViewInit(): void {
     if (this.dropListElements) {
@@ -42,6 +44,8 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.boardHelper.debugText = '';
     this.globalVariablesService.boardHelper.possibles = {};
     this.globalVariablesService.boardHelper.hits = {};
+    this.globalVariablesService.boardHelper.checks = {};
+    this.globalVariablesService.boardHelper.arrows = {};
     if (event.previousContainer === event.container) {
       return;
     } else {
@@ -143,6 +147,7 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.boardHelper.possibles = {};
     this.globalVariablesService.boardHelper.hits = {};
     this.globalVariablesService.boardHelper.checks = {};
+    this.globalVariablesService.boardHelper.arrows = {};
     if (ofColor) {
       this.globalVariablesService.field.forEach((row, rowIdx) => {
         row.forEach((cell, cellIdx) => {
@@ -158,5 +163,9 @@ export class ChessBoardComponent implements AfterViewInit {
         });
       });
     }
+  }
+
+  sanitizeScale(text: string): SafeStyle {
+    return this.sanitizer.bypassSecurityTrustStyle(text);
   }
 }

@@ -98,18 +98,14 @@ export class ChessRulesService {
               GlobalVariablesService.BOARD_HELPER.hits = {};
             }
             GlobalVariablesService.addHit({ row: targetRow, col: targetCol });
+            GlobalVariablesService.createArrow({ row: 8-srcRow, col: srcCol+1 }, { row: 8-targetRow, col: targetCol+1 }, 'orange');
           }
           if (isCheck) {
             if (!GlobalVariablesService.BOARD_HELPER.checks) {
               GlobalVariablesService.BOARD_HELPER.checks = {};
             }
             GlobalVariablesService.addCheck({ row: targetRow, col: targetCol });
-            GlobalVariablesService.addArrow({
-              top: '250px',
-              left: '130px',
-              rotate: '45deg',
-              transform: 'scaleX(5.5)'
-            }, 1);
+            GlobalVariablesService.createArrow({ row: 8-srcRow, col: srcCol+1 }, { row: 8-targetRow, col: targetCol+1 }, 'red');
           }
         }
       }
