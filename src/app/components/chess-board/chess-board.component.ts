@@ -40,8 +40,8 @@ export class ChessBoardComponent implements AfterViewInit {
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
     // Reset drops and hits
     this.globalVariablesService.debugObj.debugText = '';
-    this.globalVariablesService.debugObj.possibles = [];
-    this.globalVariablesService.debugObj.hits = [];
+    this.globalVariablesService.debugObj.possibles = {};
+    this.globalVariablesService.debugObj.hits = {};
     if (event.previousContainer === event.container) {
       return;
     } else {
@@ -93,7 +93,7 @@ export class ChessBoardComponent implements AfterViewInit {
       }
       const lastNotation = GlobalVariablesService.translateNotation(
         targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
-      this.globalVariablesService.debugObj.history.push(lastNotation);
+      GlobalVariablesService.addHistory(lastNotation);
       this.globalVariablesService.debugObj.colorTurn = this.globalVariablesService.debugObj.colorTurn === 'white' ? 'black' : 'white';
       transferArrayItem(event.previousContainer.data,
         event.container.data,
@@ -102,17 +102,17 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   isTarget(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.debugObj.possibles && this.globalVariablesService.debugObj.possibles
+    return this.globalVariablesService.debugObj.possibles && this.globalVariablesService.possibles
       .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
   isHit(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.debugObj.hits && this.globalVariablesService.debugObj.hits
+    return this.globalVariablesService.debugObj.hits && this.globalVariablesService.hits
       .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
   isCheck(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.debugObj.checks && this.globalVariablesService.debugObj.checks
+    return this.globalVariablesService.debugObj.checks && this.globalVariablesService.checks
       .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
@@ -130,7 +130,7 @@ export class ChessBoardComponent implements AfterViewInit {
       const targetSquare = this.globalVariablesService.field[0][targetCol];
       if (targetSquare && targetSquare[0]) {
         targetSquare[0].piece = toPiece;
-        const history = this.globalVariablesService.debugObj.history
+        const history = this.globalVariablesService.history;
         let lastHistory = history[history.length - 1];
         history[history.length - 1] = lastHistory + '=' + GlobalVariablesService.translatePieceNotation(toPiece);
         this.globalVariablesService.debugObj.canPromote = null;
@@ -140,8 +140,9 @@ export class ChessBoardComponent implements AfterViewInit {
 
   showPossibleMoves(ofColor: string): void {
     // Clear
-    this.globalVariablesService.debugObj.possibles = [];
-    this.globalVariablesService.debugObj.hits = [];
+    this.globalVariablesService.debugObj.possibles = {};
+    this.globalVariablesService.debugObj.hits = {};
+    this.globalVariablesService.debugObj.checks = {};
     if (ofColor) {
       this.globalVariablesService.field.forEach((row, rowIdx) => {
         row.forEach((cell, cellIdx) => {

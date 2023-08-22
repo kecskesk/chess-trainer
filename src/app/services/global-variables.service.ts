@@ -1,21 +1,24 @@
 import { Injectable } from '@angular/core';
 import { ChessPieceDto } from '../model/chess-piece.dto';
+import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
+import { ChessArrowDto } from '../model/chess-arrow.dto';
+import { ChessPositionDto } from '../model/chess-position.dto';
 
 @Injectable()
 export class GlobalVariablesService {
-  public static DEBUG_OBJECT: any = {};
+  public static DEBUG_OBJECT: ChessBoardHelperDto = null;
   public static CHESS_FIELD: ChessPieceDto[][][] = [];
-  debugObj = {
-    debugText: '',
-    possibles: [],
-    hits: [],
-    checks: [],
-    colorTurn: 'white',
-    history: [],
-    canPromote: null,
-    justDidEnPassant: null,
-    justDidCastle: null
-  };
+  debugObj = new ChessBoardHelperDto(
+              '',
+              {},
+              {},
+              {},
+              {},
+              {},
+              'white',
+              null,
+              null,
+              null);
   field = [
     [[new ChessPieceDto('black', 'rook')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'queen')], [new ChessPieceDto('black', 'king')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'rook')]],
     [[new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')]],
@@ -30,6 +33,48 @@ export class GlobalVariablesService {
   constructor() {
     GlobalVariablesService.CHESS_FIELD = this.field;
     GlobalVariablesService.DEBUG_OBJECT = this.debugObj;
+  }
+
+  get possibles(): ChessPositionDto[] {
+    return Object.values(this.debugObj.possibles);
+  }
+
+  get hits(): ChessPositionDto[] {
+    return Object.values(this.debugObj.hits);
+  }
+
+  get checks(): ChessPositionDto[] {
+    return Object.values(this.debugObj.checks);
+  }
+
+  get arrows(): ChessArrowDto[] {
+    return Object.values(this.debugObj.arrows);
+  }
+
+  get history(): string[] {
+    return Object.values(this.debugObj.history);
+  }
+
+  static addPossible(newPossible: ChessPositionDto): void {
+    this.DEBUG_OBJECT.possibles[`${newPossible.row}${newPossible.col}`] = newPossible;
+  }
+
+  static addHit(newHit: ChessPositionDto): void {
+    this.DEBUG_OBJECT.hits[`${newHit.row}${newHit.col}`] = newHit;
+  }
+
+  static addCheck(newCheck: ChessPositionDto): void {
+    this.DEBUG_OBJECT.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
+  }
+
+  static addArrow(arrowParam: ChessArrowDto, idx: number): void {
+    this.DEBUG_OBJECT.arrows[`${idx}`] = arrowParam;
+  }
+
+  static addHistory(newHistory: string): void {
+    const historySize = Object.keys(this.DEBUG_OBJECT.history).length;
+    const newItemIdx = historySize + 1;
+    this.DEBUG_OBJECT.history[`${newItemIdx}`] = newHistory;
   }
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,

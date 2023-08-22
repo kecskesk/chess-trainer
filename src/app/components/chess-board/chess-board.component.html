@@ -1,28 +1,35 @@
-<div class="container" #chessField>
-  <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
-    <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
-      <div class="piece-box">
-        <div class="square"
-             cdkDropList
-             cdkDropListOrientation="horizontal"
-             [cdkDropListEnterPredicate]="canDrop"
-             id="field{{idxX}}{{idxY}}"
-             [class.shaded]="isTarget(idxX, idxY) && !isHit(idxX, idxY)"
-             [class.killer]="isHit(idxX, idxY)"
-             [class.check-tile]="isCheck(idxX, idxY)"
-             [cdkDropListData]="cellY"
-             [cdkDropListConnectedTo]="dropLists"
-             (cdkDropListDropped)="onDrop($event)"
-             [class.white-square]="(idxY + idxX) % 2 === 0"
-             [class.black-square]="(idxY + idxX) % 2 === 1">
-          <div class="drag-box" cdkDrag
-               [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.debugObj.colorTurn">
-            <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
+<div class="outer-container">
+  <div class="container" #chessField>
+    <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
+      <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
+        <div class="piece-box">
+          <div class="square"
+               cdkDropList
+               cdkDropListOrientation="horizontal"
+               [cdkDropListEnterPredicate]="canDrop"
+               id="field{{idxX}}{{idxY}}"
+               [class.shaded]="isTarget(idxX, idxY) && !isHit(idxX, idxY)"
+               [class.killer]="isHit(idxX, idxY)"
+               [class.check-tile]="isCheck(idxX, idxY)"
+               [cdkDropListData]="cellY"
+               [cdkDropListConnectedTo]="dropLists"
+               (cdkDropListDropped)="onDrop($event)"
+               [class.white-square]="(idxY + idxX) % 2 === 0"
+               [class.black-square]="(idxY + idxX) % 2 === 1">
+            <div class="drag-box" cdkDrag
+                 [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.debugObj.colorTurn">
+              <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
+            </div>
+            <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
           </div>
-          <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
         </div>
       </div>
     </div>
+  </div>
+  <div class="arrowPointer" *ngFor="let arrow of globalVariablesService.arrows; index as arrowIdx"
+       [style.top]="arrow.top" [style.left]="arrow.left"
+       [style.transform]="arrow.transform" [style.rotate]="arrow.rotate">
+    ------>
   </div>
 </div>
 <div *ngIf="globalVariablesService.debugObj.canPromote">
@@ -38,7 +45,7 @@
     <button (click)="showPossibleMoves(null)">clear</button>
   </h3>
   <h3>History</h3>
-  <span *ngFor="let histItem of globalVariablesService.debugObj.history; index as histIdx">
+  <span *ngFor="let histItem of globalVariablesService.history; index as histIdx">
     <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
     {{histItem}}
     <br *ngIf="histIdx % 2 === 1" /></span>

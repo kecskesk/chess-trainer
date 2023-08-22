@@ -2,13 +2,14 @@ import { Injectable } from '@angular/core';
 import { GlobalVariablesService } from './global-variables.service';
 import { ChessMoveResultDto } from '../model/chess-move-result.dto';
 import { ChessMoveParamsDto } from '../model/chess-move-params.dto';
+import { ChessPieceDto } from '../model/chess-piece.dto';
 
 @Injectable()
 export class ChessRulesService {
 
   constructor() {}
 
-  public static canStepThere(targetRow: number, targetCol: number, targetData: any, srcRow: number, srcCol: number): boolean {
+  public static canStepThere(targetRow: number, targetCol: number, targetData: ChessPieceDto[], srcRow: number, srcCol: number, justLookingWithPiece: ChessPieceDto = null): boolean {
       let targetObj = null;
       let targetPiece = null;
       let targetColor = null;
@@ -25,19 +26,20 @@ export class ChessRulesService {
       }
       const moveHistory = GlobalVariablesService.DEBUG_OBJECT.history
       sourceData = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
+      if (justLookingWithPiece) {
+        sourceData = [justLookingWithPiece];
+      }
       if (!(sourceData && sourceData[0])) {
         return false;
       }
       sourceColor = sourceData[0].color;
+      let enemyColor = sourceColor === 'white' ? 'black' : 'white';
       sourcePiece = sourceData[0].piece;
       if (sourceColor !== GlobalVariablesService.DEBUG_OBJECT.colorTurn) {
         return false;
       }
-      const cmResult: ChessMoveResultDto = {
-        canDrop: targetData.length < 1,
-        canHit: false,
-        targetEmpty: targetData.length < 1
-      }
+      const cmResult = new ChessMoveResultDto(
+        targetData.length < 1, false, false, targetData.length < 1);
       if (targetData.length === 1 && targetData[0].color != sourceColor) {
         cmResult.canDrop = true;
         cmResult.canHit = true;
@@ -72,18 +74,46 @@ export class ChessRulesService {
         default:
           break;
       }
-      if (GlobalVariablesService.DEBUG_OBJECT && cmResult.canDrop) {
-        if (!GlobalVariablesService.DEBUG_OBJECT.possibles) {
-          GlobalVariablesService.DEBUG_OBJECT.possibles = [];
+
+      let enemyKingPos = { row: null, col: null };
+      GlobalVariablesService.CHESS_FIELD.forEach((row, rowIdx) => {
+        const kingIndex = row.findIndex(
+          cell => cell && cell[0] && cell[0].piece === 'king' && cell[0].color === enemyColor);
+        if (kingIndex >= 0) {
+          enemyKingPos.row = rowIdx;
+          enemyKingPos.col = kingIndex;
         }
-        GlobalVariablesService.DEBUG_OBJECT.possibles.push({ row: targetRow, col: targetCol })
-        if (cmResult.canHit) {
-          if (!GlobalVariablesService.DEBUG_OBJECT.hits) {
-            GlobalVariablesService.DEBUG_OBJECT.hits = [];
+      });
+      if (!justLookingWithPiece) {
+        const isCheck = ChessRulesService.canStepThere(
+          enemyKingPos.row, enemyKingPos.col, [new ChessPieceDto(enemyColor, 'king')],
+          targetRow, targetCol, { color: sourceColor, piece: sourcePiece });
+        if (GlobalVariablesService.DEBUG_OBJECT && cmResult.canDrop) {
+          if (!GlobalVariablesService.DEBUG_OBJECT.possibles) {
+            GlobalVariablesService.DEBUG_OBJECT.possibles = {};
           }
-          GlobalVariablesService.DEBUG_OBJECT.hits.push({ row: targetRow, col: targetCol })
+          GlobalVariablesService.addPossible({ row: targetRow, col: targetCol });
+          if (cmResult.canHit) {
+            if (!GlobalVariablesService.DEBUG_OBJECT.hits) {
+              GlobalVariablesService.DEBUG_OBJECT.hits = {};
+            }
+            GlobalVariablesService.addHit({ row: targetRow, col: targetCol });
+          }
+          if (isCheck) {
+            if (!GlobalVariablesService.DEBUG_OBJECT.checks) {
+              GlobalVariablesService.DEBUG_OBJECT.checks = {};
+            }
+            GlobalVariablesService.addCheck({ row: targetRow, col: targetCol });
+            GlobalVariablesService.addArrow({
+              top: '250px',
+              left: '130px',
+              rotate: '45deg',
+              transform: 'scaleX(5.5)'
+            }, 1);
+          }
         }
       }
+
       return cmResult.canDrop;
   }
 
@@ -122,7 +152,8 @@ export class ChessRulesService {
       cmResult.canDrop = true;
     }
     // Pawn magic 3 (en passant)
-    const lastHistory = cmParams.moveHistory[cmParams.moveHistory.length - 1];
+    const historyLength = Object.keys(cmParams.moveHistory).length;
+    const lastHistory = cmParams.moveHistory[historyLength - 1];
     const epTargetRow = cmParams.sourceColor === 'white' ? 3 : 4;
     const epSourceRow = cmParams.sourceColor === 'white' ? 1 : 6;
     const possibleEP = GlobalVariablesService.translateNotation(

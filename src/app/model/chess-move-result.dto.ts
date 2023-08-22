@@ -1,5 +1,6 @@
 export class ChessMoveResultDto {
-  canDrop: boolean;
-  canHit: boolean;
-  targetEmpty: boolean;
+  constructor(public canDrop: boolean,
+              public canHit: boolean,
+              public canCheck: boolean,
+              public targetEmpty: boolean) {}
 }

@@ -4,6 +4,6 @@ export class ChessMoveParamsDto {
               public srcRow: number,
               public srcCol: number,
               public sourceColor: string,
-              public moveHistory: string[]) {
+              public moveHistory: {[name: string]: string}) {
   }
 }
