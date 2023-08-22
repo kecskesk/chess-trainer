@@ -39,9 +39,9 @@ export class ChessBoardComponent implements AfterViewInit {
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
     // Reset drops and hits
-    this.globalVariablesService.debugObj.debugText = '';
-    this.globalVariablesService.debugObj.possibles = {};
-    this.globalVariablesService.debugObj.hits = {};
+    this.globalVariablesService.boardHelper.debugText = '';
+    this.globalVariablesService.boardHelper.possibles = {};
+    this.globalVariablesService.boardHelper.hits = {};
     if (event.previousContainer === event.container) {
       return;
     } else {
@@ -56,7 +56,7 @@ export class ChessBoardComponent implements AfterViewInit {
       const srcCell = Number(srcLocSplit[1][1]);
       const srcPiece = event.previousContainer.data[0].piece;
       if (srcPiece === 'pawn' && targetRow === 0) {
-        this.globalVariablesService.debugObj.canPromote = targetCell;
+        this.globalVariablesService.boardHelper.canPromote = targetCell;
       }
 
       let isHit = false;
@@ -69,14 +69,14 @@ export class ChessBoardComponent implements AfterViewInit {
         this.globalVariablesService.field[targetRow][targetCell].splice(0,1);
         isHit = true;
       }
-      const justDidEP = this.globalVariablesService.debugObj.justDidEnPassant;
+      const justDidEP = this.globalVariablesService.boardHelper.justDidEnPassant;
       if (justDidEP) {
         this.globalVariablesService.field[justDidEP.row][justDidEP.col].splice(0,1);
         isHit = true;
         isEP = true;
-        this.globalVariablesService.debugObj.justDidEnPassant = null;
+        this.globalVariablesService.boardHelper.justDidEnPassant = null;
       }
-      const justDidCastle = this.globalVariablesService.debugObj.justDidCastle;
+      const justDidCastle = this.globalVariablesService.boardHelper.justDidCastle;
       if (justDidCastle) {
         const rookCol = justDidCastle.col === 2 ? 0 : 7;
         const rookDestCol = justDidCastle.col === 2 ? 3 : 5;
@@ -88,13 +88,13 @@ export class ChessBoardComponent implements AfterViewInit {
         }
         const newCastleRook = new ChessPieceDto(sourceColor, 'rook');
         this.globalVariablesService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
-        this.globalVariablesService.debugObj.justDidCastle = null;
+        this.globalVariablesService.boardHelper.justDidCastle = null;
         castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
       }
       const lastNotation = GlobalVariablesService.translateNotation(
         targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
       GlobalVariablesService.addHistory(lastNotation);
-      this.globalVariablesService.debugObj.colorTurn = this.globalVariablesService.debugObj.colorTurn === 'white' ? 'black' : 'white';
+      this.globalVariablesService.boardHelper.colorTurn = this.globalVariablesService.boardHelper.colorTurn === 'white' ? 'black' : 'white';
       transferArrayItem(event.previousContainer.data,
         event.container.data,
         event.previousIndex, event.currentIndex);
@@ -102,17 +102,17 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   isTarget(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.debugObj.possibles && this.globalVariablesService.possibles
+    return this.globalVariablesService.boardHelper.possibles && this.globalVariablesService.possibles
       .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
   isHit(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.debugObj.hits && this.globalVariablesService.hits
+    return this.globalVariablesService.boardHelper.hits && this.globalVariablesService.hits
       .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
   isCheck(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.debugObj.checks && this.globalVariablesService.checks
+    return this.globalVariablesService.boardHelper.checks && this.globalVariablesService.checks
       .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
@@ -125,24 +125,24 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   promotePiece(toPiece: string): void {
-    if (this.globalVariablesService.debugObj.canPromote !== null) {
-      const targetCol = Number(this.globalVariablesService.debugObj.canPromote);
+    if (this.globalVariablesService.boardHelper.canPromote !== null) {
+      const targetCol = Number(this.globalVariablesService.boardHelper.canPromote);
       const targetSquare = this.globalVariablesService.field[0][targetCol];
       if (targetSquare && targetSquare[0]) {
         targetSquare[0].piece = toPiece;
         const history = this.globalVariablesService.history;
         let lastHistory = history[history.length - 1];
         history[history.length - 1] = lastHistory + '=' + GlobalVariablesService.translatePieceNotation(toPiece);
-        this.globalVariablesService.debugObj.canPromote = null;
+        this.globalVariablesService.boardHelper.canPromote = null;
       }
     }
   }
 
   showPossibleMoves(ofColor: string): void {
     // Clear
-    this.globalVariablesService.debugObj.possibles = {};
-    this.globalVariablesService.debugObj.hits = {};
-    this.globalVariablesService.debugObj.checks = {};
+    this.globalVariablesService.boardHelper.possibles = {};
+    this.globalVariablesService.boardHelper.hits = {};
+    this.globalVariablesService.boardHelper.checks = {};
     if (ofColor) {
       this.globalVariablesService.field.forEach((row, rowIdx) => {
         row.forEach((cell, cellIdx) => {

@@ -17,7 +17,7 @@
                [class.white-square]="(idxY + idxX) % 2 === 0"
                [class.black-square]="(idxY + idxX) % 2 === 1">
             <div class="drag-box" cdkDrag
-                 [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.debugObj.colorTurn">
+                 [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.boardHelper.colorTurn">
               <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
             </div>
             <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
@@ -32,7 +32,7 @@
     ------>
   </div>
 </div>
-<div *ngIf="globalVariablesService.debugObj.canPromote">
+<div *ngIf="globalVariablesService.boardHelper.canPromote">
   <h3>Promote!</h3>
   <button (click)="promotePiece('rook')">Rook</button>
   <button (click)="promotePiece('bishop')">Bishop</button>
@@ -40,8 +40,8 @@
   <button (click)="promotePiece('queen')">Queen</button>
 </div>
 <div>
-  <h3>{{globalVariablesService.debugObj.colorTurn}} to move
-    <button (click)="showPossibleMoves(globalVariablesService.debugObj.colorTurn)">show possible moves</button>
+  <h3>{{globalVariablesService.boardHelper.colorTurn}} to move
+    <button (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button>
     <button (click)="showPossibleMoves(null)">clear</button>
   </h3>
   <h3>History</h3>
@@ -50,6 +50,6 @@
     {{histItem}}
     <br *ngIf="histIdx % 2 === 1" /></span>
 </div>
-<div *ngIf="globalVariablesService.debugObj">
-  {{globalVariablesService.debugObj.debugText}}
+<div *ngIf="globalVariablesService.boardHelper">
+  {{globalVariablesService.boardHelper.debugText}}
 </div>

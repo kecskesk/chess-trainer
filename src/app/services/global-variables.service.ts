@@ -6,9 +6,9 @@ import { ChessPositionDto } from '../model/chess-position.dto';
 
 @Injectable()
 export class GlobalVariablesService {
-  public static DEBUG_OBJECT: ChessBoardHelperDto = null;
+  public static BOARD_HELPER: ChessBoardHelperDto = null;
   public static CHESS_FIELD: ChessPieceDto[][][] = [];
-  debugObj = new ChessBoardHelperDto(
+  boardHelper = new ChessBoardHelperDto(
               '',
               {},
               {},
@@ -32,49 +32,49 @@ export class GlobalVariablesService {
 
   constructor() {
     GlobalVariablesService.CHESS_FIELD = this.field;
-    GlobalVariablesService.DEBUG_OBJECT = this.debugObj;
+    GlobalVariablesService.BOARD_HELPER = this.boardHelper;
   }
 
   get possibles(): ChessPositionDto[] {
-    return Object.values(this.debugObj.possibles);
+    return Object.values(this.boardHelper.possibles);
   }
 
   get hits(): ChessPositionDto[] {
-    return Object.values(this.debugObj.hits);
+    return Object.values(this.boardHelper.hits);
   }
 
   get checks(): ChessPositionDto[] {
-    return Object.values(this.debugObj.checks);
+    return Object.values(this.boardHelper.checks);
   }
 
   get arrows(): ChessArrowDto[] {
-    return Object.values(this.debugObj.arrows);
+    return Object.values(this.boardHelper.arrows);
   }
 
   get history(): string[] {
-    return Object.values(this.debugObj.history);
+    return Object.values(this.boardHelper.history);
   }
 
   static addPossible(newPossible: ChessPositionDto): void {
-    this.DEBUG_OBJECT.possibles[`${newPossible.row}${newPossible.col}`] = newPossible;
+    this.BOARD_HELPER.possibles[`${newPossible.row}${newPossible.col}`] = newPossible;
   }
 
   static addHit(newHit: ChessPositionDto): void {
-    this.DEBUG_OBJECT.hits[`${newHit.row}${newHit.col}`] = newHit;
+    this.BOARD_HELPER.hits[`${newHit.row}${newHit.col}`] = newHit;
   }
 
   static addCheck(newCheck: ChessPositionDto): void {
-    this.DEBUG_OBJECT.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
+    this.BOARD_HELPER.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
   }
 
   static addArrow(arrowParam: ChessArrowDto, idx: number): void {
-    this.DEBUG_OBJECT.arrows[`${idx}`] = arrowParam;
+    this.BOARD_HELPER.arrows[`${idx}`] = arrowParam;
   }
 
   static addHistory(newHistory: string): void {
-    const historySize = Object.keys(this.DEBUG_OBJECT.history).length;
+    const historySize = Object.keys(this.BOARD_HELPER.history).length;
     const newItemIdx = historySize + 1;
-    this.DEBUG_OBJECT.history[`${newItemIdx}`] = newHistory;
+    this.BOARD_HELPER.history[`${newItemIdx}`] = newHistory;
   }
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,

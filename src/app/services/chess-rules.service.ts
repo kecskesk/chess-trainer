@@ -21,10 +21,10 @@ export class ChessRulesService {
       let sourceData = null;
       let sourcePiece = null;
       let sourceColor = null;
-      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.DEBUG_OBJECT) {
+      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
         return false;
       }
-      const moveHistory = GlobalVariablesService.DEBUG_OBJECT.history
+      const moveHistory = GlobalVariablesService.BOARD_HELPER.history
       sourceData = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
       if (justLookingWithPiece) {
         sourceData = [justLookingWithPiece];
@@ -35,7 +35,7 @@ export class ChessRulesService {
       sourceColor = sourceData[0].color;
       let enemyColor = sourceColor === 'white' ? 'black' : 'white';
       sourcePiece = sourceData[0].piece;
-      if (sourceColor !== GlobalVariablesService.DEBUG_OBJECT.colorTurn) {
+      if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn) {
         return false;
       }
       const cmResult = new ChessMoveResultDto(
@@ -88,20 +88,20 @@ export class ChessRulesService {
         const isCheck = ChessRulesService.canStepThere(
           enemyKingPos.row, enemyKingPos.col, [new ChessPieceDto(enemyColor, 'king')],
           targetRow, targetCol, { color: sourceColor, piece: sourcePiece });
-        if (GlobalVariablesService.DEBUG_OBJECT && cmResult.canDrop) {
-          if (!GlobalVariablesService.DEBUG_OBJECT.possibles) {
-            GlobalVariablesService.DEBUG_OBJECT.possibles = {};
+        if (GlobalVariablesService.BOARD_HELPER && cmResult.canDrop) {
+          if (!GlobalVariablesService.BOARD_HELPER.possibles) {
+            GlobalVariablesService.BOARD_HELPER.possibles = {};
           }
           GlobalVariablesService.addPossible({ row: targetRow, col: targetCol });
           if (cmResult.canHit) {
-            if (!GlobalVariablesService.DEBUG_OBJECT.hits) {
-              GlobalVariablesService.DEBUG_OBJECT.hits = {};
+            if (!GlobalVariablesService.BOARD_HELPER.hits) {
+              GlobalVariablesService.BOARD_HELPER.hits = {};
             }
             GlobalVariablesService.addHit({ row: targetRow, col: targetCol });
           }
           if (isCheck) {
-            if (!GlobalVariablesService.DEBUG_OBJECT.checks) {
-              GlobalVariablesService.DEBUG_OBJECT.checks = {};
+            if (!GlobalVariablesService.BOARD_HELPER.checks) {
+              GlobalVariablesService.BOARD_HELPER.checks = {};
             }
             GlobalVariablesService.addCheck({ row: targetRow, col: targetCol });
             GlobalVariablesService.addArrow({
@@ -161,7 +161,7 @@ export class ChessRulesService {
     if (stepX === 1 && stepY === targetDirectionStep && cmParams.targetRow === enemyFirstStep && lastHistory === possibleEP) {
       cmResult.canDrop = true;
       cmResult.canHit = true;
-      GlobalVariablesService.DEBUG_OBJECT.justDidEnPassant = { row: epTargetRow, col: cmParams.targetCol };
+      GlobalVariablesService.BOARD_HELPER.justDidEnPassant = { row: epTargetRow, col: cmParams.targetCol };
     }
   }
 
@@ -189,13 +189,13 @@ export class ChessRulesService {
       cmParams.targetRow === castleTargetRow && cmParams.targetCol === castleTargetCell1 &&
       rook1OK && !piecesInWay) {
       cmResult.canDrop = true;
-      GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+      GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
     }
     if (cmResult.targetEmpty && cmParams.srcRow === castleSourceRow && cmParams.srcCol === castleSourceCell &&
       cmParams.targetRow === castleTargetRow && cmParams.targetCol === castleTargetCell2 &&
       rook2OK && !piecesInWay) {
       cmResult.canDrop = true;
-      GlobalVariablesService.DEBUG_OBJECT.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+      GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
     }
   }
 
