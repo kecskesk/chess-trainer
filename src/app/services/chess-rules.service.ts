@@ -20,7 +20,7 @@ export class ChessRulesService {
       }
       let sourceData = null;
       let sourcePiece = null;
-      let sourceColor = null;
+      let sourceColor: ChessColorDto = null;
       if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
         return false;
       }
@@ -33,9 +33,9 @@ export class ChessRulesService {
         return false;
       }
       sourceColor = sourceData[0].color;
-      let enemyColor = sourceColor === 'white' ? 'black' : 'white';
+      let enemyColor: ChessColorDto = sourceColor === 'white' ? 'black' : 'white';
       sourcePiece = sourceData[0].piece;
-      if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn) {
+      if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn && !justLookingWithPiece) {
         return false;
       }
       const cmResult = new ChessMoveResultDto(
@@ -98,7 +98,6 @@ export class ChessRulesService {
               GlobalVariablesService.BOARD_HELPER.hits = {};
             }
             GlobalVariablesService.addHit({ row: targetRow, col: targetCol });
-            GlobalVariablesService.createArrow({ row: 8-srcRow, col: srcCol+1 }, { row: 8-targetRow, col: targetCol+1 }, 'orange');
           }
           if (isCheck) {
             if (!GlobalVariablesService.BOARD_HELPER.checks) {

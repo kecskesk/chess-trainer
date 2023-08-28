@@ -40,8 +40,18 @@
 </div>
 <div>
   <h3>{{globalVariablesService.boardHelper.colorTurn}} to move
-    <button (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button>
+    <button (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button> -
     <button (click)="showPossibleMoves(null)">clear</button>
+  </h3>
+  <h3>Magic Toolkit
+    <button (click)="showThreats()">my threats</button> -
+    <button (click)="showProtected()">my protected</button> -
+    <button (click)="showThreats(true)">threats from enemy</button> -
+    <button (click)="showProtected(true)">protected enemy</button>
+  </h3>
+  <h3>Magicer Toolkit
+    <button (click)="showHangingPieces()">my hanging piece (blundered)</button> - 
+    <button (click)="showHangingPieces(true)">hanging enemy (hittable)</button>
   </h3>
   <h3>History</h3>
   <span *ngFor="let histItem of globalVariablesService.history; index as histIdx">

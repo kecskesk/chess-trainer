@@ -3,7 +3,8 @@ import { CdkDrag, CdkDragDrop, CdkDropList, transferArrayItem } from '@angular/c
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
-import { DomSanitizer, SafeScript, SafeStyle } from '@angular/platform-browser';
+import { DomSanitizer, SafeStyle } from '@angular/platform-browser';
+import { ChessPositionDto } from '../../model/chess-position.dto';
 
 @Component({
   selector: 'app-chess-board',
@@ -85,15 +86,14 @@ export class ChessBoardComponent implements AfterViewInit {
         const rookCol = justDidCastle.col === 2 ? 0 : 7;
         const rookDestCol = justDidCastle.col === 2 ? 3 : 5;
         const castleRook = this.globalVariablesService.field[justDidCastle.row][rookCol];
-        let sourceColor = '';
         if (castleRook && castleRook[0]) {
-          sourceColor = castleRook[0].color;
+          let sourceColor = castleRook[0].color;
           this.globalVariablesService.field[justDidCastle.row][rookCol].splice(0,1);
+          const newCastleRook = new ChessPieceDto(sourceColor, 'rook');
+          this.globalVariablesService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
+          this.globalVariablesService.boardHelper.justDidCastle = null;
+          castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
         }
-        const newCastleRook = new ChessPieceDto(sourceColor, 'rook');
-        this.globalVariablesService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
-        this.globalVariablesService.boardHelper.justDidCastle = null;
-        castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
       }
       const lastNotation = GlobalVariablesService.translateNotation(
         targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
@@ -163,6 +163,148 @@ export class ChessBoardComponent implements AfterViewInit {
         });
       });
     }
+  }
+
+  showThreats(ofEnemy = false): void {
+    this.globalVariablesService.boardHelper.arrows = {};
+    let { ofColor, enemyColor } = this.initColors(ofEnemy);
+    if (ofColor) {
+      this.globalVariablesService.field.forEach((row, rowIdx) => {
+        row.forEach((cell, cellIdx) => {
+          // All pieces of the color
+          if (cell && cell[0] && cell[0].color === ofColor) {
+            let threats = this.getThreatsBy(cell, rowIdx, cellIdx, ofColor, enemyColor);
+            threats.forEach(threat => {
+              GlobalVariablesService.createArrow(
+                {row: 8-rowIdx, col: cellIdx+1}, {row: 8-threat.row, col: threat.col+1}, 'blue');
+            });
+          }
+        });
+      });
+    }
+  }
+
+  getThreatsBy(cell: ChessPieceDto[], rowIdx: number, cellIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): ChessPositionDto[] {
+    let threats = [];
+    for (let targetRow = 0; targetRow <= 7; targetRow++) {
+      for (let targetCol = 0; targetCol <= 7; targetCol++) {
+        if (cellIdx !== targetCol || rowIdx !== targetRow) {
+          let targetCell = this.globalVariablesService.field[targetRow][targetCol];
+          let currentPiece = { color: ofColor, piece: cell[0].piece };
+          let canStepThere = ChessRulesService.canStepThere(targetRow, targetCol, targetCell, rowIdx, cellIdx, currentPiece);
+          if (canStepThere && targetCell && targetCell[0]) {
+            threats.push(new ChessPositionDto(targetRow, targetCol));
+          }
+        }
+      }
+    }
+    return threats;
+  }
+
+  getThreatsOn(cell: ChessPieceDto[], rowIdx: number, cellIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): ChessPositionDto[] {
+    let threats = [];
+    for (let targetRow = 0; targetRow <= 7; targetRow++) {
+      for (let targetCol = 0; targetCol <= 7; targetCol++) {
+        if (cellIdx !== targetCol || rowIdx !== targetRow) {
+          let targetCell = this.globalVariablesService.field[targetRow][targetCol];
+          let currentPiece = { color: ofColor, piece: cell[0].piece };
+          let canStepThere = ChessRulesService.canStepThere(
+            rowIdx, cellIdx,
+            [ currentPiece ],
+            targetRow, targetCol,
+            targetCell[0]);
+          if (canStepThere && targetCell && targetCell[0]) {
+            threats.push(new ChessPositionDto(targetRow, targetCol));
+          }
+        }
+      }
+    }
+    return threats;
+  }
+
+  isThreatened(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): boolean {
+    return this.getThreatsOn(cellA, rowAIdx, cellAIdx, ofColor, enemyColor).length > 0;
+  }
+
+  showProtected(ofEnemy = false): void {
+    this.globalVariablesService.boardHelper.arrows = {};
+    let { ofColor, enemyColor } = this.initColors(ofEnemy);
+    if (ofColor) {
+      this.globalVariablesService.field.forEach((row, rowAIdx) => {
+        row.forEach((cellA, cellAIdx) => {
+          // All pieces of the color
+          if (cellA && cellA[0] && cellA[0].color === ofColor) {
+            let protectors = this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
+            protectors.forEach(cellB => {
+              GlobalVariablesService.createArrow(
+                {row: 8 - cellB.row, col: cellB.col + 1}, {row: 8 - rowAIdx, col: cellAIdx + 1}, 'gold');
+            });
+          }
+        });
+      });
+    }
+  }
+
+  getProtectors(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): ChessPositionDto[] {
+    let protectors = [];
+    let currentPiece = { color: ofColor, piece: cellA[0].piece };
+    this.globalVariablesService.field.forEach((rowB, rowBIdx) => {
+      rowB.forEach((cellB, cellBIdx) => {
+        // All pieces of the color
+        if (cellB && cellB[0] && cellB[0].color === ofColor) {
+          if (cellAIdx !== cellBIdx || rowAIdx !== rowBIdx) {
+            if (ChessRulesService.canStepThere(
+                  rowAIdx, cellAIdx,
+                  [{ color: enemyColor, piece: cellA[0].piece}],
+                  rowBIdx, cellBIdx,
+              { color: ofColor, piece: cellB[0].piece})) {
+              protectors.push(new ChessPositionDto(rowBIdx, cellBIdx));
+            }
+          }
+        }
+      });
+    });
+    return protectors;
+  }
+
+  isProtectedPiece(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): boolean {
+    return this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor).length > 0;
+  }
+
+  showHangingPieces(ofEnemy = false): void {
+    let { ofColor, enemyColor } = this.initColors(ofEnemy);
+    this.globalVariablesService.boardHelper.arrows = {};
+    if (ofColor) {
+      this.globalVariablesService.field.forEach((row, rowAIdx) => {
+        row.forEach((cellA, cellAIdx) => {
+          // All pieces of the color
+          if (cellA && cellA[0] && cellA[0].color === ofColor) {
+            let protectedBy = this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
+            let isProtected = protectedBy.length > 0;
+            if (!isProtected) {
+              let threatsOnCell = this.getThreatsOn(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
+              threatsOnCell.forEach(threat => {
+                GlobalVariablesService.createArrow(
+                  {row: 8-threat.row, col: threat.col+1}, {row: 8-rowAIdx, col: cellAIdx+1}, 'blue');
+              });
+            }
+          }
+        });
+      });
+    }
+  }
+
+  private initColors(ofEnemy: boolean): { ofColor: ChessColorDto, enemyColor: ChessColorDto} {
+    let ofColor: 'black' | 'white';
+    let enemyColor: 'black' | 'white';
+    if (!ofEnemy) {
+      ofColor = this.globalVariablesService.boardHelper.colorTurn;
+      enemyColor = ofColor == 'white' ? 'black' : 'white';
+    } else {
+      enemyColor = this.globalVariablesService.boardHelper.colorTurn;
+      ofColor = enemyColor == 'white' ? 'black' : 'white';
+    }
+    return {ofColor, enemyColor};
   }
 
   sanitizeScale(text: string): SafeStyle {
