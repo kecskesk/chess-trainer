@@ -128,7 +128,7 @@ export class ChessBoardComponent implements AfterViewInit {
     return `${letterChar}${numberChar}`
   }
 
-  promotePiece(toPiece: string): void {
+  promotePiece(toPiece: ChessPieces): void {
     if (this.globalVariablesService.boardHelper.canPromote !== null) {
       const targetCol = Number(this.globalVariablesService.boardHelper.canPromote);
       const targetSquare = this.globalVariablesService.field[0][targetCol];
@@ -142,7 +142,7 @@ export class ChessBoardComponent implements AfterViewInit {
     }
   }
 
-  showPossibleMoves(ofColor: string): void {
+  showPossibleMoves(ofColor: ChessColors): void {
     // Clear
     this.globalVariablesService.boardHelper.possibles = {};
     this.globalVariablesService.boardHelper.hits = {};
@@ -175,8 +175,19 @@ export class ChessBoardComponent implements AfterViewInit {
           if (cell && cell[0] && cell[0].color === ofColor) {
             let threats = this.getThreatsBy(cell, rowIdx, cellIdx, ofColor, enemyColor);
             threats.forEach(threat => {
+              let scaryThreat = 0.25;
+              const attacker = ChessRulesService.valueOfPiece(threat.piece);
+              const defender = ChessRulesService.valueOfPiece(cell[0].piece);
+              if (attacker / defender > 1) {
+                scaryThreat += 0.15;
+              }
+              if (attacker / defender < 1) {
+                scaryThreat -= 0.15;
+              }
+              const posFrom = new ChessPositionDto(8 - rowIdx, cellIdx + 1);
+              const posTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
               GlobalVariablesService.createArrow(
-                {row: 8-rowIdx, col: cellIdx+1}, {row: 8-threat.row, col: threat.col+1}, 'blue');
+                posFrom, posTo, 'blue', scaryThreat);
             });
           }
         });
@@ -184,8 +195,8 @@ export class ChessBoardComponent implements AfterViewInit {
     }
   }
 
-  getThreatsBy(cell: ChessPieceDto[], rowIdx: number, cellIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): ChessPositionDto[] {
-    let threats = [];
+  getThreatsBy(cell: ChessPieceDto[], rowIdx: number, cellIdx: number, ofColor: ChessColors, enemyColor: ChessColors): {pos: ChessPositionDto, piece: ChessPieces}[] {
+    let threats: {pos: ChessPositionDto, piece: ChessPieces}[] = [];
     for (let targetRow = 0; targetRow <= 7; targetRow++) {
       for (let targetCol = 0; targetCol <= 7; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
@@ -193,7 +204,7 @@ export class ChessBoardComponent implements AfterViewInit {
           let currentPiece = { color: ofColor, piece: cell[0].piece };
           let canStepThere = ChessRulesService.canStepThere(targetRow, targetCol, targetCell, rowIdx, cellIdx, currentPiece);
           if (canStepThere && targetCell && targetCell[0]) {
-            threats.push(new ChessPositionDto(targetRow, targetCol));
+            threats.push({pos: new ChessPositionDto(targetRow, targetCol), piece: targetCell[0].piece});
           }
         }
       }
@@ -201,8 +212,8 @@ export class ChessBoardComponent implements AfterViewInit {
     return threats;
   }
 
-  getThreatsOn(cell: ChessPieceDto[], rowIdx: number, cellIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): ChessPositionDto[] {
-    let threats = [];
+  getThreatsOn(cell: ChessPieceDto[], rowIdx: number, cellIdx: number, ofColor: ChessColors, enemyColor: ChessColors): {pos: ChessPositionDto, piece: ChessPieces}[] {
+    let threats: {pos: ChessPositionDto, piece: ChessPieces}[] = [];
     for (let targetRow = 0; targetRow <= 7; targetRow++) {
       for (let targetCol = 0; targetCol <= 7; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
@@ -214,7 +225,7 @@ export class ChessBoardComponent implements AfterViewInit {
             targetRow, targetCol,
             targetCell[0]);
           if (canStepThere && targetCell && targetCell[0]) {
-            threats.push(new ChessPositionDto(targetRow, targetCol));
+            threats.push({pos: new ChessPositionDto(targetRow, targetCol), piece: targetCell[0].piece});
           }
         }
       }
@@ -222,7 +233,7 @@ export class ChessBoardComponent implements AfterViewInit {
     return threats;
   }
 
-  isThreatened(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): boolean {
+  isThreatened(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColors, enemyColor: ChessColors): boolean {
     return this.getThreatsOn(cellA, rowAIdx, cellAIdx, ofColor, enemyColor).length > 0;
   }
 
@@ -236,8 +247,10 @@ export class ChessBoardComponent implements AfterViewInit {
           if (cellA && cellA[0] && cellA[0].color === ofColor) {
             let protectors = this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
             protectors.forEach(cellB => {
+              const posFrom = new ChessPositionDto(8 - cellB.row, cellB.col + 1);
+              const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
               GlobalVariablesService.createArrow(
-                {row: 8 - cellB.row, col: cellB.col + 1}, {row: 8 - rowAIdx, col: cellAIdx + 1}, 'gold');
+                posFrom, posTo, 'gold', 0.25);
             });
           }
         });
@@ -245,7 +258,7 @@ export class ChessBoardComponent implements AfterViewInit {
     }
   }
 
-  getProtectors(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): ChessPositionDto[] {
+  getProtectors(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColors, enemyColor: ChessColors): ChessPositionDto[] {
     let protectors = [];
     let currentPiece = { color: ofColor, piece: cellA[0].piece };
     this.globalVariablesService.field.forEach((rowB, rowBIdx) => {
@@ -267,7 +280,7 @@ export class ChessBoardComponent implements AfterViewInit {
     return protectors;
   }
 
-  isProtectedPiece(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColorDto, enemyColor: ChessColorDto): boolean {
+  isProtectedPiece(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColors, enemyColor: ChessColors): boolean {
     return this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor).length > 0;
   }
 
@@ -284,8 +297,19 @@ export class ChessBoardComponent implements AfterViewInit {
             if (!isProtected) {
               let threatsOnCell = this.getThreatsOn(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
               threatsOnCell.forEach(threat => {
+                let scaryThreat = 0.25;
+                const attacker = ChessRulesService.valueOfPiece(cellA[0].piece);
+                const defender = ChessRulesService.valueOfPiece(threat.piece);
+                if (attacker / defender > 1) {
+                  scaryThreat += 0.15;
+                }
+                if (attacker / defender < 1) {
+                  scaryThreat -= 0.15;
+                }
+                const posFrom = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
+                const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
                 GlobalVariablesService.createArrow(
-                  {row: 8-threat.row, col: threat.col+1}, {row: 8-rowAIdx, col: cellAIdx+1}, 'blue');
+                  posFrom, posTo, 'blue', scaryThreat);
               });
             }
           }
@@ -294,9 +318,9 @@ export class ChessBoardComponent implements AfterViewInit {
     }
   }
 
-  private initColors(ofEnemy: boolean): { ofColor: ChessColorDto, enemyColor: ChessColorDto} {
-    let ofColor: 'black' | 'white';
-    let enemyColor: 'black' | 'white';
+  private initColors(ofEnemy: boolean): { ofColor: ChessColors, enemyColor: ChessColors} {
+    let ofColor: ChessColors;
+    let enemyColor: ChessColors;
     if (!ofEnemy) {
       ofColor = this.globalVariablesService.boardHelper.colorTurn;
       enemyColor = ofColor == 'white' ? 'black' : 'white';

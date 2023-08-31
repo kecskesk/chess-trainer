@@ -1,8 +1,8 @@
 export class ChessPieceDto {
-  color: ChessColorDto;
-  piece: string;
+  color: ChessColors;
+  piece: ChessPieces;
 
-  constructor(color: ChessColorDto, piece: string) {
+  constructor(color: ChessColors, piece: ChessPieces) {
     this.color = color;
     this.piece = piece;
   }

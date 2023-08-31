@@ -8,7 +8,7 @@ export class ChessBoardHelperDto {
               public checks: {[name: string]: ChessPositionDto},
               public arrows: {[name: string]: ChessArrowDto},
               public history: {[name: string]: string},
-              public colorTurn: ChessColorDto,
+              public colorTurn: ChessColors,
               public canPromote: number,
               public justDidEnPassant: ChessPositionDto,
               public justDidCastle: ChessPositionDto) {

@@ -20,7 +20,7 @@ export class ChessRulesService {
       }
       let sourceData = null;
       let sourcePiece = null;
-      let sourceColor: ChessColorDto = null;
+      let sourceColor: ChessColors = null;
       if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
         return false;
       }
@@ -33,7 +33,7 @@ export class ChessRulesService {
         return false;
       }
       sourceColor = sourceData[0].color;
-      let enemyColor: ChessColorDto = sourceColor === 'white' ? 'black' : 'white';
+      let enemyColor: ChessColors = sourceColor === 'white' ? 'black' : 'white';
       sourcePiece = sourceData[0].piece;
       if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn && !justLookingWithPiece) {
         return false;
@@ -104,7 +104,8 @@ export class ChessRulesService {
               GlobalVariablesService.BOARD_HELPER.checks = {};
             }
             GlobalVariablesService.addCheck({ row: targetRow, col: targetCol });
-            GlobalVariablesService.createArrow({ row: 8-srcRow, col: srcCol+1 }, { row: 8-targetRow, col: targetCol+1 }, 'red');
+            GlobalVariablesService.createArrow(
+              { row: 8-srcRow, col: srcCol+1 }, { row: 8-targetRow, col: targetCol+1 }, 'red', 0.25);
           }
         }
       }
@@ -112,7 +113,7 @@ export class ChessRulesService {
       return cmResult.canDrop;
   }
 
-  static knightRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+  static knightRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     const stepX = Math.abs(cmParams.targetCol - cmParams.srcCol);
     const stepY = Math.abs(cmParams.targetRow - cmParams.srcRow);
     // Side 1 and up-down 2 or side 2 and up-down 1
@@ -121,7 +122,7 @@ export class ChessRulesService {
     }
   }
 
-  static pawnRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+  static pawnRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     const stepY = cmParams.targetRow - cmParams.srcRow;
     const stepX = Math.abs(cmParams.targetCol - cmParams.srcCol);
     // Can step 1 in direction
@@ -160,7 +161,7 @@ export class ChessRulesService {
     }
   }
 
-  static kingRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+  static kingRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // Side 1 and up-down 1
     if (Math.abs(cmParams.targetCol - cmParams.srcCol) > 1) {
       cmResult.canDrop = false;
@@ -194,7 +195,7 @@ export class ChessRulesService {
     }
   }
 
-  static queenRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+  static queenRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF NOR: Bishop + rook rules
     const bishopRules = Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow);
     const rookRules = cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow;
@@ -204,7 +205,7 @@ export class ChessRulesService {
     }
   }
 
-  static rookRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+  static rookRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF: not Same row AND not same col
     const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if ((cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow) || piecesInWay) {
@@ -212,7 +213,7 @@ export class ChessRulesService {
     }
   }
 
-  static bishopRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto) {
+  static bishopRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF: not same side as up-down
     const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if ((Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow)) || piecesInWay) {
@@ -220,4 +221,28 @@ export class ChessRulesService {
     }
   }
 
+  static valueOfPiece(piece: ChessPieces): number {
+    switch (piece) {
+      case 'pawn': {
+        return 1;
+      }
+      case 'knight': {
+        return 3;
+      }
+      case 'king': {
+        return 99;
+      }
+      case 'queen': {
+        return 9;
+      }
+      case 'rook': {
+        return 5;
+      }
+      case 'bishop': {
+        return 3;
+      }
+      default:
+        break;
+    }
+  }
 }

@@ -77,7 +77,7 @@ export class GlobalVariablesService {
    * rotate: '45deg',
    * transform: 'scaleX(5.5)'
    */
-  static createArrow(from: ChessPositionDto, to: ChessPositionDto, color: string): void {
+  static createArrow(from: ChessPositionDto, to: ChessPositionDto, arrowColor: string, width: number): void {
     const boxSize = 76;
     const midX = ((-1 + ((from.col + to.col) / 2)) * boxSize) + 9;
     const midY = ((8.5 - ((from.row + to.row) / 2)) * boxSize);
@@ -89,8 +89,8 @@ export class GlobalVariablesService {
     const arTop = `${midY}px`;
     const arLeft = `${midX}px`;
     const arRot = `${deg}deg`;
-    const arTransf = `scaleX(${0.5 + Math.sqrt(stepCol*stepCol + stepRow*stepRow)}) scaleY(0.25)`;
-    const newArrow = new ChessArrowDto(arTop, arLeft, arRot, color, arTransf);
+    const arTransf = `scaleX(${0.5 + Math.sqrt(stepCol*stepCol + stepRow*stepRow)}) scaleY(${width})`;
+    const newArrow = new ChessArrowDto(arTop, arLeft, arRot, arrowColor, arTransf);
     GlobalVariablesService.addArrow(newArrow);
   }
 
@@ -101,7 +101,7 @@ export class GlobalVariablesService {
   }
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,
-                    piece: string, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
+                    piece: ChessPieces, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
     let pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + targetCol);
@@ -116,7 +116,7 @@ export class GlobalVariablesService {
       `${letterChar}${numberChar}${check ? '+' : ''}${match ? '#' : ''}${ep ? ' e.p.' : ''}`;
   }
 
-  static translatePieceNotation(piece: string): string {
+  static translatePieceNotation(piece: ChessPieces): string {
     switch(piece) {
       case 'pawn': return '';
       case 'bishop': return 'B';

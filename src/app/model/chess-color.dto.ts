@@ -1,1 +1,0 @@
-type ChessColorDto = 'black' | 'white';

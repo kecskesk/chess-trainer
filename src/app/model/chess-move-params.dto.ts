@@ -3,7 +3,7 @@ export class ChessMoveParamsDto {
               public targetCol: number,
               public srcRow: number,
               public srcCol: number,
-              public sourceColor: string,
+              public sourceColor: ChessColors,
               public moveHistory: {[name: string]: string}) {
   }
 }

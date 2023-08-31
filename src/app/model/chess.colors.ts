@@ -1,0 +1,1 @@
+type ChessColors = 'black' | 'white';
