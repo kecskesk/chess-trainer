@@ -6,6 +6,8 @@ import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessPositionDto } from '../../model/chess-position.dto';
 import { ChessColorsEnum } from '../../model/chess.colors';
 import { ChessPiecesEnum } from '../../model/chess.pieces';
+import { IBoardHighlight } from '../../model/board-highlight.interface';
+import { IVisualizationArrow } from '../../model/visualization-arrow.interface';
 
 @Component({
   selector: 'app-chess-board',
@@ -38,7 +40,7 @@ export class ChessBoardComponent implements AfterViewInit {
     const sourceRow = Number(sourceLocSplit[1][0]);
     const sourceCol = Number(sourceLocSplit[1][1]);
 
-    return ChessRulesService.canStepThere(targetRow, targetCol, drop.data , sourceRow, sourceCol);
+    return ChessRulesService.validateMove(targetRow, targetCol, drop.data , sourceRow, sourceCol).isValid;
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
@@ -121,18 +123,15 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   isTarget(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.boardHelper.possibles && this.globalVariablesService.possibles
-      .some(({row, col}) => row === targetRow && col === targetCol);
+    return this.hasBoardHighlight(targetRow, targetCol, 'possible');
   }
 
   isHit(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.boardHelper.hits && this.globalVariablesService.hits
-      .some(({row, col}) => row === targetRow && col === targetCol);
+    return this.hasBoardHighlight(targetRow, targetCol, 'capture');
   }
 
   isCheck(targetRow: number, targetCol: number): boolean {
-    return this.globalVariablesService.boardHelper.checks && this.globalVariablesService.checks
-      .some(({row, col}) => row === targetRow && col === targetCol);
+    return this.hasBoardHighlight(targetRow, targetCol, 'check');
   }
 
   isMateInOneTarget(targetRow: number, targetCol: number): boolean {
@@ -269,8 +268,9 @@ export class ChessBoardComponent implements AfterViewInit {
               }
               const posFrom = new ChessPositionDto(8 - rowIdx, cellIdx + 1);
               const posTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-              GlobalVariablesService.createArrow(
-                posFrom, posTo, 'blue', scaryThreat);
+              GlobalVariablesService.createArrowFromVisualization(
+                this.createVisualizationArrow(posFrom, posTo, 'blue', scaryThreat)
+              );
             });
           }
         });
@@ -335,10 +335,6 @@ export class ChessBoardComponent implements AfterViewInit {
     return threats;
   }
 
-  isThreatened(cellA: ChessPieceDto[], rowAIdx: number, cellAIdx: number, ofColor: ChessColorsEnum, enemyColor: ChessColorsEnum): boolean {
-    return this.getThreatsOn(cellA, rowAIdx, cellAIdx, ofColor, enemyColor).length > 0;
-  }
-
   showProtected(ofEnemy = false): void {
     this.globalVariablesService.boardHelper.arrows = {};
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
@@ -351,8 +347,9 @@ export class ChessBoardComponent implements AfterViewInit {
             protectors.forEach(cellB => {
               const posFrom = new ChessPositionDto(8 - cellB.row, cellB.col + 1);
               const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
-              GlobalVariablesService.createArrow(
-                posFrom, posTo, 'gold', 0.25);
+              GlobalVariablesService.createArrowFromVisualization(
+                this.createVisualizationArrow(posFrom, posTo, 'gold', 0.25)
+              );
             });
           }
         });
@@ -390,16 +387,6 @@ export class ChessBoardComponent implements AfterViewInit {
     return protectors;
   }
 
-  isProtectedPiece(
-    cellA: ChessPieceDto[],
-    rowAIdx: number,
-    cellAIdx: number,
-    ofColor: ChessColorsEnum,
-    enemyColor: ChessColorsEnum
-  ): boolean {
-    return this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor).length > 0;
-  }
-
   showHangingPieces(ofEnemy = false): void {
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
     this.globalVariablesService.boardHelper.arrows = {};
@@ -424,8 +411,9 @@ export class ChessBoardComponent implements AfterViewInit {
                 }
                 const posFrom = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
                 const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
-                GlobalVariablesService.createArrow(
-                  posFrom, posTo, 'blue', scaryThreat);
+                GlobalVariablesService.createArrowFromVisualization(
+                  this.createVisualizationArrow(posFrom, posTo, 'blue', scaryThreat)
+                );
               });
             }
           }
@@ -445,6 +433,27 @@ export class ChessBoardComponent implements AfterViewInit {
       ofColor = enemyColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     }
     return {ofColor, enemyColor};
+  }
+
+  private hasBoardHighlight(targetRow: number, targetCol: number, type: IBoardHighlight['type']): boolean {
+    return this.globalVariablesService.boardHighlights
+      .some(highlight => highlight.type === type && highlight.row === targetRow && highlight.col === targetCol);
+  }
+
+  private createVisualizationArrow(
+    from: ChessPositionDto,
+    to: ChessPositionDto,
+    color: IVisualizationArrow['color'],
+    intensity: number
+  ): IVisualizationArrow {
+    return {
+      fromRow: from.row,
+      fromCol: from.col,
+      toRow: to.row,
+      toCol: to.col,
+      color,
+      intensity: Math.max(0, Math.min(1, intensity))
+    };
   }
 
   private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {

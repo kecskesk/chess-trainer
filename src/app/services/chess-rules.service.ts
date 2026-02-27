@@ -5,6 +5,9 @@ import { ChessMoveParamsDto } from '../model/chess-move-params.dto';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessColorsEnum } from '../model/chess.colors';
 import { ChessPiecesEnum } from '../model/chess.pieces';
+import { IMoveValidationResult } from '../model/move-validation-result.interface';
+import { IBoardHighlight } from '../model/board-highlight.interface';
+import { IVisualizationArrow } from '../model/visualization-arrow.interface';
 
 @Injectable()
 export class ChessRulesService {
@@ -44,15 +47,22 @@ export class ChessRulesService {
       sourceColor = sourceData[0].color;
       const enemyColor: ChessColorsEnum = sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
       sourcePiece = sourceData[0].piece;
+      const moveValidationResult: IMoveValidationResult = {
+        isValid: targetData.length < 1,
+        isEmptyTarget: targetData.length < 1,
+        isEnemyPiece: false
+      };
+      if (targetData.length === 1 && targetData[0].color !== sourceColor) {
+        moveValidationResult.isValid = true;
+        moveValidationResult.isEnemyPiece = true;
+      }
       if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn && !justLookingWithPiece) {
+        moveValidationResult.isValid = false;
+        moveValidationResult.errorMessage = 'Not this color\'s turn';
         return false;
       }
       const cmResult = new ChessMoveResultDto(
-        targetData.length < 1, false, false, targetData.length < 1);
-      if (targetData.length === 1 && targetData[0].color !== sourceColor) {
-        cmResult.canDrop = true;
-        cmResult.canHit = true;
-      }
+        moveValidationResult.isValid, false, moveValidationResult.isEnemyPiece, moveValidationResult.isEmptyTarget);
       const cmParams = new ChessMoveParamsDto(
         targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory);
       switch (sourcePiece) {
@@ -101,25 +111,56 @@ export class ChessRulesService {
           if (!GlobalVariablesService.BOARD_HELPER.possibles) {
             GlobalVariablesService.BOARD_HELPER.possibles = {};
           }
-          GlobalVariablesService.addPossible({ row: targetRow, col: targetCol });
+          GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'possible' });
           if (cmResult.canHit) {
             if (!GlobalVariablesService.BOARD_HELPER.hits) {
               GlobalVariablesService.BOARD_HELPER.hits = {};
             }
-            GlobalVariablesService.addHit({ row: targetRow, col: targetCol });
+            GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'capture' });
           }
           if (isCheck) {
             if (!GlobalVariablesService.BOARD_HELPER.checks) {
               GlobalVariablesService.BOARD_HELPER.checks = {};
             }
-            GlobalVariablesService.addCheck({ row: targetRow, col: targetCol });
-            GlobalVariablesService.createArrow(
-              { row: 8 - srcRow, col: srcCol + 1 }, { row: 8 - targetRow, col: targetCol + 1 }, 'red', 0.25);
+            const checkHighlight: IBoardHighlight = { row: targetRow, col: targetCol, type: 'check' };
+            GlobalVariablesService.addHighlight(checkHighlight);
+            const checkArrow: IVisualizationArrow = {
+              fromRow: 8 - srcRow,
+              fromCol: srcCol + 1,
+              toRow: 8 - targetRow,
+              toCol: targetCol + 1,
+              color: 'red',
+              intensity: 0.25
+            };
+            GlobalVariablesService.createArrowFromVisualization(checkArrow);
           }
         }
       }
 
       return cmResult.canDrop;
+  }
+
+  public static validateMove(
+    targetRow: number,
+    targetCol: number,
+    targetData: ChessPieceDto[],
+    srcRow: number,
+    srcCol: number,
+    justLookingWithPiece: ChessPieceDto = null
+  ): IMoveValidationResult {
+    const sourceData = justLookingWithPiece ||
+      (GlobalVariablesService.CHESS_FIELD && GlobalVariablesService.CHESS_FIELD[srcRow] && GlobalVariablesService.CHESS_FIELD[srcRow][srcCol]
+        ? GlobalVariablesService.CHESS_FIELD[srcRow][srcCol][0]
+        : null);
+    const isEmptyTarget = !targetData || targetData.length < 1;
+    const isEnemyPiece = !!(sourceData && targetData && targetData[0] && targetData[0].color !== sourceData.color);
+    const isValid = ChessRulesService.canStepThere(targetRow, targetCol, targetData, srcRow, srcCol, justLookingWithPiece);
+    return {
+      isValid,
+      isEmptyTarget,
+      isEnemyPiece,
+      errorMessage: isValid ? null : 'Move is not allowed'
+    };
   }
 
   static knightRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {

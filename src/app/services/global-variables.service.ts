@@ -5,6 +5,8 @@ import { ChessArrowDto } from '../model/chess-arrow.dto';
 import { ChessColorsEnum } from '../model/chess.colors';
 import { ChessPiecesEnum } from '../model/chess.pieces';
 import { ChessPositionDto } from '../model/chess-position.dto';
+import { IBoardHighlight } from '../model/board-highlight.interface';
+import { IVisualizationArrow } from '../model/visualization-arrow.interface';
 
 @Injectable()
 export class GlobalVariablesService {
@@ -89,6 +91,13 @@ export class GlobalVariablesService {
     return Object.values(this.boardHelper.arrows);
   }
 
+  get boardHighlights(): IBoardHighlight[] {
+    const possibleHighlights = this.possibles.map(({ row, col }) => ({ row, col, type: 'possible' as const }));
+    const captureHighlights = this.hits.map(({ row, col }) => ({ row, col, type: 'capture' as const }));
+    const checkHighlights = this.checks.map(({ row, col }) => ({ row, col, type: 'check' as const }));
+    return [...possibleHighlights, ...captureHighlights, ...checkHighlights];
+  }
+
   get history(): string[] {
     return Object.values(this.boardHelper.history);
   }
@@ -129,6 +138,25 @@ export class GlobalVariablesService {
     this.BOARD_HELPER.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
   }
 
+  static addHighlight(highlight: IBoardHighlight): void {
+    if (!highlight) {
+      return;
+    }
+    switch (highlight.type) {
+      case 'possible':
+        GlobalVariablesService.addPossible({ row: highlight.row, col: highlight.col });
+        break;
+      case 'capture':
+        GlobalVariablesService.addHit({ row: highlight.row, col: highlight.col });
+        break;
+      case 'check':
+        GlobalVariablesService.addCheck({ row: highlight.row, col: highlight.col });
+        break;
+      default:
+        break;
+    }
+  }
+
   static addArrow(arrowParam: ChessArrowDto): void {
     if (!arrowParam) {
       console.warn('Attempted to add null/undefined arrow');
@@ -143,24 +171,47 @@ export class GlobalVariablesService {
     this.BOARD_HELPER.arrows[arrowKey] = arrowParam;
   }
 
-  static createArrow(from: ChessPositionDto, to: ChessPositionDto, arrowColor: string, width: number): void {
+  static createArrowFromVisualization(visualizationArrow: IVisualizationArrow): void {
     const boxSize = 76;
-    const midX = (((from.col + to.col) / 2) - 0.5) * boxSize;
-    const midY = (8.5 - ((from.row + to.row) / 2)) * boxSize;
+    const midX = (((visualizationArrow.fromCol + visualizationArrow.toCol) / 2) - 0.5) * boxSize;
+    const midY = (8.5 - ((visualizationArrow.fromRow + visualizationArrow.toRow) / 2)) * boxSize;
 
-    const stepRow = from.row - to.row;
-    const stepCol = to.col - from.col;
+    const stepRow = visualizationArrow.fromRow - visualizationArrow.toRow;
+    const stepCol = visualizationArrow.toCol - visualizationArrow.fromCol;
     const deg = Math.atan2(stepRow, stepCol) * (180 / Math.PI);
     const distancePx = Math.sqrt((stepCol * boxSize) * (stepCol * boxSize) + (stepRow * boxSize) * (stepRow * boxSize));
-    const thicknessPx = Math.max(2, Math.min(8, 2 + (width * 8)));
+    const thicknessPx = Math.max(2, Math.min(8, 2 + (visualizationArrow.intensity * 8)));
 
     const arTop = `${midY}px`;
     const arLeft = `${midX}px`;
     const arRot = `${deg}deg`;
     const arLength = `${Math.max(20, distancePx)}px`;
     const arThickness = `${thicknessPx}px`;
-    const newArrow = new ChessArrowDto(arTop, arLeft, arRot, arrowColor, arLength, arThickness);
+    const newArrow = new ChessArrowDto(
+      arTop,
+      arLeft,
+      arRot,
+      GlobalVariablesService.normalizeVisualizationArrowColor(visualizationArrow.color),
+      arLength,
+      arThickness
+    );
     GlobalVariablesService.addArrow(newArrow);
+  }
+
+  private static normalizeVisualizationArrowColor(color: string): IVisualizationArrow['color'] {
+    if (color === 'red') {
+      return 'red';
+    }
+    if (color === 'green') {
+      return 'green';
+    }
+    if (color === 'yellow') {
+      return 'yellow';
+    }
+    if (color === 'gold') {
+      return 'gold';
+    }
+    return 'blue';
   }
 
   static addHistory(newHistory: string): void {
