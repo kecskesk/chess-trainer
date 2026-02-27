@@ -205,9 +205,12 @@ export class ChessBoardComponent implements AfterViewInit {
       }
       if (targetSquare && targetSquare[0]) {
         targetSquare[0].piece = toPiece;
-        const history = this.globalVariablesService.history;
-        const lastHistory = history[history.length - 1];
-        history[history.length - 1] = lastHistory + '=' + GlobalVariablesService.translatePieceNotation(toPiece);
+        const historyEntries = this.globalVariablesService.boardHelper.history;
+        const historyLength = Object.keys(historyEntries).length;
+        if (historyLength > 0 && historyEntries[`${historyLength}`]) {
+          historyEntries[`${historyLength}`] =
+            historyEntries[`${historyLength}`] + '=' + GlobalVariablesService.translatePieceNotation(toPiece);
+        }
         this.globalVariablesService.boardHelper.canPromote = null;
       }
     }

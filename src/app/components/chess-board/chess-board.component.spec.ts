@@ -140,6 +140,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.promotePiece(ChessPiecesEnum.Queen);
     expect(globals.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
     expect(globals.boardHelper.canPromote).toBeNull();
+    expect(globals.history[globals.history.length - 1]).toContain('=Q');
   });
 
   it('triggers and applies black promotion on back rank', () => {
@@ -154,5 +155,6 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.promotePiece(ChessPiecesEnum.Queen);
     expect(globals.field[7][7][0].piece).toBe(ChessPiecesEnum.Queen);
     expect(globals.boardHelper.canPromote).toBeNull();
+    expect(globals.history[globals.history.length - 1]).toContain('=Q');
   });
 });

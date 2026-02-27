@@ -23,4 +23,21 @@ describe('GlobalVariablesService notation helpers', () => {
 
     expect(notation).toBe('Ne2xe4+');
   });
+
+  it('builds move notation with hyphen for non-captures', () => {
+    const notation = GlobalVariablesService.translateNotation(
+      4,
+      4,
+      6,
+      4,
+      ChessPiecesEnum.Pawn,
+      false,
+      false,
+      false,
+      false,
+      null
+    );
+
+    expect(notation).toBe('e2-e4');
+  });
 });

@@ -328,7 +328,7 @@ export class ChessRulesService {
     if (!notation || notation === 'O-O' || notation === 'O-O-O') {
       return null;
     }
-    const match = notation.match(/^([KQRBN]?)([a-h][1-8])x?[a-h][1-8]/);
+    const match = notation.match(/^([KQRBN]?)([a-h][1-8])(?:-|x)?[a-h][1-8]/);
     if (!match) {
       return null;
     }

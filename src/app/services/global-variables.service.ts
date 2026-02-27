@@ -234,7 +234,7 @@ export class GlobalVariablesService {
     if (castleData) {
       return castleData;
     }
-    return `${pieceNotation}${letterCharSrc}${numberCharSrc}${hit ? 'x' : ''}` +
+    return `${pieceNotation}${letterCharSrc}${numberCharSrc}${hit ? 'x' : '-'}` +
       `${letterChar}${numberChar}${check ? '+' : ''}${match ? '#' : ''}${ep ? ' e.p.' : ''}`;
   }
 
