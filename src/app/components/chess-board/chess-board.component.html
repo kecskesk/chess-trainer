@@ -48,13 +48,19 @@
         <div class="clock-display"
              [class.clock-display--active]="isClockActive(chessColors.Black)"
              [class.clock-display--low]="isClockLow(chessColors.Black)">
-          <span class="clock-player">Black</span>
+          <div class="clock-meta">
+            <span class="clock-player">Black</span>
+            <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.Black)"></span>
+          </div>
           <span class="clock-time">{{formatClock(blackClockMs)}}</span>
         </div>
         <div class="clock-display"
              [class.clock-display--active]="isClockActive(chessColors.White)"
              [class.clock-display--low]="isClockLow(chessColors.White)">
-          <span class="clock-player">White</span>
+          <div class="clock-meta">
+            <span class="clock-player">White</span>
+            <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.White)"></span>
+          </div>
           <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
         </div>
       </div>
