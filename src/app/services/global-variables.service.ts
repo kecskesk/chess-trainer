@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
 import { ChessArrowDto } from '../model/chess-arrow.dto';
+import { ChessColorsEnum } from '../model/chess.colors';
+import { ChessPiecesEnum } from '../model/chess.pieces';
 import { ChessPositionDto } from '../model/chess-position.dto';
+import { IBoardHighlight } from '../model/board-highlight.interface';
+import { IVisualizationArrow } from '../model/visualization-arrow.interface';
 
 @Injectable()
 export class GlobalVariablesService {
@@ -15,19 +19,57 @@ export class GlobalVariablesService {
               {},
               {},
               {},
-              'white',
+              ChessColorsEnum.White,
               null,
               null,
+              null,
+              false,
               null);
   field = [
-    [[new ChessPieceDto('black', 'rook')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'queen')], [new ChessPieceDto('black', 'king')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'rook')]],
-    [[new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')]],
+    [
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)]
+    ],
+    [
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)]
+    ],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
-    [[new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')]],
-    [[new ChessPieceDto('white', 'rook')], [new ChessPieceDto('white', 'knight')], [new ChessPieceDto('white', 'bishop')], [new ChessPieceDto('white', 'queen')], [new ChessPieceDto('white', 'king')], [new ChessPieceDto('white', 'bishop')], [new ChessPieceDto('white', 'knight')], [new ChessPieceDto('white', 'rook')]]
+    [
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]
+    ],
+    [
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)]
+    ]
   ];
 
   constructor() {
@@ -51,47 +93,130 @@ export class GlobalVariablesService {
     return Object.values(this.boardHelper.arrows);
   }
 
+  get boardHighlights(): IBoardHighlight[] {
+    const possibleHighlights = this.possibles.map(({ row, col }) => ({ row, col, type: 'possible' as const }));
+    const captureHighlights = this.hits.map(({ row, col }) => ({ row, col, type: 'capture' as const }));
+    const checkHighlights = this.checks.map(({ row, col }) => ({ row, col, type: 'check' as const }));
+    return [...possibleHighlights, ...captureHighlights, ...checkHighlights];
+  }
+
   get history(): string[] {
     return Object.values(this.boardHelper.history);
   }
 
   static addPossible(newPossible: ChessPositionDto): void {
+    if (!newPossible) {
+      console.warn('Attempted to add null/undefined possible move');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
     this.BOARD_HELPER.possibles[`${newPossible.row}${newPossible.col}`] = newPossible;
   }
 
   static addHit(newHit: ChessPositionDto): void {
+    if (!newHit) {
+      console.warn('Attempted to add null/undefined hit position');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
     this.BOARD_HELPER.hits[`${newHit.row}${newHit.col}`] = newHit;
   }
 
   static addCheck(newCheck: ChessPositionDto): void {
+    if (!newCheck) {
+      console.warn('Attempted to add null/undefined check position');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
     this.BOARD_HELPER.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
   }
 
-  static addArrow(arrowParam: ChessArrowDto): void {
-    this.BOARD_HELPER.arrows[`${arrowParam.left}${arrowParam.top}${arrowParam.rotate}${arrowParam.color}${arrowParam.transform}`] = arrowParam;
+  static addHighlight(highlight: IBoardHighlight): void {
+    if (!highlight) {
+      return;
+    }
+    switch (highlight.type) {
+      case 'possible':
+        GlobalVariablesService.addPossible({ row: highlight.row, col: highlight.col });
+        break;
+      case 'capture':
+        GlobalVariablesService.addHit({ row: highlight.row, col: highlight.col });
+        break;
+      case 'check':
+        GlobalVariablesService.addCheck({ row: highlight.row, col: highlight.col });
+        break;
+      default:
+        break;
+    }
   }
 
-  /**
-   * top: '250px',
-   * left: '130px',
-   * rotate: '45deg',
-   * transform: 'scaleX(5.5)'
-   */
-  static createArrow(from: ChessPositionDto, to: ChessPositionDto, arrowColor: string, width: number): void {
-    const boxSize = 76;
-    const midX = ((-1 + ((from.col + to.col) / 2)) * boxSize) + 9;
-    const midY = ((8.5 - ((from.row + to.row) / 2)) * boxSize);
+  static addArrow(arrowParam: ChessArrowDto): void {
+    if (!arrowParam) {
+      console.warn('Attempted to add null/undefined arrow');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
+    const arrowKey = `${arrowParam.left}${arrowParam.top}${arrowParam.rotate}` +
+      `${arrowParam.color}${arrowParam.length}${arrowParam.thickness}`;
+    this.BOARD_HELPER.arrows[arrowKey] = arrowParam;
+  }
 
-    const stepRow = from.row - to.row;
-    const stepCol = to.col - from.col;
+  static createArrowFromVisualization(visualizationArrow: IVisualizationArrow): void {
+    const boxSize = 76;
+    const midX = (((visualizationArrow.fromCol + visualizationArrow.toCol) / 2) - 0.5) * boxSize;
+    const midY = (8.5 - ((visualizationArrow.fromRow + visualizationArrow.toRow) / 2)) * boxSize;
+
+    const stepRow = visualizationArrow.fromRow - visualizationArrow.toRow;
+    const stepCol = visualizationArrow.toCol - visualizationArrow.fromCol;
     const deg = Math.atan2(stepRow, stepCol) * (180 / Math.PI);
+    const distancePx = Math.sqrt((stepCol * boxSize) * (stepCol * boxSize) + (stepRow * boxSize) * (stepRow * boxSize));
+    const thicknessPx = Math.max(2, Math.min(8, 2 + (visualizationArrow.intensity * 8)));
 
     const arTop = `${midY}px`;
     const arLeft = `${midX}px`;
     const arRot = `${deg}deg`;
-    const arTransf = `scaleX(${0.5 + Math.sqrt(stepCol*stepCol + stepRow*stepRow)}) scaleY(${width})`;
-    const newArrow = new ChessArrowDto(arTop, arLeft, arRot, arrowColor, arTransf);
+    const arLength = `${Math.max(20, distancePx)}px`;
+    const arThickness = `${thicknessPx}px`;
+    const newArrow = new ChessArrowDto(
+      arTop,
+      arLeft,
+      arRot,
+      GlobalVariablesService.normalizeVisualizationArrowColor(visualizationArrow.color),
+      arLength,
+      arThickness
+    );
     GlobalVariablesService.addArrow(newArrow);
+  }
+
+  private static normalizeVisualizationArrowColor(color: string): IVisualizationArrow['color'] {
+    if (color === 'red') {
+      return 'red';
+    }
+    if (color === 'green') {
+      return 'green';
+    }
+    if (color === 'yellow') {
+      return 'yellow';
+    }
+    if (color === 'gold') {
+      return 'gold';
+    }
+    if (color === 'cyan') {
+      return 'cyan';
+    }
+    return 'blue';
   }
 
   static addHistory(newHistory: string): void {
@@ -101,8 +226,8 @@ export class GlobalVariablesService {
   }
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,
-                    piece: ChessPieces, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
-    let pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
+                    piece: ChessPiecesEnum, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
+    const pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + targetCol);
     const letterCharSrc = String.fromCharCode('a'.charCodeAt(0) + srcCol);
@@ -112,49 +237,74 @@ export class GlobalVariablesService {
     if (castleData) {
       return castleData;
     }
-    return `${pieceNotation}${letterCharSrc}${numberCharSrc}${hit ? 'x' : ''}` +
+    return `${pieceNotation}${letterCharSrc}${numberCharSrc}${hit ? 'x' : '-'}` +
       `${letterChar}${numberChar}${check ? '+' : ''}${match ? '#' : ''}${ep ? ' e.p.' : ''}`;
   }
 
-  static translatePieceNotation(piece: ChessPieces): string {
-    switch(piece) {
-      case 'pawn': return '';
-      case 'bishop': return 'B';
-      case 'king': return 'K';
-      case 'queen': return 'Q';
-      case 'rook': return 'R';
-      case 'knight': return 'N';
+  static translatePieceNotation(piece: ChessPiecesEnum): string {
+    switch (piece) {
+      case ChessPiecesEnum.Pawn: return '';
+      case ChessPiecesEnum.Bishop: return 'B';
+      case ChessPiecesEnum.King: return 'K';
+      case ChessPiecesEnum.Queen: return 'Q';
+      case ChessPiecesEnum.Rook: return 'R';
+      case ChessPiecesEnum.Knight: return 'N';
+      default: return '';
     }
   }
 
   static pieceIsInWay(targetRow: number, targetCol: number, srcRow: number, srcCol: number): boolean {
+    // Validate board is initialized
+    if (!GlobalVariablesService.CHESS_FIELD || GlobalVariablesService.CHESS_FIELD.length === 0) {
+      console.error('CHESS_FIELD is not initialized');
+      return false;
+    }
+
     const stepRow = targetRow - srcRow;
     const stepCol = targetCol - srcCol;
+
+    // If no movement, no piece can be in the way
+    if (stepRow === 0 && stepCol === 0) {
+      return false;
+    }
+
     let nextStepRow = srcRow;
     let nextStepCol = srcCol;
+
     if (nextStepRow !== targetRow) {
       nextStepRow += stepRow > 0 ? 1 : -1;
     }
     if (nextStepCol !== targetCol) {
       nextStepCol += stepCol > 0 ? 1 : -1;
     }
+
     let cntr = 0;
     while (nextStepRow !== targetRow || nextStepCol !== targetCol) {
-      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.CHESS_FIELD[nextStepRow] ||
-        !GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol]) {
+      // Validate indices are within bounds
+      if (nextStepRow < 0 || nextStepRow > 7 || nextStepCol < 0 || nextStepCol > 7) {
         return false;
       }
-      if (GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol].length > 0) {
+
+      const cell = GlobalVariablesService.CHESS_FIELD[nextStepRow] && GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol];
+      if (!cell) {
+        return false;
+      }
+
+      if (cell.length > 0) {
         return true;
       }
+
       if (nextStepRow !== targetRow) {
         nextStepRow += stepRow > 0 ? 1 : -1;
       }
       if (nextStepCol !== targetCol) {
         nextStepCol += stepCol > 0 ? 1 : -1;
       }
+
       cntr++;
-      if (cntr > 7) {
+      // Safety check to prevent infinite loops
+      if (cntr > 8) {
+        console.warn('Infinite loop detected in pieceIsInWay');
         return false;
       }
     }

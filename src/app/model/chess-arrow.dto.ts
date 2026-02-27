@@ -3,6 +3,7 @@ export class ChessArrowDto {
               public left: string,
               public rotate: string,
               public color: string,
-              public transform: string) {
+              public length: string,
+              public thickness: string) {
   }
 }

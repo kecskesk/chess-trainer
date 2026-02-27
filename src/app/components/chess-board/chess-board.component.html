@@ -1,64 +1,391 @@
-<div class="outer-container">
-  <div class="container" #chessField>
-    <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
-      <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
-        <div class="piece-box">
-          <div class="square"
-               cdkDropList
-               cdkDropListOrientation="horizontal"
-               [cdkDropListEnterPredicate]="canDrop"
-               id="field{{idxX}}{{idxY}}"
-               [class.shaded]="isTarget(idxX, idxY) && !isHit(idxX, idxY)"
-               [class.killer]="isHit(idxX, idxY)"
-               [cdkDropListData]="cellY"
-               [cdkDropListConnectedTo]="dropLists"
-               (cdkDropListDropped)="onDrop($event)"
-               [class.white-square]="(idxY + idxX) % 2 === 0"
-               [class.black-square]="(idxY + idxX) % 2 === 1">
-            <div class="drag-box" cdkDrag
-                 [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.boardHelper.colorTurn">
-              <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
+<div class="trainer-layout">
+  <div class="info-hover" aria-label="Roadmap TODOs" [class.info-hover--open]="isInfoOverlayOpen">
+    <button class="info-hover__trigger"
+            type="button"
+            aria-label="Show roadmap TODOs"
+            [attr.aria-expanded]="isInfoOverlayOpen"
+            (click)="toggleInfoOverlay()">ⓘ</button>
+    <div class="info-hover__panel" role="note">
+      <div class="info-hover__title">TODO Roadmap</div>
+      <ul>
+        <li>Engine evaluation next to move history (e.g. +0.3).</li>
+        <li>Undo/redo workflow polish.</li>
+        <li>Optional board flip for Black perspective.</li>
+        <li>Opening/endgame recognition improvements.</li>
+        <li>Export options: image, PGN, FEN.</li>
+        <li>Tactical helpers: pin, fork, and related motifs.</li>
+        <li>Calculation model upgrades: CCT + TRC, candidate moves, prophylaxis, quiet moves, blunder check.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="ambient-math" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
+  <section class="board-panel">
+    <div class="board-stack">
+      <div class="outer-container board-shell" [class.board-shell--flipped]="isBoardFlipped">
+        <div class="container" #chessField>
+          <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
+            <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
+              <div class="piece-box">
+                <div class="square"
+                     cdkDropList
+                     cdkDropListOrientation="horizontal"
+                      [cdkDropListEnterPredicate]="canDropPredicate"
+                     id="field{{idxX}}{{idxY}}"
+                     [ngClass]="getSquareHighlightClass(idxX, idxY)"
+                     [cdkDropListData]="cellY"
+                     [cdkDropListConnectedTo]="dropLists"
+                     (cdkDropListEntered)="onDropListEntered($event)"
+                     (cdkDropListDropped)="onDrop($event)"
+                     [class.white-square]="isWhiteSquare(idxX, idxY)"
+                     [class.black-square]="!isWhiteSquare(idxX, idxY)">
+                  <div class="drag-box" (mousedown)="onSquarePointerDown(cellY)">
+                    <app-chess-piece [piece]="cellY[0]"
+                                     *ngIf="cellY && cellY[0]"
+                                     cdkDrag
+                                     [cdkDragData]="cellY[0]"
+                                     [cdkDragPreviewClass]="isBoardFlipped ? 'drag-preview-flipped' : ''"
+                                     [cdkDragDisabled]="globalVariablesService.boardHelper.gameOver || !cellY || !cellY[0] || cellY[0].color !== globalVariablesService.boardHelper.colorTurn"
+                                     (cdkDragStarted)="onDragStarted()"
+                                     (cdkDragEnded)="onDragEnded()"></app-chess-piece>
+                  </div>
+                  <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
+                </div>
+              </div>
             </div>
-            <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
+          </div>
+        </div>
+        <div class="arrowPointer" *ngFor="let arrow of globalVariablesService.arrows; index as arrowIdx"
+             [style.top]="arrow.top" [style.left]="arrow.left" [style.color]="arrow.color"
+             [style.width]="arrow.length"
+             [style.--arrow-thickness]="arrow.thickness"
+             [style.transform]="'translate(-50%, -50%) rotate(' + arrow.rotate + ')'">
+          <span class="arrow-shaft"></span>
+          <span class="arrow-head"></span>
+        </div>
+      </div>
+
+      <details class="position-key-panel"
+               *ngIf="globalVariablesService.boardHelper"
+               [open]="isDebugPanelOpen"
+               (toggle)="onDebugPanelToggle($event)">
+        <summary>Debug & Position key</summary>
+        <div class="position-key-value" *ngIf="globalVariablesService.boardHelper.debugText">
+          {{globalVariablesService.boardHelper.debugText}}
+        </div>
+        <div class="position-key-value">{{getDebugPositionKey()}}</div>
+      </details>
+    </div>
+  </section>
+
+  <section class="sidebar-panel">
+    <div class="clock-card panel-card panel-card--wide">
+      <h3 class="section-title">Clock</h3>
+      <div class="clock-layout">
+        <div class="clock-stack">
+          <div class="clock-display"
+               [class.clock-display--active]="isClockActive(chessColors.Black)"
+               [class.clock-display--low]="isClockLow(chessColors.Black)">
+            <div class="clock-meta">
+              <span class="clock-player">Black</span>
+              <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.Black)"></span>
+            </div>
+            <span class="clock-time">{{formatClock(blackClockMs)}}</span>
+          </div>
+          <div class="clock-display"
+               [class.clock-display--active]="isClockActive(chessColors.White)"
+               [class.clock-display--low]="isClockLow(chessColors.White)">
+            <div class="clock-meta">
+              <span class="clock-player">White</span>
+              <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.White)"></span>
+            </div>
+            <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
+          </div>
+        </div>
+
+        <div class="clock-controls">
+          <div class="clock-controls-grid">
+            <button class="time-btn"
+              [disabled]="clockStarted"
+              [class.time-btn--selected]="selectedClockPresetLabel === '1+0'"
+              (click)="applyTimeControl(1, 0, '1+0')">1+0</button>
+            <button class="time-btn"
+              [disabled]="clockStarted"
+              [class.time-btn--selected]="selectedClockPresetLabel === '3+2'"
+              (click)="applyTimeControl(3, 2, '3+2')">3+2</button>
+            <button class="action-btn action-btn--large" (click)="startOrPauseClock()">{{getClockButtonLabel()}}</button>
+            <button class="time-btn"
+              [disabled]="clockStarted"
+              [class.time-btn--selected]="selectedClockPresetLabel === '5+0'"
+              (click)="applyTimeControl(5, 0, '5+0')">5+0</button>
+            <button class="time-btn"
+              [disabled]="clockStarted"
+              [class.time-btn--selected]="selectedClockPresetLabel === '10+0'"
+              (click)="applyTimeControl(10, 0, '10+0')">10+0</button>
+            <button class="action-btn action-btn--secondary action-btn--large" (click)="resetClock()">Reset</button>
           </div>
         </div>
       </div>
     </div>
-  </div>
-  <div class="arrowPointer" *ngFor="let arrow of globalVariablesService.arrows; index as arrowIdx"
-       [style.top]="arrow.top" [style.left]="arrow.left" [style.color]="arrow.color"
-       [style.transform]="sanitizeScale(arrow.transform)" [style.rotate]="arrow.rotate">
-    <i class="fas fa-arrow-right"></i>
-  </div>
-</div>
-<div *ngIf="globalVariablesService.boardHelper.canPromote">
-  <h3>Promote!</h3>
-  <button (click)="promotePiece('rook')">Rook</button>
-  <button (click)="promotePiece('bishop')">Bishop</button>
-  <button (click)="promotePiece('knight')">Knight</button>
-  <button (click)="promotePiece('queen')">Queen</button>
-</div>
-<div>
-  <h3>{{globalVariablesService.boardHelper.colorTurn}} to move
-    <button (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button> -
-    <button (click)="showPossibleMoves(null)">clear</button>
-  </h3>
-  <h3>Magic Toolkit
-    <button (click)="showThreats()">my threats</button> -
-    <button (click)="showProtected()">my protected</button> -
-    <button (click)="showThreats(true)">threats from enemy</button> -
-    <button (click)="showProtected(true)">protected enemy</button>
-  </h3>
-  <h3>Magicer Toolkit
-    <button (click)="showHangingPieces()">my hanging piece (blundered)</button> -
-    <button (click)="showHangingPieces(true)">hanging enemy (hittable)</button>
-  </h3>
-  <h3>History</h3>
-  <span *ngFor="let histItem of globalVariablesService.history; index as histIdx">
-    <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
-    {{histItem}}
-    <br *ngIf="histIdx % 2 === 1" /></span>
-</div>
-<div *ngIf="globalVariablesService.boardHelper">
-  {{globalVariablesService.boardHelper.debugText}}
+
+    <div class="status-card panel-card panel-card--wide">
+      <h3 class="section-title">
+        {{getStatusTitle()}}
+      </h3>
+      <div class="icon-actions-row icon-actions-row--compact icon-actions-row--status">
+        <button class="icon-action-btn"
+          (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)"
+          title="Show possible moves"
+          aria-label="Show possible moves">
+          <span class="icon-action-btn__icon">👁</span>
+          <span class="icon-action-btn__text">Show moves</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary"
+          (click)="showPossibleMoves(null)"
+          title="Clear highlights"
+          aria-label="Clear highlights">
+          <span class="icon-action-btn__icon">⌫</span>
+          <span class="icon-action-btn__text">Clear highlights</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary status-action-new-game"
+          *ngIf="pendingDrawOfferBy === null"
+          (click)="startNewGame()"
+          title="Start new game"
+          aria-label="Start new game">
+          <span class="icon-action-btn__icon">↻</span>
+          <span class="icon-action-btn__text">New game</span>
+        </button>
+        <button class="icon-action-btn"
+          *ngIf="canOfferDraw()"
+          (click)="offerDraw()"
+          title="Offer draw"
+          aria-label="Offer draw">
+          <span class="icon-action-btn__icon">🤝</span>
+          <span class="icon-action-btn__text">Offer draw</span>
+        </button>
+        <button class="icon-action-btn"
+          *ngIf="canRespondToDrawOffer()"
+          (click)="acceptDrawOffer()"
+          title="Accept draw"
+          aria-label="Accept draw">
+          <span class="icon-action-btn__icon">✔</span>
+          <span class="icon-action-btn__text">Accept draw</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary"
+          *ngIf="canRespondToDrawOffer()"
+          (click)="declineDrawOffer()"
+          title="Decline draw"
+          aria-label="Decline draw">
+          <span class="icon-action-btn__icon">✖</span>
+          <span class="icon-action-btn__text">Decline draw</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary"
+          *ngIf="canClaimDraw()"
+          (click)="claimDraw()"
+          title="Claim draw"
+          aria-label="Claim draw">
+          <span class="icon-action-btn__icon">⚖</span>
+          <span class="icon-action-btn__text">Claim draw</span>
+        </button>
+      </div>
+      <div class="icon-actions-row icon-actions-row--resign" *ngIf="clockRunning">
+        <button class="icon-action-btn icon-action-btn--danger"
+                [disabled]="!canResign(chessColors.White)"
+                (click)="openResignConfirm(chessColors.White)"
+                title="White resign"
+                aria-label="White resign">
+          <span class="icon-action-btn__icon">♔</span>
+          <span class="icon-action-btn__text">White</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--danger"
+                [disabled]="!canResign(chessColors.Black)"
+                (click)="openResignConfirm(chessColors.Black)"
+                title="Black resign"
+                aria-label="Black resign">
+          <span class="icon-action-btn__icon">♚</span>
+          <span class="icon-action-btn__text">Black</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="status-card panel-card panel-card--wide" *ngIf="resignConfirmColor !== null" role="dialog" aria-modal="false" aria-label="Confirm resignation">
+      <h3 class="section-title">Are You Sure {{resignConfirmColor === chessColors.White ? 'White' : 'Black'}} Resigns?</h3>
+      <div class="icon-actions-row icon-actions-row--compact">
+        <button class="icon-action-btn icon-action-btn--secondary" (click)="cancelResignConfirm()" title="Cancel resignation" aria-label="Cancel resignation">
+          <span class="icon-action-btn__icon">✖</span>
+          <span class="icon-action-btn__text">Cancel</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--danger" (click)="confirmResign()" title="Confirm resignation" aria-label="Confirm resignation">
+          <span class="icon-action-btn__icon">⚑</span>
+          <span class="icon-action-btn__text">Resign</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tool-card panel-card panel-card--wide" *ngIf="globalVariablesService.boardHelper.canPromote !== null">
+      <h3 class="section-title">Promote</h3>
+      <div class="icon-actions-row promote-row">
+        <button class="icon-action-btn" (click)="promotePiece('rook')" title="Promote to rook" aria-label="Promote to rook">
+          <span class="icon-action-btn__icon">♖</span>
+          <span class="icon-action-btn__text">Rook</span>
+        </button>
+        <button class="icon-action-btn" (click)="promotePiece('bishop')" title="Promote to bishop" aria-label="Promote to bishop">
+          <span class="icon-action-btn__icon">♗</span>
+          <span class="icon-action-btn__text">Bishop</span>
+        </button>
+        <button class="icon-action-btn" (click)="promotePiece('knight')" title="Promote to knight" aria-label="Promote to knight">
+          <span class="icon-action-btn__icon">♘</span>
+          <span class="icon-action-btn__text">Knight</span>
+        </button>
+        <button class="icon-action-btn" (click)="promotePiece('queen')" title="Promote to queen" aria-label="Promote to queen">
+          <span class="icon-action-btn__icon">♕</span>
+          <span class="icon-action-btn__text">Queen</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tool-card panel-card">
+      <h3 class="section-title">Magic Toolkit</h3>
+      <div class="icon-actions-row">
+        <button class="icon-action-btn" (click)="showThreats()" title="My threats" aria-label="My threats">
+          <span class="icon-action-btn__icon">⚔</span>
+          <span class="icon-action-btn__text">Mine</span>
+        </button>
+        <button class="icon-action-btn" (click)="showProtected()" title="My protected" aria-label="My protected">
+          <span class="icon-action-btn__icon">🛡</span>
+          <span class="icon-action-btn__text">Safe</span>
+        </button>
+        <button class="icon-action-btn" (click)="showThreats(true)" title="Enemy threats" aria-label="Enemy threats">
+          <span class="icon-action-btn__icon">☠</span>
+          <span class="icon-action-btn__text">Enemy</span>
+        </button>
+        <button class="icon-action-btn" (click)="showProtected(true)" title="Enemy protected" aria-label="Enemy protected">
+          <span class="icon-action-btn__icon">⛨</span>
+          <span class="icon-action-btn__text">Guarded</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tool-card panel-card">
+      <h3 class="section-title">Magicer Toolkit</h3>
+      <div class="icon-actions-row icon-actions-row--compact">
+        <button class="icon-action-btn" (click)="showHangingPieces()" title="My hanging pieces (blundered)" aria-label="My hanging pieces">
+          <span class="icon-action-btn__icon">⚠</span>
+          <span class="icon-action-btn__text">Blunder</span>
+        </button>
+        <button class="icon-action-btn" (click)="showHangingPieces(true)" title="Hanging enemy pieces (hittable)" aria-label="Hanging enemy pieces">
+          <span class="icon-action-btn__icon">🎯</span>
+          <span class="icon-action-btn__text">Target</span>
+        </button>
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showForkIdeasMock()" title="Fork ideas (mock)" aria-label="Fork ideas">
+          <span class="icon-action-btn__icon">⑂</span>
+          <span class="icon-action-btn__text">Fork</span>
+        </button>
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showPinIdeasMock()" title="Pin opportunities (mock)" aria-label="Pin opportunities">
+          <span class="icon-action-btn__icon">📌</span>
+          <span class="icon-action-btn__text">Pin</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="tool-card panel-card">
+      <h3 class="section-title">Game Tools</h3>
+      <div class="icon-actions-row icon-actions-row--compact">
+        <button class="icon-action-btn" (click)="toggleBoardFlip()" title="Flip board" aria-label="Flip board">
+          <span class="icon-action-btn__icon">⇅</span>
+          <span class="icon-action-btn__text">Flip</span>
+        </button>
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportPgnMock()" title="Export PGN (mock)" aria-label="Export PGN">
+          <span class="icon-action-btn__icon">⭳</span>
+          <span class="icon-action-btn__text">PGN</span>
+        </button>
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportBoardImageMock()" title="Export image (mock)" aria-label="Export board image">
+          <span class="icon-action-btn__icon">🖼</span>
+          <span class="icon-action-btn__text">Image</span>
+        </button>
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportFenMock()" title="Export FEN (mock)" aria-label="Export FEN">
+          <span class="icon-action-btn__icon">⌘</span>
+          <span class="icon-action-btn__text">FEN</span>
+        </button>
+      </div>
+      <div class="mock-export-text" *ngIf="mockExportMessage">{{mockExportMessage}}</div>
+    </div>
+
+    <div class="tool-card panel-card">
+      <h3 class="section-title">Recognition</h3>
+      <div class="recognition-line"><strong>Opening:</strong> {{getMockOpeningRecognition()}}</div>
+      <div class="recognition-line"><strong>Endgame:</strong> {{getMockEndgameRecognition()}}</div>
+      <div class="recognition-line recognition-line--suggestions">
+        <strong>Suggested:</strong>
+        <span class="suggested-move"
+              [ngClass]="getSuggestedMoveClass(move)"
+            (mouseenter)="previewSuggestedMoveArrows(move)"
+            (mouseleave)="clearSuggestedMoveArrows()"
+              *ngFor="let move of getMockSuggestedMoves()">{{move}}</span>
+      </div>
+    </div>
+
+    <div class="history-card panel-card">
+      <h3 class="section-title">History</h3>
+      <div class="icon-actions-row icon-actions-row--compact history-controls">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canUndoMoveMock()" (click)="undoMoveMock()" title="Undo move (mock)" aria-label="Undo move">
+          <span class="icon-action-btn__icon">↶</span>
+          <span class="icon-action-btn__text">Undo</span>
+        </button>
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canRedoMoveMock()" (click)="redoMoveMock()" title="Redo move (mock)" aria-label="Redo move">
+          <span class="icon-action-btn__icon">↷</span>
+          <span class="icon-action-btn__text">Redo</span>
+        </button>
+      </div>
+      <div class="history-log">
+        <div class="history-entry"
+             [class.history-entry--white]="histIdx % 2 === 0"
+             [class.history-entry--black]="histIdx % 2 === 1"
+             *ngFor="let histItem of getVisibleHistory(); index as histIdx">
+          <span class="history-move" [class.history-move--black]="histIdx % 2 === 1">
+            <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
+            {{histItem}}
+          </span>
+          <span class="history-eval">SF {{getMockEvaluationForMove(histIdx)}}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-card panel-card cct-card">
+      <h3 class="section-title">CCT</h3>
+      <div class="cct-row cct-row--capture" title="Captures: forcing moves that win or trade material.">
+        <span class="cct-row__icon" title="Captures">✕</span>
+        <ng-container *ngIf="getCctRecommendations('captures') as captureRecs">
+              <span class="cct-step"
+                *ngFor="let rec of captureRecs"
+                [title]="rec.tooltip"
+                (mouseenter)="previewSuggestedMoveArrows(rec.move)"
+                (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
+          <span class="cct-empty" *ngIf="captureRecs.length < 1" title="No immediate forcing captures found.">—</span>
+        </ng-container>
+      </div>
+      <div class="cct-row cct-row--check" title="Checks: direct king pressure that forces responses.">
+        <span class="cct-row__icon" title="Checks">♔</span>
+        <ng-container *ngIf="getCctRecommendations('checks') as checkRecs">
+              <span class="cct-step"
+                *ngFor="let rec of checkRecs"
+                [title]="rec.tooltip"
+                (mouseenter)="previewSuggestedMoveArrows(rec.move)"
+                (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
+          <span class="cct-empty" *ngIf="checkRecs.length < 1" title="No immediate forcing checks found.">—</span>
+        </ng-container>
+      </div>
+      <div class="cct-row cct-row--threat" title="Threats: moves that create tactical pressure next move.">
+        <span class="cct-row__icon" title="Threats">⚠</span>
+        <ng-container *ngIf="getCctRecommendations('threats') as threatRecs">
+              <span class="cct-step"
+                *ngFor="let rec of threatRecs"
+                [title]="rec.tooltip"
+                (mouseenter)="previewSuggestedMoveArrows(rec.move)"
+                (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
+          <span class="cct-empty" *ngIf="threatRecs.length < 1" title="No immediate forcing threats found.">—</span>
+        </ng-container>
+      </div>
+    </div>
+
+  </section>
 </div>
