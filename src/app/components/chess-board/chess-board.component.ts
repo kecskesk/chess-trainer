@@ -578,11 +578,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   startNewGame(): void {
-    this.stopClock();
-    this.resetBoardState();
-    this.resetTransientUiState();
-    this.resetClock();
-    this.randomizeAmbientStyle();
+    window.location.reload();
   }
 
   offerDraw(): void {
