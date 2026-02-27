@@ -1,5 +1,5 @@
 <div class="trainer-layout">
-  <div class="ambient-math" [ngClass]="getAmbientThemeClass()" aria-hidden="true"></div>
+  <div class="ambient-math" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
   <section class="board-panel">
     <div class="outer-container board-shell">
       <div class="container" #chessField>
@@ -42,6 +42,38 @@
   </section>
 
   <section class="sidebar-panel">
+    <div class="clock-card">
+      <h3 class="section-title">Clock</h3>
+      <div class="clock-stack">
+        <div class="clock-display"
+             [class.clock-display--active]="isClockActive(chessColors.Black)"
+             [class.clock-display--low]="isClockLow(chessColors.Black)">
+          <span class="clock-player">Black</span>
+          <span class="clock-time">{{formatClock(blackClockMs)}}</span>
+        </div>
+        <div class="clock-display"
+             [class.clock-display--active]="isClockActive(chessColors.White)"
+             [class.clock-display--low]="isClockLow(chessColors.White)">
+          <span class="clock-player">White</span>
+          <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
+        </div>
+      </div>
+
+      <div class="time-control-grid">
+        <button class="time-btn"
+                *ngFor="let preset of clockPresets"
+                [class.time-btn--selected]="preset.label === selectedClockPresetLabel"
+                (click)="applyTimeControl(preset.baseMinutes, preset.incrementSeconds, preset.label)">
+          {{preset.label}}
+        </button>
+      </div>
+
+      <div class="time-action-grid">
+        <button class="action-btn action-btn--large" (click)="startOrPauseClock()">{{getClockButtonLabel()}}</button>
+        <button class="action-btn action-btn--secondary action-btn--large" (click)="resetClock()">Reset Clock</button>
+      </div>
+    </div>
+
     <div class="status-card">
       <h3 class="section-title">
         {{getStatusTitle()}}
@@ -53,6 +85,14 @@
         <button class="action-btn" *ngIf="canRespondToDrawOffer()" (click)="acceptDrawOffer()">accept draw</button>
         <button class="action-btn action-btn--secondary" *ngIf="canRespondToDrawOffer()" (click)="declineDrawOffer()">decline draw</button>
         <button class="action-btn action-btn--secondary" *ngIf="canClaimDraw()" (click)="claimDraw()">claim draw</button>
+      </div>
+      <div class="resign-grid">
+        <button class="action-btn action-btn--danger action-btn--large"
+                [disabled]="!canResign(chessColors.White)"
+                (click)="resign(chessColors.White)">White resigns</button>
+        <button class="action-btn action-btn--danger action-btn--large"
+                [disabled]="!canResign(chessColors.Black)"
+                (click)="resign(chessColors.Black)">Black resigns</button>
       </div>
     </div>
 

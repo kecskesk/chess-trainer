@@ -196,7 +196,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
     expect(globals.boardHelper.debugText).toBe('Draw by stalemate.');
-    expect(globals.history[globals.history.length - 1]).toContain('½-½');
+    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by stalemate}');
   });
 
   it('declares draw by threefold repetition', () => {
@@ -224,6 +224,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
     expect(globals.boardHelper.debugText).toBe('Draw by threefold repetition (claimed).');
+    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by threefold repetition}');
   });
 
   it('declares draw by fivefold repetition', () => {
@@ -253,6 +254,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
     expect(globals.boardHelper.debugText).toBe('Draw by fivefold repetition.');
+    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by fivefold repetition}');
   });
 
   it('declares draw by 50-move rule after 100 non-pawn non-capture half-moves', () => {
@@ -279,7 +281,8 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by 50-move rule (claimed).');
+    expect(globals.boardHelper.debugText).toBe('Draw by fifty-move rule (claimed).');
+    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by fifty-move rule}');
   });
 
   it('declares draw by 75-move rule after 150 non-pawn non-capture half-moves', () => {
@@ -301,7 +304,8 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by 75-move rule.');
+    expect(globals.boardHelper.debugText).toBe('Draw by seventy-five-move rule.');
+    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by seventy-five-move rule}');
   });
 
   [
@@ -379,6 +383,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
     expect(globals.boardHelper.debugText).toBe('Draw by agreement.');
+    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw agreed}');
     expect(component.pendingDrawOfferBy).toBeNull();
   });
 
@@ -390,6 +395,24 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     expect(globals.boardHelper.gameOver).toBeFalse();
     expect(component.pendingDrawOfferBy).toBeNull();
+  });
+
+  it('records white resignation as 0-1 with long result notation', () => {
+    component.resign(ChessColorsEnum.White);
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.checkmateColor).toBeNull();
+    expect(globals.boardHelper.debugText).toBe('White resigns.');
+    expect(globals.history[globals.history.length - 1]).toContain('0-1 {White resigns}');
+  });
+
+  it('records black resignation as 1-0 with long result notation', () => {
+    component.resign(ChessColorsEnum.Black);
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.checkmateColor).toBeNull();
+    expect(globals.boardHelper.debugText).toBe('Black resigns.');
+    expect(globals.history[globals.history.length - 1]).toContain('1-0 {Black resigns}');
   });
 
   it('auto-declines pending draw offer when responder makes a move', () => {

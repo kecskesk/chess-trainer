@@ -1,6 +1,7 @@
 .trainer-layout {
   position: relative;
-  z-index: 1;
+  z-index: 0;
+  isolation: isolate;
   display: grid;
   grid-template-columns: auto minmax(320px, 420px);
   gap: 20px;
@@ -108,11 +109,28 @@
   inset: 0;
   border-radius: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   overflow: hidden;
-  opacity: 0.16;
-  mix-blend-mode: screen;
+  opacity: 0.14;
+  mix-blend-mode: lighten;
   transition: opacity 0.3s ease, filter 0.3s ease;
+  --blob1-x: 34%;
+  --blob1-y: 30%;
+  --blob1-r: 9%;
+  --blob2-x: 66%;
+  --blob2-y: 30%;
+  --blob2-r: 10%;
+  --blob3-x: 50%;
+  --blob3-y: 60%;
+  --blob3-r: 8%;
+  --blob4-x: 38%;
+  --blob4-y: 70%;
+  --blob4-r: 9%;
+  --blob5-x: 62%;
+  --blob5-y: 70%;
+  --blob5-r: 8%;
+  --wobble-a: 6.2s;
+  --wobble-b: 8.8s;
 
   &::before,
   &::after {
@@ -124,35 +142,54 @@
 
   &::before {
     background-image:
-      repeating-radial-gradient(circle at 30% 35%, currentColor 0 1px, transparent 1px 18px),
-      repeating-linear-gradient(35deg, currentColor 0 1px, transparent 1px 22px),
-      radial-gradient(circle at 72% 24%, currentColor 0%, transparent 43%);
-    animation: ambient-pulse 5.5s ease-in-out infinite;
+      radial-gradient(circle at var(--blob1-x) var(--blob1-y), currentColor 0 var(--blob1-r), transparent calc(var(--blob1-r) + 6%)),
+      radial-gradient(circle at var(--blob2-x) var(--blob2-y), currentColor 0 var(--blob2-r), transparent calc(var(--blob2-r) + 6%)),
+      radial-gradient(circle at var(--blob3-x) var(--blob3-y), currentColor 0 var(--blob3-r), transparent calc(var(--blob3-r) + 6%));
+    animation: ambient-wobble var(--wobble-a) ease-in-out infinite;
   }
 
   &::after {
     background-image:
-      repeating-linear-gradient(-35deg, currentColor 0 1px, transparent 1px 20px),
-      radial-gradient(circle at 22% 74%, currentColor 0%, transparent 40%);
-    opacity: 0.85;
-    animation: ambient-drift 8.5s linear infinite;
+      radial-gradient(circle at var(--blob4-x) var(--blob4-y), currentColor 0 var(--blob4-r), transparent calc(var(--blob4-r) + 6%)),
+      radial-gradient(circle at var(--blob5-x) var(--blob5-y), currentColor 0 var(--blob5-r), transparent calc(var(--blob5-r) + 6%));
+    opacity: 0.95;
+    animation: ambient-wobble-reverse var(--wobble-b) ease-in-out infinite;
   }
 }
 
 .ambient-math--white-turn {
-  color: rgba(245, 248, 255, 0.75);
+  color: rgba(255, 255, 255, 1);
+  opacity: 0.7;
+  filter: brightness(1.68) contrast(1.26) saturate(0.86);
+
+  &::before,
+  &::after {
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.48));
+  }
 }
 
 .ambient-math--black-turn {
-  color: rgba(22, 26, 34, 0.82);
+  color: rgba(0, 0, 0, 1);
   mix-blend-mode: multiply;
-  opacity: 0.12;
+  opacity: 0.7;
+  filter: brightness(1.68) contrast(1.26) saturate(0.86);
+
+  &::before,
+  &::after {
+    filter: drop-shadow(0 0 14px rgba(0, 0, 0, 0.5));
+  }
 }
 
 .ambient-math--draw-pending {
-  color: rgba(214, 54, 54, 0.82);
-  opacity: 0.2;
-  filter: saturate(1.1);
+  color: rgb(214, 54, 54, 1);
+  mix-blend-mode: multiply;
+  opacity: 0.7;
+  filter: brightness(1.68) contrast(1.26) saturate(0.86);
+
+  &::before,
+  &::after {
+    filter: drop-shadow(0 0 14px rgba(214, 54, 54, 0.5));
+  }
 }
 
 .container {
@@ -210,6 +247,7 @@
 }
 
 .status-card,
+.clock-card,
 .tool-card,
 .history-card,
 .debug-card {
@@ -262,6 +300,112 @@
   &:active {
     transform: translateY(1px);
   }
+
+  &:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.45);
+    opacity: 0.55;
+  }
+}
+
+.action-btn--large {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 12px 14px;
+}
+
+.clock-stack {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.clock-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(219, 230, 255, 0.35);
+  background: rgba(12, 19, 36, 0.9);
+  padding: 12px;
+}
+
+.clock-display--active {
+  border-color: rgba(148, 187, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(148, 187, 255, 0.35), 0 0 16px rgba(65, 100, 190, 0.35);
+}
+
+.clock-display--low {
+  border-color: rgba(255, 126, 126, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 126, 126, 0.32), 0 0 16px rgba(214, 54, 54, 0.35);
+}
+
+.clock-player {
+  color: #c8d5fb;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.clock-time {
+  color: #f8faff;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.time-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.resign-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.time-btn {
+  border: 1px solid rgba(189, 206, 255, 0.55);
+  background: linear-gradient(180deg, #3557a8 0%, #263f78 100%);
+  color: #f7f9ff;
+  border-radius: 10px;
+  padding: 12px 10px;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.time-btn--selected {
+  border-color: rgba(255, 238, 167, 0.95);
+  box-shadow: 0 0 0 1px rgba(255, 238, 167, 0.35), inset 0 0 0 1px rgba(255, 238, 167, 0.22);
+}
+
+.action-btn--danger {
+  border-color: rgba(255, 144, 144, 0.75);
+  background: linear-gradient(180deg, #bf3b3b 0%, #8a2929 100%);
 }
 
 .action-btn--secondary {
@@ -300,26 +444,26 @@
   }
 }
 
-@keyframes ambient-pulse {
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 0.5;
+@keyframes ambient-wobble {
+  0% {
+    transform: translate3d(-1.5%, -1%, 0) rotate(0deg) scale(1);
   }
   50% {
-    transform: scale(1.04) rotate(2.5deg);
-    opacity: 0.9;
+    transform: translate3d(2.2%, 1.8%, 0) rotate(2.2deg) scale(1.05);
+  }
+  100% {
+    transform: translate3d(-1.5%, -1%, 0) rotate(0deg) scale(1);
   }
 }
 
-@keyframes ambient-drift {
+@keyframes ambient-wobble-reverse {
   0% {
-    transform: translate3d(-2.5%, -1.5%, 0) rotate(0deg);
+    transform: translate3d(1.6%, 1.1%, 0) rotate(0deg) scale(1);
   }
   50% {
-    transform: translate3d(2.5%, 2%, 0) rotate(3deg);
+    transform: translate3d(-2%, -1.6%, 0) rotate(-2.4deg) scale(0.96);
   }
   100% {
-    transform: translate3d(-2.5%, -1.5%, 0) rotate(0deg);
+    transform: translate3d(1.6%, 1.1%, 0) rotate(0deg) scale(1);
   }
 }

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
@@ -14,7 +14,7 @@ import { IVisualizationArrow } from '../../model/visualization-arrow.interface';
   templateUrl: './chess-board.component.html',
   styleUrls: ['./chess-board.component.less']
 })
-export class ChessBoardComponent implements AfterViewInit {
+export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   @ViewChild('chessField') chessField: ElementRef;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
@@ -25,11 +25,35 @@ export class ChessBoardComponent implements AfterViewInit {
   private lastMatePreviewKey = '';
   private repetitionCounts: {[positionKey: string]: number} = {};
   private trackedHistoryLength = -1;
+  chessColors = ChessColorsEnum;
+  clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = [
+    { label: '1+0', baseMinutes: 1, incrementSeconds: 0 },
+    { label: '3+2', baseMinutes: 3, incrementSeconds: 2 },
+    { label: '5+0', baseMinutes: 5, incrementSeconds: 0 },
+    { label: '10+0', baseMinutes: 10, incrementSeconds: 0 }
+  ];
+  selectedClockPresetLabel = '5+0';
+  whiteClockMs = 0;
+  blackClockMs = 0;
+  clockRunning = false;
+  clockStarted = false;
+  private clockIntervalId: number | null = null;
+  private lastClockTickAt = 0;
+  private incrementMs = 0;
+  private readonly clockTickIntervalMs = 200;
   pendingDrawOfferBy: ChessColorsEnum | null = null;
+  ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
-  constructor(public globalVariablesService: GlobalVariablesService) {}
+  constructor(public globalVariablesService: GlobalVariablesService) {
+    this.randomizeAmbientStyle();
+    this.applyTimeControl(5, 0, '5+0');
+  }
+
+  ngOnDestroy(): void {
+    this.stopClock();
+  }
 
   ngAfterViewInit(): void {
     if (this.dropListElements) {
@@ -134,6 +158,13 @@ export class ChessBoardComponent implements AfterViewInit {
         return;
       }
 
+      if (!this.clockStarted) {
+        this.clockStarted = true;
+        this.startClock();
+      }
+
+      this.randomizeAmbientStyle();
+
       const srcColor = event.previousContainer.data[0].color;
       if (this.pendingDrawOfferBy !== null && this.pendingDrawOfferBy !== srcColor) {
         this.pendingDrawOfferBy = null;
@@ -220,6 +251,7 @@ export class ChessBoardComponent implements AfterViewInit {
       const lastNotation = GlobalVariablesService.translateNotation(
         targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
       GlobalVariablesService.addHistory(lastNotation);
+      this.addIncrementToColor(srcColor);
       this.globalVariablesService.boardHelper.colorTurn =
         this.globalVariablesService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
       if (!isMatch) {
@@ -355,6 +387,7 @@ export class ChessBoardComponent implements AfterViewInit {
       return;
     }
     this.pendingDrawOfferBy = this.getOpponentColor(this.globalVariablesService.boardHelper.colorTurn);
+    this.randomizeAmbientStyle();
   }
 
   canOfferDraw(): boolean {
@@ -378,7 +411,8 @@ export class ChessBoardComponent implements AfterViewInit {
     if (!this.canRespondToDrawOffer()) {
       return;
     }
-    this.setDrawState('Draw by agreement.');
+    this.setDrawState('Draw by agreement.', 'Draw agreed');
+    this.randomizeAmbientStyle();
   }
 
   declineDrawOffer(): void {
@@ -386,6 +420,67 @@ export class ChessBoardComponent implements AfterViewInit {
       return;
     }
     this.pendingDrawOfferBy = null;
+    this.randomizeAmbientStyle();
+  }
+
+  applyTimeControl(baseMinutes: number, incrementSeconds: number, label: string): void {
+    this.stopClock();
+    this.selectedClockPresetLabel = label;
+    const baseMs = Math.max(0, baseMinutes) * 60 * 1000;
+    this.incrementMs = Math.max(0, incrementSeconds) * 1000;
+    this.whiteClockMs = baseMs;
+    this.blackClockMs = baseMs;
+    this.clockStarted = false;
+    this.clockRunning = false;
+    this.lastClockTickAt = 0;
+  }
+
+  startOrPauseClock(): void {
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return;
+    }
+    if (this.clockRunning) {
+      this.stopClock();
+      return;
+    }
+    this.clockStarted = true;
+    this.startClock();
+  }
+
+  resetClock(): void {
+    const selectedPreset = this.clockPresets.find(preset => preset.label === this.selectedClockPresetLabel);
+    if (!selectedPreset) {
+      return;
+    }
+    this.applyTimeControl(selectedPreset.baseMinutes, selectedPreset.incrementSeconds, selectedPreset.label);
+  }
+
+  getClockButtonLabel(): string {
+    return this.clockRunning ? 'Pause Clock' : 'Start Clock';
+  }
+
+  formatClock(clockMs: number): string {
+    const totalMs = Math.max(0, Math.floor(clockMs));
+    const totalSeconds = Math.floor(totalMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const tenths = Math.floor((totalMs % 1000) / 100);
+    if (minutes >= 1) {
+      return `${this.padToTwo(minutes)}:${this.padToTwo(seconds)}`;
+    }
+    return `${this.padToTwo(minutes)}:${this.padToTwo(seconds)}.${tenths}`;
+  }
+
+  isClockActive(color: ChessColorsEnum): boolean {
+    if (!this.clockRunning || !this.clockStarted || this.globalVariablesService.boardHelper.gameOver) {
+      return false;
+    }
+    return this.globalVariablesService.boardHelper.colorTurn === color;
+  }
+
+  isClockLow(color: ChessColorsEnum): boolean {
+    const remainingTime = color === ChessColorsEnum.White ? this.whiteClockMs : this.blackClockMs;
+    return remainingTime <= 10000;
   }
 
   canClaimDraw(): boolean {
@@ -404,12 +499,38 @@ export class ChessBoardComponent implements AfterViewInit {
       return;
     }
     if (this.isThreefoldRepetition()) {
-      this.setDrawState('Draw by threefold repetition (claimed).');
+      this.setDrawState('Draw by threefold repetition (claimed).', 'Draw by threefold repetition');
       return;
     }
     if (this.isFiftyMoveRule()) {
-      this.setDrawState('Draw by 50-move rule (claimed).');
+      this.setDrawState('Draw by fifty-move rule (claimed).', 'Draw by fifty-move rule');
     }
+  }
+
+  canResign(color: ChessColorsEnum): boolean {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return false;
+    }
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return false;
+    }
+    return color === ChessColorsEnum.White || color === ChessColorsEnum.Black;
+  }
+
+  resign(color: ChessColorsEnum): void {
+    if (!this.canResign(color)) {
+      return;
+    }
+
+    this.stopClock();
+    this.pendingDrawOfferBy = null;
+    this.globalVariablesService.boardHelper.gameOver = true;
+    this.globalVariablesService.boardHelper.checkmateColor = null;
+
+    const loserName = color === ChessColorsEnum.White ? 'White' : 'Black';
+    const winnerResult = color === ChessColorsEnum.White ? '0-1' : '1-0';
+    this.globalVariablesService.boardHelper.debugText = `${loserName} resigns.`;
+    this.appendGameResultToLastMove(winnerResult, `${loserName} resigns`);
   }
 
   private collectMateInOneTargets(
@@ -897,50 +1018,163 @@ export class ChessBoardComponent implements AfterViewInit {
 
     const isStalemate = !isCurrentTurnInCheck && !hasLegalMovesForCurrentTurn;
     if (isStalemate) {
-      this.setDrawState('Draw by stalemate.');
+      this.setDrawState('Draw by stalemate.', 'Draw by stalemate');
       return;
     }
 
     if (this.isInsufficientMaterial(this.globalVariablesService.field)) {
-      this.setDrawState('Draw by insufficient material.');
+      this.setDrawState('Draw by insufficient material.', 'Draw by insufficient material');
       return;
     }
 
     this.recordCurrentPosition();
     if (this.isFivefoldRepetition()) {
-      this.setDrawState('Draw by fivefold repetition.');
+      this.setDrawState('Draw by fivefold repetition.', 'Draw by fivefold repetition');
       return;
     }
 
     if (this.isSeventyFiveMoveRule()) {
-      this.setDrawState('Draw by 75-move rule.');
+      this.setDrawState('Draw by seventy-five-move rule.', 'Draw by seventy-five-move rule');
       return;
     }
   }
 
-  private setDrawState(message: string): void {
+  private setDrawState(message: string, historyReason: string): void {
     this.globalVariablesService.boardHelper.gameOver = true;
     this.globalVariablesService.boardHelper.checkmateColor = null;
     this.globalVariablesService.boardHelper.debugText = message;
     this.pendingDrawOfferBy = null;
-    this.appendDrawMarkerToLastMove();
+    this.appendGameResultToLastMove('1/2-1/2', historyReason);
   }
 
   private getOpponentColor(color: ChessColorsEnum): ChessColorsEnum {
     return color === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
   }
 
-  private appendDrawMarkerToLastMove(): void {
+  private randomizeAmbientStyle(): void {
+    this.ambientStyle = {
+      '--blob1-x': `${this.randomBetween(28, 42)}%`,
+      '--blob1-y': `${this.randomBetween(24, 40)}%`,
+      '--blob1-r': `${this.randomBetween(7, 11)}%`,
+      '--blob2-x': `${this.randomBetween(58, 72)}%`,
+      '--blob2-y': `${this.randomBetween(24, 40)}%`,
+      '--blob2-r': `${this.randomBetween(7, 12)}%`,
+      '--blob3-x': `${this.randomBetween(40, 60)}%`,
+      '--blob3-y': `${this.randomBetween(52, 68)}%`,
+      '--blob3-r': `${this.randomBetween(6, 10)}%`,
+      '--blob4-x': `${this.randomBetween(30, 46)}%`,
+      '--blob4-y': `${this.randomBetween(58, 78)}%`,
+      '--blob4-r': `${this.randomBetween(7, 11)}%`,
+      '--blob5-x': `${this.randomBetween(54, 70)}%`,
+      '--blob5-y': `${this.randomBetween(58, 78)}%`,
+      '--blob5-r': `${this.randomBetween(6, 10)}%`,
+      '--wobble-a': `${this.randomBetween(5.8, 8.4)}s`,
+      '--wobble-b': `${this.randomBetween(7.6, 11.2)}s`
+    };
+  }
+
+  private randomBetween(min: number, max: number): number {
+    return Number((Math.random() * (max - min) + min).toFixed(2));
+  }
+
+  private appendGameResultToLastMove(result: '1-0' | '0-1' | '1/2-1/2', reason: string): void {
     const historyEntries = this.globalVariablesService.boardHelper.history;
     const historyLength = Object.keys(historyEntries).length;
+    const resultSuffix = `${result} {${reason}}`;
+
     if (historyLength < 1) {
+      GlobalVariablesService.addHistory(resultSuffix);
       return;
     }
+
     const lastMove = historyEntries[`${historyLength}`];
-    if (!lastMove || lastMove.includes('½-½')) {
+    if (!lastMove) {
+      historyEntries[`${historyLength}`] = resultSuffix;
       return;
     }
-    historyEntries[`${historyLength}`] = `${lastMove} ½-½`;
+
+    if (/(?:1-0|0-1|1\/2-1\/2)\s*\{/.test(lastMove)) {
+      return;
+    }
+
+    historyEntries[`${historyLength}`] = `${lastMove} ${resultSuffix}`;
+  }
+
+  private startClock(): void {
+    if (this.clockIntervalId !== null) {
+      return;
+    }
+    this.lastClockTickAt = Date.now();
+    this.clockRunning = true;
+    this.clockIntervalId = window.setInterval(() => this.tickClock(), this.clockTickIntervalMs);
+  }
+
+  private stopClock(): void {
+    if (this.clockIntervalId !== null) {
+      window.clearInterval(this.clockIntervalId);
+      this.clockIntervalId = null;
+    }
+    this.clockRunning = false;
+  }
+
+  private tickClock(): void {
+    if (!this.clockRunning || !this.clockStarted || this.globalVariablesService.boardHelper.gameOver) {
+      this.stopClock();
+      return;
+    }
+
+    const now = Date.now();
+    const elapsedMs = now - this.lastClockTickAt;
+    this.lastClockTickAt = now;
+    if (elapsedMs <= 0) {
+      return;
+    }
+
+    const activeColor = this.globalVariablesService.boardHelper.colorTurn;
+    if (activeColor === ChessColorsEnum.White) {
+      this.whiteClockMs = Math.max(0, this.whiteClockMs - elapsedMs);
+      if (this.whiteClockMs === 0) {
+        this.handleTimeForfeit(ChessColorsEnum.White);
+      }
+      return;
+    }
+
+    this.blackClockMs = Math.max(0, this.blackClockMs - elapsedMs);
+    if (this.blackClockMs === 0) {
+      this.handleTimeForfeit(ChessColorsEnum.Black);
+    }
+  }
+
+  private addIncrementToColor(color: ChessColorsEnum): void {
+    if (!this.clockStarted || this.incrementMs <= 0 || this.globalVariablesService.boardHelper.gameOver) {
+      return;
+    }
+    if (color === ChessColorsEnum.White) {
+      this.whiteClockMs += this.incrementMs;
+      return;
+    }
+    this.blackClockMs += this.incrementMs;
+  }
+
+  private handleTimeForfeit(loserColor: ChessColorsEnum): void {
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return;
+    }
+
+    this.stopClock();
+    this.pendingDrawOfferBy = null;
+    this.globalVariablesService.boardHelper.gameOver = true;
+    this.globalVariablesService.boardHelper.checkmateColor = null;
+
+    const winnerColor = loserColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    const winnerResult = winnerColor === ChessColorsEnum.White ? '1-0' : '0-1';
+    const loserName = loserColor === ChessColorsEnum.White ? 'White' : 'Black';
+    this.globalVariablesService.boardHelper.debugText = `${loserName} forfeits on time.`;
+    this.appendGameResultToLastMove(winnerResult, `${loserName} forfeits on time`);
+  }
+
+  private padToTwo(value: number): string {
+    return value.toString().padStart(2, '0');
   }
 
   private ensureRepetitionTrackingState(): void {
