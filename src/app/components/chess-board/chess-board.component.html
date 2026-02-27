@@ -1,7 +1,7 @@
 <div class="trainer-layout">
   <div class="ambient-math" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
   <section class="board-panel">
-    <div class="outer-container board-shell">
+    <div class="outer-container board-shell" [class.board-shell--flipped]="isBoardFlipped">
       <div class="container" #chessField>
         <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
           <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
@@ -92,13 +92,32 @@
         <button class="action-btn action-btn--secondary" *ngIf="canRespondToDrawOffer()" (click)="declineDrawOffer()">decline draw</button>
         <button class="action-btn action-btn--secondary" *ngIf="canClaimDraw()" (click)="claimDraw()">claim draw</button>
       </div>
-      <div class="resign-grid">
-        <button class="action-btn action-btn--danger action-btn--large"
+      <div class="icon-actions-row icon-actions-row--resign">
+        <button class="icon-action-btn icon-action-btn--danger"
                 [disabled]="!canResign(chessColors.White)"
-                (click)="resign(chessColors.White)">White resigns</button>
-        <button class="action-btn action-btn--danger action-btn--large"
+                (click)="openResignConfirm(chessColors.White)"
+                title="White resign"
+                aria-label="White resign">
+          <span class="icon-action-btn__icon">♔</span>
+          <span class="icon-action-btn__text">White</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--danger"
                 [disabled]="!canResign(chessColors.Black)"
-                (click)="resign(chessColors.Black)">Black resigns</button>
+                (click)="openResignConfirm(chessColors.Black)"
+                title="Black resign"
+                aria-label="Black resign">
+          <span class="icon-action-btn__icon">♚</span>
+          <span class="icon-action-btn__text">Black</span>
+        </button>
+      </div>
+      <div class="mini-modal" *ngIf="resignConfirmColor !== null" role="dialog" aria-modal="false" aria-label="Confirm resignation">
+        <div class="mini-modal__text">
+          Are you sure {{resignConfirmColor === chessColors.White ? 'White' : 'Black'}} resigns?
+        </div>
+        <div class="mini-modal__actions">
+          <button class="action-btn action-btn--secondary" (click)="cancelResignConfirm()">Cancel</button>
+          <button class="action-btn action-btn--danger" (click)="confirmResign()">Resign</button>
+        </div>
       </div>
     </div>
 
@@ -114,30 +133,85 @@
 
     <div class="tool-card">
       <h3 class="section-title">Magic Toolkit</h3>
-      <div class="actions-grid">
-        <button class="action-btn" (click)="showThreats()">my threats</button>
-        <button class="action-btn" (click)="showProtected()">my protected</button>
-        <button class="action-btn" (click)="showThreats(true)">threats from enemy</button>
-        <button class="action-btn" (click)="showProtected(true)">protected enemy</button>
+      <div class="icon-actions-row">
+        <button class="icon-action-btn" (click)="showThreats()" title="My threats" aria-label="My threats">
+          <span class="icon-action-btn__icon">⚔</span>
+          <span class="icon-action-btn__text">Mine</span>
+        </button>
+        <button class="icon-action-btn" (click)="showProtected()" title="My protected" aria-label="My protected">
+          <span class="icon-action-btn__icon">🛡</span>
+          <span class="icon-action-btn__text">Safe</span>
+        </button>
+        <button class="icon-action-btn" (click)="showThreats(true)" title="Enemy threats" aria-label="Enemy threats">
+          <span class="icon-action-btn__icon">☠</span>
+          <span class="icon-action-btn__text">Enemy</span>
+        </button>
+        <button class="icon-action-btn" (click)="showProtected(true)" title="Enemy protected" aria-label="Enemy protected">
+          <span class="icon-action-btn__icon">⛨</span>
+          <span class="icon-action-btn__text">Guarded</span>
+        </button>
       </div>
     </div>
 
     <div class="tool-card">
       <h3 class="section-title">Magicer Toolkit</h3>
-      <div class="actions-grid actions-grid--compact">
-        <button class="action-btn" (click)="showHangingPieces()">my hanging piece (blundered)</button>
-        <button class="action-btn" (click)="showHangingPieces(true)">hanging enemy (hittable)</button>
+      <div class="icon-actions-row icon-actions-row--compact">
+        <button class="icon-action-btn" (click)="showHangingPieces()" title="My hanging pieces (blundered)" aria-label="My hanging pieces">
+          <span class="icon-action-btn__icon">⚠</span>
+          <span class="icon-action-btn__text">Blunder</span>
+        </button>
+        <button class="icon-action-btn" (click)="showHangingPieces(true)" title="Hanging enemy pieces (hittable)" aria-label="Hanging enemy pieces">
+          <span class="icon-action-btn__icon">🎯</span>
+          <span class="icon-action-btn__text">Target</span>
+        </button>
       </div>
+    </div>
+
+    <div class="tool-card">
+      <h3 class="section-title">Game Tools</h3>
+      <div class="icon-actions-row icon-actions-row--compact">
+        <button class="icon-action-btn" (click)="toggleBoardFlip()" title="Flip board" aria-label="Flip board">
+          <span class="icon-action-btn__icon">⇅</span>
+          <span class="icon-action-btn__text">{{isBoardFlipped ? 'Normal' : 'Flip'}}</span>
+        </button>
+        <button class="icon-action-btn" (click)="exportPgnMock()" title="Export PGN (mock)" aria-label="Export PGN">
+          <span class="icon-action-btn__icon">⭳</span>
+          <span class="icon-action-btn__text">PGN</span>
+        </button>
+        <button class="icon-action-btn" (click)="exportBoardImageMock()" title="Export image (mock)" aria-label="Export board image">
+          <span class="icon-action-btn__icon">🖼</span>
+          <span class="icon-action-btn__text">Image</span>
+        </button>
+      </div>
+      <div class="mock-export-text" *ngIf="mockExportMessage">{{mockExportMessage}}</div>
+    </div>
+
+    <div class="tool-card">
+      <h3 class="section-title">Recognition</h3>
+      <div class="recognition-line"><strong>Opening:</strong> {{getMockOpeningRecognition()}}</div>
+      <div class="recognition-line"><strong>Endgame:</strong> {{getMockEndgameRecognition()}}</div>
     </div>
 
     <div class="history-card">
       <h3 class="section-title">History</h3>
+      <div class="icon-actions-row icon-actions-row--compact history-controls">
+        <button class="icon-action-btn" [disabled]="!canUndoMoveMock()" (click)="undoMoveMock()" title="Undo move (mock)" aria-label="Undo move">
+          <span class="icon-action-btn__icon">↶</span>
+          <span class="icon-action-btn__text">Undo</span>
+        </button>
+        <button class="icon-action-btn" [disabled]="!canRedoMoveMock()" (click)="redoMoveMock()" title="Redo move (mock)" aria-label="Redo move">
+          <span class="icon-action-btn__icon">↷</span>
+          <span class="icon-action-btn__text">Redo</span>
+        </button>
+      </div>
       <div class="history-log">
-        <span class="history-entry" *ngFor="let histItem of globalVariablesService.history; index as histIdx">
-          <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
-          {{histItem}}
-          <br *ngIf="histIdx % 2 === 1" />
-        </span>
+        <div class="history-entry" *ngFor="let histItem of getVisibleHistory(); index as histIdx">
+          <span class="history-move">
+            <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
+            {{histItem}}
+          </span>
+          <span class="history-eval">SF {{getMockEvaluationForMove(histIdx)}}</span>
+        </div>
       </div>
     </div>
 

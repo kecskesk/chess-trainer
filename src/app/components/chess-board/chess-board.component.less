@@ -22,6 +22,16 @@
   overflow: visible;
 }
 
+.board-shell--flipped {
+  transform: rotate(180deg);
+  transform-origin: center;
+}
+
+.board-shell--flipped .drag-box,
+.board-shell--flipped .notation {
+  transform: rotate(180deg);
+}
+
 .field-cell,
 .field-row,
 .piece-box {
@@ -410,6 +420,89 @@
   margin-top: 8px;
 }
 
+.icon-actions-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.icon-actions-row--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.icon-actions-row--resign {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 8px;
+}
+
+.icon-action-btn {
+  border: 1px solid rgba(189, 206, 255, 0.55);
+  background: linear-gradient(180deg, #4164be 0%, #304a8b 100%);
+  color: #f7f9ff;
+  border-radius: 8px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.45);
+    opacity: 0.55;
+  }
+}
+
+.icon-action-btn__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.icon-action-btn__text {
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.icon-action-btn--danger {
+  border-color: rgba(255, 144, 144, 0.75);
+  background: linear-gradient(180deg, #bf3b3b 0%, #8a2929 100%);
+}
+
+.mini-modal {
+  margin-top: 8px;
+  border: 1px solid rgba(219, 230, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(9, 14, 28, 0.88);
+  padding: 8px;
+}
+
+.mini-modal__text {
+  color: #dce5ff;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.mini-modal__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .time-btn {
   border: 1px solid rgba(189, 206, 255, 0.55);
   background: linear-gradient(180deg, #3557a8 0%, #263f78 100%);
@@ -455,7 +548,38 @@
 }
 
 .history-entry {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   line-height: 1.45;
+  border-bottom: 1px solid rgba(219, 230, 255, 0.08);
+  padding: 2px 0;
+}
+
+.history-move {
+  flex: 1;
+}
+
+.history-eval {
+  color: #9ed3a9;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.history-controls {
+  margin-bottom: 8px;
+}
+
+.recognition-line,
+.mock-export-text {
+  color: #dce5ff;
+  font-size: 12px;
+}
+
+.recognition-line + .recognition-line,
+.mock-export-text {
+  margin-top: 6px;
 }
 
 .debug-card {

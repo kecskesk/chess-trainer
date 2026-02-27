@@ -42,6 +42,19 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private incrementMs = 0;
   private readonly clockTickIntervalMs = 200;
   pendingDrawOfferBy: ChessColorsEnum | null = null;
+  resignConfirmColor: ChessColorsEnum | null = null;
+  mockHistoryCursor: number | null = null;
+  isBoardFlipped = false;
+  mockExportMessage = '';
+  private readonly mockEvalCycle: string[] = [
+    '+0.1', '+0.3', '+0.0', '-0.2', '+0.5', '+0.8', '-0.1', '+1.1'
+  ];
+  private readonly mockOpeningCycle: string[] = [
+    'Ruy Lopez (mock)',
+    'Queen\'s Gambit (mock)',
+    'Italian Game (mock)',
+    'Sicilian Defense (mock)'
+  ];
   ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
@@ -517,11 +530,123 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return color === ChessColorsEnum.White || color === ChessColorsEnum.Black;
   }
 
+  openResignConfirm(color: ChessColorsEnum): void {
+    if (!this.canResign(color)) {
+      return;
+    }
+    this.resignConfirmColor = color;
+  }
+
+  cancelResignConfirm(): void {
+    this.resignConfirmColor = null;
+  }
+
+  confirmResign(): void {
+    if (this.resignConfirmColor === null) {
+      return;
+    }
+    const color = this.resignConfirmColor;
+    this.resignConfirmColor = null;
+    this.resign(color);
+  }
+
+  getVisibleHistory(): string[] {
+    const history = this.globalVariablesService.history || [];
+    if (this.mockHistoryCursor === null) {
+      return history;
+    }
+    if (history.length < 1) {
+      return [];
+    }
+    const maxIndex = history.length - 1;
+    const clampedIndex = Math.max(0, Math.min(this.mockHistoryCursor, maxIndex));
+    return history.slice(0, clampedIndex + 1);
+  }
+
+  canUndoMoveMock(): boolean {
+    return this.getCurrentVisibleMoveIndex() > 0;
+  }
+
+  canRedoMoveMock(): boolean {
+    const maxIndex = this.getMaxMoveIndex();
+    if (maxIndex < 0 || this.mockHistoryCursor === null) {
+      return false;
+    }
+    return this.mockHistoryCursor < maxIndex;
+  }
+
+  undoMoveMock(): void {
+    const maxIndex = this.getMaxMoveIndex();
+    if (maxIndex < 0) {
+      return;
+    }
+    const currentIndex = this.getCurrentVisibleMoveIndex();
+    if (currentIndex <= 0) {
+      return;
+    }
+    this.mockHistoryCursor = currentIndex - 1;
+  }
+
+  redoMoveMock(): void {
+    const maxIndex = this.getMaxMoveIndex();
+    if (maxIndex < 0 || this.mockHistoryCursor === null) {
+      return;
+    }
+    if (this.mockHistoryCursor >= maxIndex) {
+      this.mockHistoryCursor = null;
+      return;
+    }
+    this.mockHistoryCursor += 1;
+    if (this.mockHistoryCursor >= maxIndex) {
+      this.mockHistoryCursor = null;
+    }
+  }
+
+  getMockEvaluationForMove(halfMoveIndex: number): string {
+    if (halfMoveIndex < 0) {
+      return '+0.0';
+    }
+    return this.mockEvalCycle[halfMoveIndex % this.mockEvalCycle.length];
+  }
+
+  toggleBoardFlip(): void {
+    this.isBoardFlipped = !this.isBoardFlipped;
+  }
+
+  getMockOpeningRecognition(): string {
+    const moveCount = this.getVisibleHistory().length;
+    if (moveCount < 2) {
+      return 'Waiting for opening line...';
+    }
+    const cycleIndex = Math.floor(moveCount / 2) % this.mockOpeningCycle.length;
+    return this.mockOpeningCycle[cycleIndex];
+  }
+
+  getMockEndgameRecognition(): string {
+    const totalPieces = this.getCurrentPieceCount();
+    if (totalPieces <= 12) {
+      return 'Likely endgame (mock)';
+    }
+    if (totalPieces <= 20) {
+      return 'Transition phase (mock)';
+    }
+    return 'Not endgame yet (mock)';
+  }
+
+  exportPgnMock(): void {
+    this.mockExportMessage = `Mock export: PGN ready (${new Date().toLocaleTimeString()})`;
+  }
+
+  exportBoardImageMock(): void {
+    this.mockExportMessage = `Mock export: Board image ready (${new Date().toLocaleTimeString()})`;
+  }
+
   resign(color: ChessColorsEnum): void {
     if (!this.canResign(color)) {
       return;
     }
 
+    this.resignConfirmColor = null;
     this.stopClock();
     this.pendingDrawOfferBy = null;
     this.globalVariablesService.boardHelper.gameOver = true;
@@ -1175,6 +1300,33 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private padToTwo(value: number): string {
     return value.toString().padStart(2, '0');
+  }
+
+  private getMaxMoveIndex(): number {
+    return (this.globalVariablesService.history || []).length - 1;
+  }
+
+  private getCurrentVisibleMoveIndex(): number {
+    const maxIndex = this.getMaxMoveIndex();
+    if (maxIndex < 0) {
+      return -1;
+    }
+    if (this.mockHistoryCursor === null) {
+      return maxIndex;
+    }
+    return Math.max(0, Math.min(this.mockHistoryCursor, maxIndex));
+  }
+
+  private getCurrentPieceCount(): number {
+    let totalPieces = 0;
+    this.globalVariablesService.field.forEach(row => {
+      row.forEach(cell => {
+        if (cell && cell[0]) {
+          totalPieces += 1;
+        }
+      });
+    });
+    return totalPieces;
   }
 
   private ensureRepetitionTrackingState(): void {
