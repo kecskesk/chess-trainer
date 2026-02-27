@@ -62,7 +62,7 @@ export class ChessRulesService {
         return false;
       }
       const cmResult = new ChessMoveResultDto(
-        moveValidationResult.isValid, false, moveValidationResult.isEnemyPiece, moveValidationResult.isEmptyTarget);
+        moveValidationResult.isValid, moveValidationResult.isEnemyPiece, false, moveValidationResult.isEmptyTarget);
       const cmParams = new ChessMoveParamsDto(
         targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory);
       switch (sourcePiece) {
