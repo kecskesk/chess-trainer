@@ -64,7 +64,7 @@ export class ChessRulesService {
       const cmResult = new ChessMoveResultDto(
         moveValidationResult.isValid, moveValidationResult.isEnemyPiece, false, moveValidationResult.isEmptyTarget);
       const cmParams = new ChessMoveParamsDto(
-        targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory);
+        targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory, !!justLookingWithPiece);
       switch (sourcePiece) {
         case ChessPiecesEnum.Pawn: {
           ChessRulesService.pawnRules(cmResult, cmParams);
@@ -211,37 +211,190 @@ export class ChessRulesService {
   }
 
   static kingRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
+    const colDelta = Math.abs(cmParams.targetCol - cmParams.srcCol);
+    const rowDelta = Math.abs(cmParams.targetRow - cmParams.srcRow);
     // Side 1 and up-down 1
-    if (Math.abs(cmParams.targetCol - cmParams.srcCol) > 1) {
+    if (colDelta > 1) {
       cmResult.canDrop = false;
     }
-    if (Math.abs(cmParams.targetRow - cmParams.srcRow) > 1) {
+    if (rowDelta > 1) {
       cmResult.canDrop = false;
     }
+    const isCastleAttempt = rowDelta === 0 && colDelta === 2;
+    if (!isCastleAttempt || cmParams.justLooking) {
+      return;
+    }
+
+    cmResult.canDrop = false;
     const castleSourceRow = cmParams.sourceColor === ChessColorsEnum.White ? 7 : 0;
     const castleSourceCell = 4;
-    const castleTargetRow = castleSourceRow;
-    const castleTargetCell1 = 2;
-    const castleTargetCell2 = 6;
-    const rookInPlace1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][0];
-    const rook1OK = rookInPlace1.length === 1 &&
-      rookInPlace1[0] && rookInPlace1[0].color === cmParams.sourceColor && rookInPlace1[0].piece === ChessPiecesEnum.Rook;
-    const rookInPlace2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][7];
-    const rook2OK = rookInPlace2.length === 1 &&
-      rookInPlace2[0] && rookInPlace2[0].color === cmParams.sourceColor && rookInPlace2[0].piece === ChessPiecesEnum.Rook;
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
-    if (cmResult.targetEmpty && cmParams.srcRow === castleSourceRow && cmParams.srcCol === castleSourceCell &&
-      cmParams.targetRow === castleTargetRow && cmParams.targetCol === castleTargetCell1 &&
-      rook1OK && !piecesInWay) {
-      cmResult.canDrop = true;
-      GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+    if (!cmResult.targetEmpty || cmParams.srcRow !== castleSourceRow || cmParams.srcCol !== castleSourceCell ||
+      cmParams.targetRow !== castleSourceRow) {
+      return;
     }
-    if (cmResult.targetEmpty && cmParams.srcRow === castleSourceRow && cmParams.srcCol === castleSourceCell &&
-      cmParams.targetRow === castleTargetRow && cmParams.targetCol === castleTargetCell2 &&
-      rook2OK && !piecesInWay) {
-      cmResult.canDrop = true;
-      GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+
+    const isKingSideCastle = cmParams.targetCol === 6;
+    const isQueenSideCastle = cmParams.targetCol === 2;
+    if (!isKingSideCastle && !isQueenSideCastle) {
+      return;
     }
+
+    const rookSourceCol = isKingSideCastle ? 7 : 0;
+    const rookCell = GlobalVariablesService.CHESS_FIELD[castleSourceRow][rookSourceCol];
+    const rookInPlace = rookCell.length === 1 &&
+      rookCell[0] && rookCell[0].color === cmParams.sourceColor && rookCell[0].piece === ChessPiecesEnum.Rook;
+    if (!rookInPlace) {
+      return;
+    }
+
+    if (ChessRulesService.hasPieceMoved(
+      cmParams.sourceColor,
+      ChessPiecesEnum.King,
+      castleSourceRow,
+      castleSourceCell,
+      cmParams.moveHistory
+    )) {
+      return;
+    }
+
+    if (ChessRulesService.hasPieceMoved(
+      cmParams.sourceColor,
+      ChessPiecesEnum.Rook,
+      castleSourceRow,
+      rookSourceCol,
+      cmParams.moveHistory
+    )) {
+      return;
+    }
+
+    const kingPathCols = isKingSideCastle ? [5, 6] : [3, 2];
+    const rookPathCols = isKingSideCastle ? [5, 6] : [1, 2, 3];
+    const hasPieceInWay = rookPathCols.some(col => GlobalVariablesService.CHESS_FIELD[castleSourceRow][col].length > 0);
+    if (hasPieceInWay) {
+      return;
+    }
+
+    const enemyColor = cmParams.sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    const kingSafetyCols = [castleSourceCell, ...kingPathCols];
+    const isAnySafetySquareUnderAttack = kingSafetyCols.some(col =>
+      ChessRulesService.isSquareUnderAttack(castleSourceRow, col, enemyColor)
+    );
+    if (isAnySafetySquareUnderAttack) {
+      return;
+    }
+
+    cmResult.canDrop = true;
+    GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+  }
+
+  private static hasPieceMoved(
+    sourceColor: ChessColorsEnum,
+    piece: ChessPiecesEnum,
+    sourceRow: number,
+    sourceCol: number,
+    moveHistory: {[name: string]: string}
+  ): boolean {
+    if (!moveHistory) {
+      return false;
+    }
+    const sourceSquare = ChessRulesService.toSquareNotation(sourceRow, sourceCol);
+    const historyEntries = Object.keys(moveHistory)
+      .map(key => ({ index: Number(key), notation: moveHistory[key] }))
+      .filter(entry => !isNaN(entry.index) && !!entry.notation)
+      .sort((a, b) => a.index - b.index);
+
+    for (const entry of historyEntries) {
+      if (piece === ChessPiecesEnum.King && (entry.notation === 'O-O' || entry.notation === 'O-O-O')) {
+        const moveColor = entry.index % 2 === 1 ? ChessColorsEnum.White : ChessColorsEnum.Black;
+        if (moveColor === sourceColor) {
+          return true;
+        }
+      }
+
+      const parsedMove = ChessRulesService.parseMoveNotation(entry.notation);
+      if (!parsedMove) {
+        continue;
+      }
+      if (parsedMove.sourceSquare === sourceSquare && parsedMove.piece === piece) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static parseMoveNotation(
+    notation: string
+  ): { piece: ChessPiecesEnum, sourceSquare: string } | null {
+    if (!notation || notation === 'O-O' || notation === 'O-O-O') {
+      return null;
+    }
+    const match = notation.match(/^([KQRBN]?)([a-h][1-8])x?[a-h][1-8]/);
+    if (!match) {
+      return null;
+    }
+    const pieceChar = match[1];
+    let piece = ChessPiecesEnum.Pawn;
+    switch (pieceChar) {
+      case 'K': {
+        piece = ChessPiecesEnum.King;
+        break;
+      }
+      case 'Q': {
+        piece = ChessPiecesEnum.Queen;
+        break;
+      }
+      case 'R': {
+        piece = ChessPiecesEnum.Rook;
+        break;
+      }
+      case 'B': {
+        piece = ChessPiecesEnum.Bishop;
+        break;
+      }
+      case 'N': {
+        piece = ChessPiecesEnum.Knight;
+        break;
+      }
+      default: {
+        piece = ChessPiecesEnum.Pawn;
+        break;
+      }
+    }
+    return {
+      piece,
+      sourceSquare: match[2]
+    };
+  }
+
+  private static toSquareNotation(row: number, col: number): string {
+    const file = String.fromCharCode('a'.charCodeAt(0) + col);
+    const rank = `${8 - row}`;
+    return `${file}${rank}`;
+  }
+
+  private static isSquareUnderAttack(row: number, col: number, attackerColor: ChessColorsEnum): boolean {
+    const targetColor = attackerColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    for (let srcRow = 0; srcRow <= 7; srcRow++) {
+      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+        const attackerCell = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
+        if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
+          continue;
+        }
+        const attacker = attackerCell[0];
+        const canAttackSquare = ChessRulesService.canStepThere(
+          row,
+          col,
+          [new ChessPieceDto(targetColor, ChessPiecesEnum.King)],
+          srcRow,
+          srcCol,
+          new ChessPieceDto(attacker.color, attacker.piece)
+        );
+        if (canAttackSquare) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   static queenRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {

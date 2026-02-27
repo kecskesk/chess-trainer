@@ -54,7 +54,7 @@
       </div>
     </div>
 
-    <div class="tool-card" *ngIf="globalVariablesService.boardHelper.canPromote">
+    <div class="tool-card" *ngIf="globalVariablesService.boardHelper.canPromote !== null">
       <h3 class="section-title">Promote</h3>
       <div class="actions-grid actions-grid--compact">
         <button class="action-btn" (click)="promotePiece('rook')">Rook</button>

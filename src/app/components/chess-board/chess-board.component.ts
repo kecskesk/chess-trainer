@@ -92,7 +92,8 @@ export class ChessBoardComponent implements AfterViewInit {
       const srcCell = Number(srcLocSplit[1][1]);
       const srcPiece = event.previousContainer.data[0].piece;
       const srcColor = event.previousContainer.data[0].color;
-      if (srcPiece === ChessPiecesEnum.Pawn && targetRow === 0) {
+      const promotionTargetRow = srcColor === ChessColorsEnum.White ? 0 : 7;
+      if (srcPiece === ChessPiecesEnum.Pawn && targetRow === promotionTargetRow) {
         this.globalVariablesService.boardHelper.canPromote = targetCell;
       }
 
@@ -194,7 +195,14 @@ export class ChessBoardComponent implements AfterViewInit {
   promotePiece(toPiece: ChessPiecesEnum): void {
     if (this.globalVariablesService.boardHelper.canPromote !== null) {
       const targetCol = Number(this.globalVariablesService.boardHelper.canPromote);
-      const targetSquare = this.globalVariablesService.field[0][targetCol];
+      const whitePromotionSquare = this.globalVariablesService.field[0][targetCol];
+      const blackPromotionSquare = this.globalVariablesService.field[7][targetCol];
+      let targetSquare = null;
+      if (whitePromotionSquare && whitePromotionSquare[0] && whitePromotionSquare[0].piece === ChessPiecesEnum.Pawn) {
+        targetSquare = whitePromotionSquare;
+      } else if (blackPromotionSquare && blackPromotionSquare[0] && blackPromotionSquare[0].piece === ChessPiecesEnum.Pawn) {
+        targetSquare = blackPromotionSquare;
+      }
       if (targetSquare && targetSquare[0]) {
         targetSquare[0].piece = toPiece;
         const history = this.globalVariablesService.history;

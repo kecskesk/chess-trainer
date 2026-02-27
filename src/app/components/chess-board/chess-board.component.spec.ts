@@ -100,4 +100,59 @@ describe('ChessBoardComponent move sequence integration', () => {
       } as any
     )).toBeFalse();
   });
+
+  it('supports d2d4 e7e5 d4d5 c7c5 d5xc6 e.p. d7xc6 sequence', () => {
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+
+    expect(canDropLike(1, 4, 3, 4)).toBeTrue();
+    component.onDrop(createDropLike(1, 4, 3, 4));
+
+    expect(canDropLike(4, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(4, 3, 3, 3));
+
+    expect(canDropLike(1, 2, 3, 2)).toBeTrue();
+    component.onDrop(createDropLike(1, 2, 3, 2));
+
+    expect(canDropLike(3, 3, 2, 2)).toBeTrue();
+    component.onDrop(createDropLike(3, 3, 2, 2));
+    expect(globals.field[3][2].length).toBe(0);
+    expect(globals.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(globals.field[2][2][0].color).toBe(ChessColorsEnum.White);
+
+    expect(canDropLike(1, 3, 2, 2)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 2, 2));
+
+    expect(globals.field[1][3].length).toBe(0);
+    expect(globals.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(globals.field[2][2][0].color).toBe(ChessColorsEnum.Black);
+  });
+
+  it('triggers and applies white promotion on back rank', () => {
+    globals.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    globals.field[0][0] = [];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    expect(canDropLike(1, 0, 0, 0)).toBeTrue();
+    component.onDrop(createDropLike(1, 0, 0, 0));
+
+    expect(globals.boardHelper.canPromote).toBe(0);
+    component.promotePiece(ChessPiecesEnum.Queen);
+    expect(globals.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
+    expect(globals.boardHelper.canPromote).toBeNull();
+  });
+
+  it('triggers and applies black promotion on back rank', () => {
+    globals.field[6][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    globals.field[7][7] = [];
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+
+    expect(canDropLike(6, 7, 7, 7)).toBeTrue();
+    component.onDrop(createDropLike(6, 7, 7, 7));
+
+    expect(globals.boardHelper.canPromote).toBe(7);
+    component.promotePiece(ChessPiecesEnum.Queen);
+    expect(globals.field[7][7][0].piece).toBe(ChessPiecesEnum.Queen);
+    expect(globals.boardHelper.canPromote).toBeNull();
+  });
 });

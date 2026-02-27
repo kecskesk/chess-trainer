@@ -6,6 +6,7 @@ export class ChessMoveParamsDto {
               public srcRow: number,
               public srcCol: number,
               public sourceColor: ChessColorsEnum,
-              public moveHistory: {[name: string]: string}) {
+              public moveHistory: {[name: string]: string},
+              public justLooking = false) {
   }
 }
