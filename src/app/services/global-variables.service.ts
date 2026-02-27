@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
 import { ChessArrowDto } from '../model/chess-arrow.dto';
+import { ChessColorsEnum } from '../model/chess.colors';
+import { ChessPiecesEnum } from '../model/chess.pieces';
 import { ChessPositionDto } from '../model/chess-position.dto';
 
 @Injectable()
@@ -15,19 +17,19 @@ export class GlobalVariablesService {
               {},
               {},
               {},
-              'white',
+              ChessColorsEnum.White,
               null,
               null,
               null);
   field = [
-    [[new ChessPieceDto('black', 'rook')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'queen')], [new ChessPieceDto('black', 'king')], [new ChessPieceDto('black', 'bishop')], [new ChessPieceDto('black', 'knight')], [new ChessPieceDto('black', 'rook')]],
-    [[new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')], [new ChessPieceDto('black', 'pawn')]],
+    [[new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)]],
+    [[new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)]],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
-    [[new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')], [new ChessPieceDto('white', 'pawn')]],
-    [[new ChessPieceDto('white', 'rook')], [new ChessPieceDto('white', 'knight')], [new ChessPieceDto('white', 'bishop')], [new ChessPieceDto('white', 'queen')], [new ChessPieceDto('white', 'king')], [new ChessPieceDto('white', 'bishop')], [new ChessPieceDto('white', 'knight')], [new ChessPieceDto('white', 'rook')]]
+    [[new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]],
+    [[new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)]]
   ];
 
   constructor() {
@@ -133,7 +135,7 @@ export class GlobalVariablesService {
   }
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,
-                    piece: ChessPieces, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
+                    piece: ChessPiecesEnum, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
     let pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + targetCol);
@@ -148,14 +150,14 @@ export class GlobalVariablesService {
       `${letterChar}${numberChar}${check ? '+' : ''}${match ? '#' : ''}${ep ? ' e.p.' : ''}`;
   }
 
-  static translatePieceNotation(piece: ChessPieces): string {
+  static translatePieceNotation(piece: ChessPiecesEnum): string {
     switch(piece) {
-      case 'pawn': return '';
-      case 'bishop': return 'B';
-      case 'king': return 'K';
-      case 'queen': return 'Q';
-      case 'rook': return 'R';
-      case 'knight': return 'N';
+      case ChessPiecesEnum.Pawn: return '';
+      case ChessPiecesEnum.Bishop: return 'B';
+      case ChessPiecesEnum.King: return 'K';
+      case ChessPiecesEnum.Queen: return 'Q';
+      case ChessPiecesEnum.Rook: return 'R';
+      case ChessPiecesEnum.Knight: return 'N';
       default: return '';
     }
   }

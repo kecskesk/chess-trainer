@@ -14,9 +14,9 @@ export interface IChessMove {
   /** Target column (0-7) */
   targetCol: number;
   /** The piece being moved */
-  piece: ChessPiecesEnum | 'pawn' | 'king' | 'queen' | 'knight' | 'bishop' | 'rook';
+  piece: ChessPiecesEnum;
   /** Color of the moving piece */
-  color: ChessColorsEnum | 'black' | 'white';
+  color: ChessColorsEnum;
   /** Whether this move is a capture */
   isCapture: boolean;
   /** Whether this move gives check */

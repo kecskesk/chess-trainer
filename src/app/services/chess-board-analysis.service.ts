@@ -3,6 +3,8 @@ import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessPositionDto } from '../model/chess-position.dto';
 import { ChessRulesService } from './chess-rules.service';
 import { GlobalVariablesService } from './global-variables.service';
+import { ChessColorsEnum } from '../model/chess.colors';
+import { ChessPiecesEnum } from '../model/chess.pieces';
 
 /**
  * Service for analyzing board positions and piece relationships
@@ -23,16 +25,16 @@ export class ChessBoardAnalysisService {
     targetCol: number,
     targetCell: ChessPieceDto[],
     field: ChessPieceDto[][][],
-    byColor: string
-  ): Array<{pos: ChessPositionDto, piece: string}> {
+    byColor: ChessColorsEnum
+  ): Array<{pos: ChessPositionDto, piece: ChessPiecesEnum}> {
     const cacheKey = `threats_${targetRow}_${targetCol}_${byColor}`;
 
     if (this.cacheEnabled && this.threatCache.has(cacheKey)) {
       return this.threatCache.get(cacheKey);
     }
 
-    const threats: Array<{pos: ChessPositionDto, piece: string}> = [];
-    const enemyColor = byColor === 'white' ? 'black' : 'white';
+    const threats: Array<{pos: ChessPositionDto, piece: ChessPiecesEnum}> = [];
+    const enemyColor = byColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
 
     for (let srcRow = 0; srcRow <= 7; srcRow++) {
       for (let srcCol = 0; srcCol <= 7; srcCol++) {
@@ -78,12 +80,12 @@ export class ChessBoardAnalysisService {
   getProtectors(
     targetRow: number,
     targetCol: number,
-    protectorColor: string,
-    targetPiece: string,
+    protectorColor: ChessColorsEnum,
+    targetPiece: ChessPiecesEnum,
     field: ChessPieceDto[][][]
   ): ChessPositionDto[] {
     const protectors: ChessPositionDto[] = [];
-    const enemyColor = protectorColor === 'white' ? 'black' : 'white';
+    const enemyColor = protectorColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
 
     for (let srcRow = 0; srcRow <= 7; srcRow++) {
       for (let srcCol = 0; srcCol <= 7; srcCol++) {
@@ -123,7 +125,7 @@ export class ChessBoardAnalysisService {
   isHangingPiece(
     row: number,
     col: number,
-    pieceColor: string,
+    pieceColor: ChessColorsEnum,
     field: ChessPieceDto[][][]
   ): boolean {
     const cell = field[row] && field[row][col];
@@ -138,7 +140,7 @@ export class ChessBoardAnalysisService {
       return false; // Protected, not hanging
     }
 
-    const enemyColor = pieceColor === 'white' ? 'black' : 'white';
+    const enemyColor = pieceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     const threats = this.getThreatsOnSquare(row, col, cell, field, enemyColor);
 
     return threats.length > 0; // Has threats and no protection = hanging
@@ -155,7 +157,7 @@ export class ChessBoardAnalysisService {
       row.forEach(cell => {
         if (cell && cell[0]) {
           const value = ChessRulesService.valueOfPiece(cell[0].piece);
-          if (cell[0].color === 'white') {
+          if (cell[0].color === ChessColorsEnum.White) {
             balance.white += value;
           } else {
             balance.black += value;

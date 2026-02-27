@@ -62,7 +62,7 @@ export class ChessBoardComponent implements AfterViewInit {
       const srcRow = Number(srcLocSplit[1][0]);
       const srcCell = Number(srcLocSplit[1][1]);
       const srcPiece = event.previousContainer.data[0].piece;
-      if (srcPiece === 'pawn' && targetRow === 0) {
+      if (srcPiece === ChessPiecesEnum.Pawn && targetRow === 0) {
         this.globalVariablesService.boardHelper.canPromote = targetCell;
       }
 
@@ -100,7 +100,8 @@ export class ChessBoardComponent implements AfterViewInit {
       const lastNotation = GlobalVariablesService.translateNotation(
         targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
       GlobalVariablesService.addHistory(lastNotation);
-      this.globalVariablesService.boardHelper.colorTurn = this.globalVariablesService.boardHelper.colorTurn === 'white' ? 'black' : 'white';
+      this.globalVariablesService.boardHelper.colorTurn =
+        this.globalVariablesService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
       transferArrayItem(event.previousContainer.data,
         event.container.data,
         event.previousIndex, event.currentIndex);

@@ -3,6 +3,8 @@ import { GlobalVariablesService } from './global-variables.service';
 import { ChessMoveResultDto } from '../model/chess-move-result.dto';
 import { ChessMoveParamsDto } from '../model/chess-move-params.dto';
 import { ChessPieceDto } from '../model/chess-piece.dto';
+import { ChessColorsEnum } from '../model/chess.colors';
+import { ChessPiecesEnum } from '../model/chess.pieces';
 
 @Injectable()
 export class ChessRulesService {
@@ -20,7 +22,7 @@ export class ChessRulesService {
       }
       let sourceData = null;
       let sourcePiece = null;
-      let sourceColor: ChessColors = null;
+      let sourceColor: ChessColorsEnum = null;
       if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
         return false;
       }
@@ -33,7 +35,7 @@ export class ChessRulesService {
         return false;
       }
       sourceColor = sourceData[0].color;
-      let enemyColor: ChessColors = sourceColor === 'white' ? 'black' : 'white';
+      let enemyColor: ChessColorsEnum = sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
       sourcePiece = sourceData[0].piece;
       if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn && !justLookingWithPiece) {
         return false;
@@ -47,27 +49,27 @@ export class ChessRulesService {
       const cmParams = new ChessMoveParamsDto(
         targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory);
       switch (sourcePiece) {
-        case 'pawn': {
+        case ChessPiecesEnum.Pawn: {
           ChessRulesService.pawnRules(cmResult, cmParams);
           break;
         }
-        case 'knight': {
+        case ChessPiecesEnum.Knight: {
           ChessRulesService.knightRules(cmResult, cmParams);
           break;
         }
-        case 'king': {
+        case ChessPiecesEnum.King: {
           ChessRulesService.kingRules(cmResult, cmParams);
           break;
         }
-        case 'queen': {
+        case ChessPiecesEnum.Queen: {
           ChessRulesService.queenRules(cmResult, cmParams);
           break;
         }
-        case 'rook': {
+        case ChessPiecesEnum.Rook: {
           ChessRulesService.rookRules(cmResult, cmParams);
           break;
         }
-        case 'bishop': {
+        case ChessPiecesEnum.Bishop: {
           ChessRulesService.bishopRules(cmResult, cmParams);
           break;
         }
@@ -78,7 +80,7 @@ export class ChessRulesService {
       let enemyKingPos = { row: null, col: null };
       GlobalVariablesService.CHESS_FIELD.forEach((row, rowIdx) => {
         const kingIndex = row.findIndex(
-          cell => cell && cell[0] && cell[0].piece === 'king' && cell[0].color === enemyColor);
+          cell => cell && cell[0] && cell[0].piece === ChessPiecesEnum.King && cell[0].color === enemyColor);
         if (kingIndex >= 0) {
           enemyKingPos.row = rowIdx;
           enemyKingPos.col = kingIndex;
@@ -86,7 +88,7 @@ export class ChessRulesService {
       });
       if (!justLookingWithPiece) {
         const isCheck = ChessRulesService.canStepThere(
-          enemyKingPos.row, enemyKingPos.col, [new ChessPieceDto(enemyColor, 'king')],
+          enemyKingPos.row, enemyKingPos.col, [new ChessPieceDto(enemyColor, ChessPiecesEnum.King)],
           targetRow, targetCol, { color: sourceColor, piece: sourcePiece });
         if (GlobalVariablesService.BOARD_HELPER && cmResult.canDrop) {
           if (!GlobalVariablesService.BOARD_HELPER.possibles) {
@@ -126,12 +128,12 @@ export class ChessRulesService {
     const stepY = cmParams.targetRow - cmParams.srcRow;
     const stepX = Math.abs(cmParams.targetCol - cmParams.srcCol);
     // Can step 1 in direction
-    const targetDirectionStep = cmParams.sourceColor === 'white' ? -1 : 1;
+    const targetDirectionStep = cmParams.sourceColor === ChessColorsEnum.White ? -1 : 1;
     // Pawn on home row
-    const homeRow = cmParams.sourceColor === 'white' ? 6 : 1;
-    const enemyFirstStep = cmParams.sourceColor === 'black' ? 5 : 2;
+    const homeRow = cmParams.sourceColor === ChessColorsEnum.White ? 6 : 1;
+    const enemyFirstStep = cmParams.sourceColor === ChessColorsEnum.Black ? 5 : 2;
     // Can step 2 from home row
-    const homeRowStep = cmParams.sourceColor === 'white' ? -2 : 2;
+    const homeRowStep = cmParams.sourceColor === ChessColorsEnum.White ? -2 : 2;
     // Cannot step left/right
     const validStepForward = ((stepY === targetDirectionStep) || (cmParams.srcRow === homeRow && stepY === homeRowStep)) && stepX === 0;
     if (!validStepForward) {
@@ -150,10 +152,10 @@ export class ChessRulesService {
     // Pawn magic 3 (en passant)
     const historyLength = Object.keys(cmParams.moveHistory).length;
     const lastHistory = cmParams.moveHistory[historyLength - 1];
-    const epTargetRow = cmParams.sourceColor === 'white' ? 3 : 4;
-    const epSourceRow = cmParams.sourceColor === 'white' ? 1 : 6;
+    const epTargetRow = cmParams.sourceColor === ChessColorsEnum.White ? 3 : 4;
+    const epSourceRow = cmParams.sourceColor === ChessColorsEnum.White ? 1 : 6;
     const possibleEP = GlobalVariablesService.translateNotation(
-      epTargetRow, cmParams.targetCol, epSourceRow, cmParams.targetCol, 'pawn', false, false, false, false, null);
+      epTargetRow, cmParams.targetCol, epSourceRow, cmParams.targetCol, ChessPiecesEnum.Pawn, false, false, false, false, null);
     if (stepX === 1 && stepY === targetDirectionStep && cmParams.targetRow === enemyFirstStep && lastHistory === possibleEP) {
       cmResult.canDrop = true;
       cmResult.canHit = true;
@@ -169,17 +171,17 @@ export class ChessRulesService {
     if (Math.abs(cmParams.targetRow - cmParams.srcRow) > 1) {
       cmResult.canDrop = false;
     }
-    const castleSourceRow = cmParams.sourceColor === 'white' ? 7 : 0;
+    const castleSourceRow = cmParams.sourceColor === ChessColorsEnum.White ? 7 : 0;
     const castleSourceCell = 4;
     const castleTargetRow = castleSourceRow;
     const castleTargetCell1 = 2;
     const castleTargetCell2 = 6;
     const rookInPlace1 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][0];
     const rook1OK = rookInPlace1.length === 1 &&
-      rookInPlace1[0] && rookInPlace1[0].color === cmParams.sourceColor && rookInPlace1[0].piece === 'rook';
+      rookInPlace1[0] && rookInPlace1[0].color === cmParams.sourceColor && rookInPlace1[0].piece === ChessPiecesEnum.Rook;
     const rookInPlace2 = GlobalVariablesService.CHESS_FIELD[castleSourceRow][7];
     const rook2OK = rookInPlace2.length === 1 &&
-      rookInPlace2[0] && rookInPlace2[0].color === cmParams.sourceColor && rookInPlace2[0].piece === 'rook';
+      rookInPlace2[0] && rookInPlace2[0].color === cmParams.sourceColor && rookInPlace2[0].piece === ChessPiecesEnum.Rook;
     const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if (cmResult.targetEmpty && cmParams.srcRow === castleSourceRow && cmParams.srcCol === castleSourceCell &&
       cmParams.targetRow === castleTargetRow && cmParams.targetCol === castleTargetCell1 &&
@@ -221,24 +223,24 @@ export class ChessRulesService {
     }
   }
 
-  static valueOfPiece(piece: ChessPieces): number {
+  static valueOfPiece(piece: ChessPiecesEnum): number {
     switch (piece) {
-      case 'pawn': {
+      case ChessPiecesEnum.Pawn: {
         return 1;
       }
-      case 'knight': {
+      case ChessPiecesEnum.Knight: {
         return 3;
       }
-      case 'king': {
+      case ChessPiecesEnum.King: {
         return 99;
       }
-      case 'queen': {
+      case ChessPiecesEnum.Queen: {
         return 9;
       }
-      case 'rook': {
+      case ChessPiecesEnum.Rook: {
         return 5;
       }
-      case 'bishop': {
+      case ChessPiecesEnum.Bishop: {
         return 3;
       }
       default:
