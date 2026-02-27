@@ -84,14 +84,13 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   onDragStarted(): void {
+    this.clearTransientHighlights();
     this.isDragPreviewActive = true;
   }
 
   onDragEnded(): void {
+    this.clearTransientHighlights();
     this.isDragPreviewActive = false;
-    this.mateInOneTargets = {};
-    this.mateInOneBlunderTargets = {};
-    this.lastMatePreviewKey = '';
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
@@ -108,14 +107,8 @@ export class ChessBoardComponent implements AfterViewInit {
       return;
     }
 
-    // Reset drops and hits
-    this.globalVariablesService.boardHelper.debugText = '';
-    this.globalVariablesService.boardHelper.possibles = {};
-    this.globalVariablesService.boardHelper.hits = {};
-    this.globalVariablesService.boardHelper.checks = {};
-    this.globalVariablesService.boardHelper.arrows = {};
-    this.mateInOneTargets = {};
-    this.mateInOneBlunderTargets = {};
+    this.clearTransientHighlights();
+
     if (event.previousContainer === event.container) {
       return;
     } else {
@@ -129,6 +122,18 @@ export class ChessBoardComponent implements AfterViewInit {
       const srcLocSplit = srcId.split('field');
       const srcRow = Number(srcLocSplit[1][0]);
       const srcCell = Number(srcLocSplit[1][1]);
+
+      const isValidMove = ChessRulesService.validateMove(
+        targetRow,
+        targetCell,
+        this.globalVariablesService.field[targetRow][targetCell],
+        srcRow,
+        srcCell
+      ).isValid;
+      if (!isValidMove) {
+        return;
+      }
+
       const srcPiece = event.previousContainer.data[0].piece;
       const srcColor = event.previousContainer.data[0].color;
       const promotionTargetRow = srcColor === ChessColorsEnum.White ? 0 : 7;
@@ -632,6 +637,17 @@ export class ChessBoardComponent implements AfterViewInit {
       color,
       intensity: Math.max(0, Math.min(1, intensity))
     };
+  }
+
+  private clearTransientHighlights(): void {
+    this.globalVariablesService.boardHelper.debugText = '';
+    this.globalVariablesService.boardHelper.possibles = {};
+    this.globalVariablesService.boardHelper.hits = {};
+    this.globalVariablesService.boardHelper.checks = {};
+    this.globalVariablesService.boardHelper.arrows = {};
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+    this.lastMatePreviewKey = '';
   }
 
   private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {

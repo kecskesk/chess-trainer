@@ -256,6 +256,23 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.boardHelper.debugText).toBe('Draw by insufficient material.');
   });
 
+  it('ignores onDrop when move would leave own king in check', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.onDrop(createDropLike(6, 4, 6, 5));
+
+    expect(globals.field[6][4][0].piece).toBe(ChessPiecesEnum.Rook);
+    expect(globals.field[6][4][0].color).toBe(ChessColorsEnum.White);
+    expect(globals.field[6][5].length).toBe(0);
+    expect(globals.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
+    expect(globals.history.length).toBe(0);
+  });
+
   it('shows protection arrows for defended targets in threat view', () => {
     clearBoard();
     globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
@@ -356,6 +373,23 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.getSquareHighlightClass(4, 4)).toBe('killer');
     delete globals.boardHelper.hits['44'];
     expect(component.getSquareHighlightClass(4, 4)).toBe('shaded');
+  });
+
+  it('clears possible-move highlights on drag end without a move', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    expect(canDropLike(6, 4, 5, 4)).toBeTrue();
+    expect(Object.keys(globals.boardHelper.possibles).length).toBeGreaterThan(0);
+
+    component.onDragEnded();
+
+    expect(globals.boardHelper.possibles).toEqual({});
+    expect(globals.boardHelper.hits).toEqual({});
+    expect(globals.boardHelper.checks).toEqual({});
   });
 });
 

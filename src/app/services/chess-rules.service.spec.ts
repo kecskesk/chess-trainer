@@ -183,3 +183,32 @@ describe('ChessRulesService castling', () => {
     expect(canCastle).toBeFalse();
   });
 });
+
+describe('ChessRulesService king safety', () => {
+  let globals: GlobalVariablesService;
+
+  const clearBoard = (): void => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        globals.field[row][col] = [];
+      }
+    }
+  };
+
+  beforeEach(() => {
+    globals = new GlobalVariablesService();
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    clearBoard();
+    globals.field[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    globals.field[0][0] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+  });
+
+  it('does not allow moving a pinned piece that would expose own king to check', () => {
+    globals.field[6][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)];
+    globals.field[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
+
+    const isValid = ChessRulesService.validateMove(6, 5, globals.field[6][5], 6, 4).isValid;
+
+    expect(isValid).toBeFalse();
+  });
+});

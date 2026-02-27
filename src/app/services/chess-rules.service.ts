@@ -94,6 +94,16 @@ export class ChessRulesService {
           break;
       }
 
+      if (cmResult.canDrop && !justLookingWithPiece && ChessRulesService.isMoveLeavingOwnKingInCheck(
+        srcRow,
+        srcCol,
+        targetRow,
+        targetCol,
+        sourceColor
+      )) {
+        cmResult.canDrop = false;
+      }
+
       const enemyKingPos = { row: null, col: null };
       GlobalVariablesService.CHESS_FIELD.forEach((row, rowIdx) => {
         const kingIndex = row.findIndex(
@@ -395,6 +405,133 @@ export class ChessRulesService {
       }
     }
     return false;
+  }
+
+  private static isMoveLeavingOwnKingInCheck(
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    sourceColor: ChessColorsEnum
+  ): boolean {
+    const simulatedBoard = ChessRulesService.simulateMoveOnBoard(
+      GlobalVariablesService.CHESS_FIELD,
+      srcRow,
+      srcCol,
+      targetRow,
+      targetCol
+    );
+    return ChessRulesService.isKingInCheckOnBoard(simulatedBoard, sourceColor);
+  }
+
+  private static simulateMoveOnBoard(
+    board: ChessPieceDto[][][],
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number
+  ): ChessPieceDto[][][] {
+    const nextBoard = board.map(row => row.map(cell => {
+      if (!cell || cell.length < 1) {
+        return [];
+      }
+      return [new ChessPieceDto(cell[0].color, cell[0].piece)];
+    }));
+
+    const movingPiece = nextBoard[srcRow] && nextBoard[srcRow][srcCol] && nextBoard[srcRow][srcCol][0]
+      ? new ChessPieceDto(nextBoard[srcRow][srcCol][0].color, nextBoard[srcRow][srcCol][0].piece)
+      : null;
+    if (!movingPiece) {
+      return nextBoard;
+    }
+
+    if (movingPiece.piece === ChessPiecesEnum.Pawn && srcCol !== targetCol && nextBoard[targetRow][targetCol].length < 1) {
+      nextBoard[srcRow][targetCol] = [];
+    }
+
+    nextBoard[srcRow][srcCol] = [];
+    nextBoard[targetRow][targetCol] = [movingPiece];
+
+    if (movingPiece.piece === ChessPiecesEnum.King && srcRow === targetRow && Math.abs(targetCol - srcCol) === 2) {
+      const isKingSideCastle = targetCol > srcCol;
+      const rookSourceCol = isKingSideCastle ? 7 : 0;
+      const rookTargetCol = isKingSideCastle ? 5 : 3;
+      const rookCell = nextBoard[targetRow][rookSourceCol];
+      if (rookCell && rookCell[0] && rookCell[0].piece === ChessPiecesEnum.Rook) {
+        const rook = new ChessPieceDto(rookCell[0].color, rookCell[0].piece);
+        nextBoard[targetRow][rookSourceCol] = [];
+        nextBoard[targetRow][rookTargetCol] = [rook];
+      }
+    }
+
+    return nextBoard;
+  }
+
+  private static findKingPosition(
+    board: ChessPieceDto[][][],
+    kingColor: ChessColorsEnum
+  ): { row: number, col: number } | null {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        const cell = board[row][col];
+        if (cell && cell[0] && cell[0].piece === ChessPiecesEnum.King && cell[0].color === kingColor) {
+          return { row, col };
+        }
+      }
+    }
+    return null;
+  }
+
+  private static isKingInCheckOnBoard(board: ChessPieceDto[][][], kingColor: ChessColorsEnum): boolean {
+    const kingPosition = ChessRulesService.findKingPosition(board, kingColor);
+    if (!kingPosition) {
+      return false;
+    }
+
+    const attackerColor = kingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        const attackerCell = board[row][col];
+        if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
+          continue;
+        }
+        const attacker = attackerCell[0];
+        const canAttackKing = ChessRulesService.withBoardContext(board, attackerColor, () =>
+          ChessRulesService.canStepThere(
+            kingPosition.row,
+            kingPosition.col,
+            [new ChessPieceDto(kingColor, ChessPiecesEnum.King)],
+            row,
+            col,
+            new ChessPieceDto(attacker.color, attacker.piece)
+          )
+        );
+        if (canAttackKing) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
+    const previousField = GlobalVariablesService.CHESS_FIELD;
+    const previousTurn = GlobalVariablesService.BOARD_HELPER ? GlobalVariablesService.BOARD_HELPER.colorTurn : null;
+    const previousCastle = GlobalVariablesService.BOARD_HELPER ? GlobalVariablesService.BOARD_HELPER.justDidCastle : null;
+    try {
+      GlobalVariablesService.CHESS_FIELD = board;
+      if (GlobalVariablesService.BOARD_HELPER) {
+        GlobalVariablesService.BOARD_HELPER.colorTurn = turn;
+        GlobalVariablesService.BOARD_HELPER.justDidCastle = null;
+      }
+      return callback();
+    } finally {
+      GlobalVariablesService.CHESS_FIELD = previousField;
+      if (GlobalVariablesService.BOARD_HELPER) {
+        GlobalVariablesService.BOARD_HELPER.colorTurn = previousTurn;
+        GlobalVariablesService.BOARD_HELPER.justDidCastle = previousCastle;
+      }
+    }
   }
 
   static queenRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
