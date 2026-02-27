@@ -12,6 +12,8 @@ export class ChessBoardHelperDto {
               public colorTurn: ChessColorsEnum,
               public canPromote: number,
               public justDidEnPassant: ChessPositionDto,
-              public justDidCastle: ChessPositionDto) {
+              public justDidCastle: ChessPositionDto,
+              public gameOver: boolean = false,
+              public checkmateColor: ChessColorsEnum = null) {
   }
 }

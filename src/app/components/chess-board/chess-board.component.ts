@@ -18,8 +18,10 @@ export class ChessBoardComponent implements AfterViewInit {
   @ViewChild('chessField') chessField: ElementRef;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
-  dropLists: CdkDropList[] = undefined;
+  dropLists: CdkDropList[] = [];
   mateInOneTargets: {[key: string]: boolean} = {};
+  canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
+    this.canDrop(drag, drop);
 
   constructor(public globalVariablesService: GlobalVariablesService) {}
 
@@ -32,6 +34,18 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   canDrop(drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return false;
+    }
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return false;
+    }
+    if (!drag || !drop || !drag.dropContainer || !drop.data || !drag.dropContainer.data) {
+      return false;
+    }
+    if (!drag.dropContainer.data[0]) {
+      return false;
+    }
 
     const targetLocSplit = drop.id.split('field');
     const targetRow = Number(targetLocSplit[1][0]);
@@ -44,6 +58,19 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return;
+    }
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return;
+    }
+    if (!event || !event.previousContainer || !event.container || !event.previousContainer.data || !event.container.data) {
+      return;
+    }
+    if (!event.previousContainer.data[0]) {
+      return;
+    }
+
     // Reset drops and hits
     this.globalVariablesService.boardHelper.debugText = '';
     this.globalVariablesService.boardHelper.possibles = {};
@@ -70,8 +97,8 @@ export class ChessBoardComponent implements AfterViewInit {
       }
 
       let isHit = false;
-      const isCheck = false;
-      const isMatch = false;
+      let isCheck = false;
+      let isMatch = false;
       let isEP = false;
       let castleData = null;
       // Remove target on hit before moving the item in the container
@@ -111,14 +138,32 @@ export class ChessBoardComponent implements AfterViewInit {
           castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
         }
       }
+
+      if (!event.previousContainer.data || !event.container.data) {
+        return;
+      }
+      transferArrayItem(event.previousContainer.data,
+        event.container.data,
+        event.previousIndex, event.currentIndex);
+
+      const enemyColor = srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+      isCheck = this.isKingInCheck(this.globalVariablesService.field, enemyColor);
+      if (isCheck) {
+        const hasLegalMoves = this.hasAnyLegalMove(this.globalVariablesService.field, enemyColor);
+        isMatch = !hasLegalMoves;
+        if (isMatch) {
+          this.globalVariablesService.boardHelper.gameOver = true;
+          this.globalVariablesService.boardHelper.checkmateColor = enemyColor;
+          this.globalVariablesService.boardHelper.debugText =
+            `Checkmate! ${srcColor === ChessColorsEnum.White ? 'White' : 'Black'} wins.`;
+        }
+      }
+
       const lastNotation = GlobalVariablesService.translateNotation(
         targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
       GlobalVariablesService.addHistory(lastNotation);
       this.globalVariablesService.boardHelper.colorTurn =
         this.globalVariablesService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-      transferArrayItem(event.previousContainer.data,
-        event.container.data,
-        event.previousIndex, event.currentIndex);
     }
   }
 

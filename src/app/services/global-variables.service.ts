@@ -22,6 +22,8 @@ export class GlobalVariablesService {
               ChessColorsEnum.White,
               null,
               null,
+              null,
+              false,
               null);
   field = [
     [

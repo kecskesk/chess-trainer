@@ -25,7 +25,10 @@ describe('ChessBoardComponent move sequence integration', () => {
   const canDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
     return component.canDrop(
       {
-        dropContainer: { id: `field${srcRow}${srcCol}` }
+        dropContainer: {
+          id: `field${srcRow}${srcCol}`,
+          data: globals.field[srcRow][srcCol]
+        }
       } as any,
       {
         id: `field${targetRow}${targetCol}`,
@@ -63,5 +66,38 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.field[4][3].length).toBe(0);
     expect(globals.field[3][4][0].piece).toBe(ChessPiecesEnum.Pawn);
     expect(globals.field[3][4][0].color).toBe(ChessColorsEnum.White);
+  });
+
+  it('detects Fool\'s Mate and ends the game', () => {
+    expect(canDropLike(6, 5, 5, 5)).toBeTrue();
+    component.onDrop(createDropLike(6, 5, 5, 5));
+
+    expect(canDropLike(1, 4, 3, 4)).toBeTrue();
+    component.onDrop(createDropLike(1, 4, 3, 4));
+
+    expect(canDropLike(6, 6, 4, 6)).toBeTrue();
+    component.onDrop(createDropLike(6, 6, 4, 6));
+
+    expect(canDropLike(0, 3, 4, 7)).toBeTrue();
+    component.onDrop(createDropLike(0, 3, 4, 7));
+
+    const history = globals.history;
+    const lastMove = history[history.length - 1];
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.checkmateColor).toBe(ChessColorsEnum.White);
+    expect(lastMove).toContain('#');
+    expect(component.canDropPredicate(
+      {
+        dropContainer: {
+          id: 'field60',
+          data: globals.field[6][0]
+        }
+      } as any,
+      {
+        id: 'field50',
+        data: globals.field[5][0]
+      } as any
+    )).toBeFalse();
   });
 });
