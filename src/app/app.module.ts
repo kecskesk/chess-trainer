@@ -8,6 +8,9 @@ import { ChessPieceComponent } from './components/chess-piece/chess-piece.compon
 import { ChessRulesService } from './services/chess-rules.service';
 import { GlobalVariablesService } from './services/global-variables.service';
 import { ChessBoardComponent } from './components/chess-board/chess-board.component';
+import { ChessBoardValidationService } from './services/chess-board-validation.service';
+import { ChessGameLoggerService } from './services/chess-game-logger.service';
+import { ChessBoardAnalysisService } from './services/chess-board-analysis.service';
 
 
 @NgModule({
@@ -23,7 +26,10 @@ import { ChessBoardComponent } from './components/chess-board/chess-board.compon
   ],
   providers: [
     ChessRulesService,
-    GlobalVariablesService
+    GlobalVariablesService,
+    ChessBoardValidationService,
+    ChessGameLoggerService,
+    ChessBoardAnalysisService
   ],
   bootstrap: [AppComponent]
 })

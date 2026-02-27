@@ -56,18 +56,50 @@ export class GlobalVariablesService {
   }
 
   static addPossible(newPossible: ChessPositionDto): void {
+    if (!newPossible) {
+      console.warn('Attempted to add null/undefined possible move');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
     this.BOARD_HELPER.possibles[`${newPossible.row}${newPossible.col}`] = newPossible;
   }
 
   static addHit(newHit: ChessPositionDto): void {
+    if (!newHit) {
+      console.warn('Attempted to add null/undefined hit position');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
     this.BOARD_HELPER.hits[`${newHit.row}${newHit.col}`] = newHit;
   }
 
   static addCheck(newCheck: ChessPositionDto): void {
+    if (!newCheck) {
+      console.warn('Attempted to add null/undefined check position');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
     this.BOARD_HELPER.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
   }
 
   static addArrow(arrowParam: ChessArrowDto): void {
+    if (!arrowParam) {
+      console.warn('Attempted to add null/undefined arrow');
+      return;
+    }
+    if (!this.BOARD_HELPER) {
+      console.error('BOARD_HELPER is not initialized');
+      return;
+    }
     this.BOARD_HELPER.arrows[`${arrowParam.left}${arrowParam.top}${arrowParam.rotate}${arrowParam.color}${arrowParam.transform}`] = arrowParam;
   }
 
@@ -124,37 +156,62 @@ export class GlobalVariablesService {
       case 'queen': return 'Q';
       case 'rook': return 'R';
       case 'knight': return 'N';
+      default: return '';
     }
   }
 
   static pieceIsInWay(targetRow: number, targetCol: number, srcRow: number, srcCol: number): boolean {
+    // Validate board is initialized
+    if (!GlobalVariablesService.CHESS_FIELD || GlobalVariablesService.CHESS_FIELD.length === 0) {
+      console.error('CHESS_FIELD is not initialized');
+      return false;
+    }
+
     const stepRow = targetRow - srcRow;
     const stepCol = targetCol - srcCol;
+
+    // If no movement, no piece can be in the way
+    if (stepRow === 0 && stepCol === 0) {
+      return false;
+    }
+
     let nextStepRow = srcRow;
     let nextStepCol = srcCol;
+
     if (nextStepRow !== targetRow) {
       nextStepRow += stepRow > 0 ? 1 : -1;
     }
     if (nextStepCol !== targetCol) {
       nextStepCol += stepCol > 0 ? 1 : -1;
     }
+
     let cntr = 0;
     while (nextStepRow !== targetRow || nextStepCol !== targetCol) {
-      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.CHESS_FIELD[nextStepRow] ||
-        !GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol]) {
+      // Validate indices are within bounds
+      if (nextStepRow < 0 || nextStepRow > 7 || nextStepCol < 0 || nextStepCol > 7) {
         return false;
       }
-      if (GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol].length > 0) {
+
+      const cell = GlobalVariablesService.CHESS_FIELD[nextStepRow] && GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol];
+      if (!cell) {
+        return false;
+      }
+
+      if (cell.length > 0) {
         return true;
       }
+
       if (nextStepRow !== targetRow) {
         nextStepRow += stepRow > 0 ? 1 : -1;
       }
       if (nextStepCol !== targetCol) {
         nextStepCol += stepCol > 0 ? 1 : -1;
       }
+
       cntr++;
-      if (cntr > 7) {
+      // Safety check to prevent infinite loops
+      if (cntr > 8) {
+        console.warn('Infinite loop detected in pieceIsInWay');
         return false;
       }
     }

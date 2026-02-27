@@ -1,8 +1,11 @@
-export class ChessPieceDto {
-  color: ChessColors;
-  piece: ChessPieces;
+import { ChessColorsEnum } from './chess.colors';
+import { ChessPiecesEnum } from './chess.pieces';
 
-  constructor(color: ChessColors, piece: ChessPieces) {
+export class ChessPieceDto {
+  color: ChessColorsEnum;
+  piece: ChessPiecesEnum;
+
+  constructor(color: ChessColorsEnum, piece: ChessPiecesEnum) {
     this.color = color;
     this.piece = piece;
   }
