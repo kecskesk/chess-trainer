@@ -213,6 +213,9 @@ export class GlobalVariablesService {
     if (color === 'gold') {
       return 'gold';
     }
+    if (color === 'cyan') {
+      return 'cyan';
+    }
     return 'blue';
   }
 

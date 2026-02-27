@@ -10,15 +10,16 @@
                    cdkDropListOrientation="horizontal"
                     [cdkDropListEnterPredicate]="canDropPredicate"
                    id="field{{idxX}}{{idxY}}"
-                   [class.shaded]="isTarget(idxX, idxY) && !isHit(idxX, idxY)"
-                   [class.killer]="isHit(idxX, idxY)"
-                   [class.mate-one]="isMateInOneTarget(idxX, idxY)"
+                   [ngClass]="getSquareHighlightClass(idxX, idxY)"
                    [cdkDropListData]="cellY"
                    [cdkDropListConnectedTo]="dropLists"
+                   (cdkDropListEntered)="onDropListEntered($event)"
                    (cdkDropListDropped)="onDrop($event)"
                    [class.white-square]="(idxY + idxX) % 2 === 0"
                    [class.black-square]="(idxY + idxX) % 2 === 1">
                 <div class="drag-box" cdkDrag
+                   (cdkDragStarted)="onDragStarted()"
+                   (cdkDragEnded)="onDragEnded()"
                    [cdkDragDisabled]="globalVariablesService.boardHelper.gameOver || !cellY || !cellY[0] || cellY[0].color !== globalVariablesService.boardHelper.colorTurn">
                   <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
                 </div>
@@ -79,7 +80,6 @@
       <div class="actions-grid actions-grid--compact">
         <button class="action-btn" (click)="showHangingPieces()">my hanging piece (blundered)</button>
         <button class="action-btn" (click)="showHangingPieces(true)">hanging enemy (hittable)</button>
-        <button class="action-btn" (click)="showMateInOne()">highlight mate in 1</button>
       </div>
     </div>
 

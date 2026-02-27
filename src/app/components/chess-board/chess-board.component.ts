@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, ElementRef, QueryList, ViewChild, ViewChildren } from '@angular/core';
-import { CdkDrag, CdkDragDrop, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
@@ -20,6 +20,11 @@ export class ChessBoardComponent implements AfterViewInit {
 
   dropLists: CdkDropList[] = [];
   mateInOneTargets: {[key: string]: boolean} = {};
+  mateInOneBlunderTargets: {[key: string]: boolean} = {};
+  isDragPreviewActive = false;
+  private lastMatePreviewKey = '';
+  private repetitionCounts: {[positionKey: string]: number} = {};
+  private trackedHistoryLength = -1;
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
@@ -57,6 +62,38 @@ export class ChessBoardComponent implements AfterViewInit {
     return ChessRulesService.validateMove(targetRow, targetCol, drop.data , sourceRow, sourceCol).isValid;
   }
 
+  onDropListEntered(event: CdkDragEnter<ChessPieceDto[]>): void {
+    if (!event || !event.item || !event.container || !event.item.dropContainer) {
+      return;
+    }
+    const sourceId = event.item.dropContainer.id;
+    const targetId = event.container.id;
+    if (!sourceId || !targetId || !sourceId.startsWith('field') || !targetId.startsWith('field')) {
+      return;
+    }
+    const sourceLocSplit = sourceId.split('field');
+    const targetLocSplit = targetId.split('field');
+    const sourceRow = Number(sourceLocSplit[1][0]);
+    const sourceCol = Number(sourceLocSplit[1][1]);
+    const targetRow = Number(targetLocSplit[1][0]);
+    const targetCol = Number(targetLocSplit[1][1]);
+
+    const targetData = this.globalVariablesService.field[targetRow][targetCol];
+    const isValidMove = ChessRulesService.validateMove(targetRow, targetCol, targetData, sourceRow, sourceCol).isValid;
+    this.previewHoverMateInOne(sourceRow, sourceCol, targetRow, targetCol, isValidMove);
+  }
+
+  onDragStarted(): void {
+    this.isDragPreviewActive = true;
+  }
+
+  onDragEnded(): void {
+    this.isDragPreviewActive = false;
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+    this.lastMatePreviewKey = '';
+  }
+
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
     if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
       return;
@@ -78,9 +115,11 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.boardHelper.checks = {};
     this.globalVariablesService.boardHelper.arrows = {};
     this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
     if (event.previousContainer === event.container) {
       return;
     } else {
+      this.ensureRepetitionTrackingState();
       const targetId = event.container.id;
       const targetLocSplit = targetId.split('field');
       const targetRow = Number(targetLocSplit[1][0]);
@@ -149,8 +188,8 @@ export class ChessBoardComponent implements AfterViewInit {
 
       const enemyColor = srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
       isCheck = this.isKingInCheck(this.globalVariablesService.field, enemyColor);
+      const hasLegalMoves = this.hasAnyLegalMove(this.globalVariablesService.field, enemyColor);
       if (isCheck) {
-        const hasLegalMoves = this.hasAnyLegalMove(this.globalVariablesService.field, enemyColor);
         isMatch = !hasLegalMoves;
         if (isMatch) {
           this.globalVariablesService.boardHelper.gameOver = true;
@@ -165,6 +204,9 @@ export class ChessBoardComponent implements AfterViewInit {
       GlobalVariablesService.addHistory(lastNotation);
       this.globalVariablesService.boardHelper.colorTurn =
         this.globalVariablesService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+      if (!isMatch) {
+        this.applyDrawRules(hasLegalMoves, isCheck);
+      }
     }
   }
 
@@ -182,6 +224,26 @@ export class ChessBoardComponent implements AfterViewInit {
 
   isMateInOneTarget(targetRow: number, targetCol: number): boolean {
     return !!this.mateInOneTargets[`${targetRow}${targetCol}`];
+  }
+
+  isMateInOneBlunderTarget(targetRow: number, targetCol: number): boolean {
+    return !!this.mateInOneBlunderTargets[`${targetRow}${targetCol}`];
+  }
+
+  getSquareHighlightClass(targetRow: number, targetCol: number): string {
+    if (this.isMateInOneBlunderTarget(targetRow, targetCol)) {
+      return 'mate-one-danger';
+    }
+    if (this.isMateInOneTarget(targetRow, targetCol)) {
+      return 'mate-one';
+    }
+    if (this.isHit(targetRow, targetCol)) {
+      return 'killer';
+    }
+    if (this.isTarget(targetRow, targetCol)) {
+      return 'shaded';
+    }
+    return '';
   }
 
   translateFieldNames(idxX: number, idxY: number): string {
@@ -223,6 +285,7 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.boardHelper.checks = {};
     this.globalVariablesService.boardHelper.arrows = {};
     this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
     if (ofColor) {
       this.globalVariablesService.field.forEach((row, rowIdx) => {
         row.forEach((cell, cellIdx) => {
@@ -240,21 +303,16 @@ export class ChessBoardComponent implements AfterViewInit {
     }
   }
 
-  showMateInOne(): void {
-    this.globalVariablesService.boardHelper.possibles = {};
-    this.globalVariablesService.boardHelper.hits = {};
-    this.globalVariablesService.boardHelper.checks = {};
-    this.globalVariablesService.boardHelper.arrows = {};
-    this.mateInOneTargets = {};
-
-    const forColor = this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
-    const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const board = this.cloneBoard(this.globalVariablesService.field);
-
+  private collectMateInOneTargets(
+    board: ChessPieceDto[][][],
+    attackerColor: ChessColorsEnum,
+    defenderColor: ChessColorsEnum
+  ): {[key: string]: boolean} {
+    const targets: {[key: string]: boolean} = {};
     for (let srcRow = 0; srcRow <= 7; srcRow++) {
       for (let srcCol = 0; srcCol <= 7; srcCol++) {
         const sourceCell = board[srcRow][srcCol];
-        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === attackerColor)) {
           continue;
         }
         const sourcePiece = sourceCell[0];
@@ -263,7 +321,7 @@ export class ChessBoardComponent implements AfterViewInit {
             if (srcRow === targetRow && srcCol === targetCol) {
               continue;
             }
-            const canMove = this.withBoardContext(board, forColor, () =>
+            const canMove = this.withBoardContext(board, attackerColor, () =>
               ChessRulesService.canStepThere(
                 targetRow,
                 targetCol,
@@ -273,34 +331,73 @@ export class ChessBoardComponent implements AfterViewInit {
                 new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
               )
             );
-
             if (!canMove) {
               continue;
             }
 
-            const afterOurMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-            if (this.isKingInCheck(afterOurMove, forColor)) {
+            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            if (this.isKingInCheck(afterMove, attackerColor)) {
               continue;
             }
 
-            const enemyInCheck = this.isKingInCheck(afterOurMove, enemyColor);
-            if (!enemyInCheck) {
+            const defenderInCheck = this.isKingInCheck(afterMove, defenderColor);
+            if (!defenderInCheck) {
               continue;
             }
 
-            const enemyHasResponse = this.hasAnyLegalMove(afterOurMove, enemyColor);
-            if (!enemyHasResponse) {
-              this.mateInOneTargets[`${targetRow}${targetCol}`] = true;
+            const defenderHasResponse = this.hasAnyLegalMove(afterMove, defenderColor);
+            if (!defenderHasResponse) {
+              targets[`${targetRow}${targetCol}`] = true;
             }
           }
         }
       }
     }
+    return targets;
+  }
 
-    const mateCount = Object.keys(this.mateInOneTargets).length;
-    this.globalVariablesService.boardHelper.debugText = mateCount > 0
-      ? `Mate in one found: ${mateCount} move${mateCount > 1 ? 's' : ''}`
-      : 'No mate in one found.';
+  private previewHoverMateInOne(
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    isValidMove: boolean
+  ): void {
+    if (!isValidMove) {
+      return;
+    }
+
+    const historyLength = this.globalVariablesService.history.length;
+    const previewKey = `${srcRow}${srcCol}-${targetRow}${targetCol}-${historyLength}`;
+    if (this.lastMatePreviewKey === previewKey) {
+      return;
+    }
+    this.lastMatePreviewKey = previewKey;
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+
+    const board = this.cloneBoard(this.globalVariablesService.field);
+    const sourceCell = board[srcRow][srcCol];
+    const forColor = sourceCell && sourceCell[0]
+      ? sourceCell[0].color
+      : this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
+    const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+
+    if (this.isKingInCheck(afterMove, forColor)) {
+      return;
+    }
+
+    const enemyInCheck = this.isKingInCheck(afterMove, enemyColor);
+    const enemyHasResponse = this.hasAnyLegalMove(afterMove, enemyColor);
+    if (enemyInCheck && !enemyHasResponse) {
+      this.mateInOneTargets[`${targetRow}${targetCol}`] = true;
+    }
+
+    const enemyMateInOneTargets = this.collectMateInOneTargets(afterMove, enemyColor, forColor);
+    if (Object.keys(enemyMateInOneTargets).length > 0) {
+      this.mateInOneBlunderTargets[`${targetRow}${targetCol}`] = true;
+    }
   }
 
   showThreats(ofEnemy = false): void {
@@ -324,9 +421,34 @@ export class ChessBoardComponent implements AfterViewInit {
               }
               const posFrom = new ChessPositionDto(8 - rowIdx, cellIdx + 1);
               const posTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-              GlobalVariablesService.createArrowFromVisualization(
-                this.createVisualizationArrow(posFrom, posTo, 'blue', scaryThreat)
-              );
+              const threatenedCell = this.globalVariablesService.field[threat.pos.row][threat.pos.col];
+              if (threatenedCell && threatenedCell[0]) {
+                const protectors = this.getProtectors(
+                  threatenedCell,
+                  threat.pos.row,
+                  threat.pos.col,
+                  enemyColor,
+                  ofColor
+                );
+                let threatColor: IVisualizationArrow['color'] = protectors.length > 0 ? 'blue' : 'cyan';
+                if (threatenedCell[0].piece === ChessPiecesEnum.King) {
+                  threatColor = 'red';
+                }
+                GlobalVariablesService.createArrowFromVisualization(
+                  this.createVisualizationArrow(posFrom, posTo, threatColor, scaryThreat)
+                );
+                protectors.forEach(protector => {
+                  const protectionFrom = new ChessPositionDto(8 - protector.row, protector.col + 1);
+                  const protectionTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
+                  GlobalVariablesService.createArrowFromVisualization(
+                    this.createVisualizationArrow(protectionFrom, protectionTo, 'gold', 0.25)
+                  );
+                });
+              } else {
+                GlobalVariablesService.createArrowFromVisualization(
+                  this.createVisualizationArrow(posFrom, posTo, 'cyan', scaryThreat)
+                );
+              }
             });
           }
         });
@@ -548,8 +670,34 @@ export class ChessBoardComponent implements AfterViewInit {
     const movingPiece = nextBoard[srcRow][srcCol] && nextBoard[srcRow][srcCol][0]
       ? new ChessPieceDto(nextBoard[srcRow][srcCol][0].color, nextBoard[srcRow][srcCol][0].piece)
       : null;
+    if (!movingPiece) {
+      return nextBoard;
+    }
+
+    if (movingPiece.piece === ChessPiecesEnum.Pawn && srcCol !== targetCol && nextBoard[targetRow][targetCol].length < 1) {
+      nextBoard[srcRow][targetCol] = [];
+    }
+
     nextBoard[srcRow][srcCol] = [];
     nextBoard[targetRow][targetCol] = movingPiece ? [movingPiece] : [];
+
+    if (movingPiece.piece === ChessPiecesEnum.King && srcRow === targetRow && Math.abs(targetCol - srcCol) === 2) {
+      const isKingSideCastle = targetCol > srcCol;
+      const rookSourceCol = isKingSideCastle ? 7 : 0;
+      const rookTargetCol = isKingSideCastle ? 5 : 3;
+      const rookCell = nextBoard[targetRow][rookSourceCol];
+      if (rookCell && rookCell[0] && rookCell[0].piece === ChessPiecesEnum.Rook) {
+        const rook = new ChessPieceDto(rookCell[0].color, rookCell[0].piece);
+        nextBoard[targetRow][rookSourceCol] = [];
+        nextBoard[targetRow][rookTargetCol] = [rook];
+      }
+    }
+
+    const promotionRow = movingPiece.color === ChessColorsEnum.White ? 0 : 7;
+    if (movingPiece.piece === ChessPiecesEnum.Pawn && targetRow === promotionRow) {
+      nextBoard[targetRow][targetCol][0].piece = ChessPiecesEnum.Queen;
+    }
+
     return nextBoard;
   }
 
@@ -631,5 +779,180 @@ export class ChessBoardComponent implements AfterViewInit {
       }
     }
     return false;
+  }
+
+  private applyDrawRules(hasLegalMovesForCurrentTurn: boolean, isCurrentTurnInCheck: boolean): void {
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return;
+    }
+
+    const isStalemate = !isCurrentTurnInCheck && !hasLegalMovesForCurrentTurn;
+    if (isStalemate) {
+      this.setDrawState('Draw by stalemate.');
+      return;
+    }
+
+    if (this.isInsufficientMaterial(this.globalVariablesService.field)) {
+      this.setDrawState('Draw by insufficient material.');
+      return;
+    }
+
+    this.recordCurrentPosition();
+    if (this.isThreefoldRepetition()) {
+      this.setDrawState('Draw by threefold repetition.');
+      return;
+    }
+
+    if (this.isFiftyMoveRule()) {
+      this.setDrawState('Draw by 50-move rule.');
+    }
+  }
+
+  private setDrawState(message: string): void {
+    this.globalVariablesService.boardHelper.gameOver = true;
+    this.globalVariablesService.boardHelper.checkmateColor = null;
+    this.globalVariablesService.boardHelper.debugText = message;
+    this.appendDrawMarkerToLastMove();
+  }
+
+  private appendDrawMarkerToLastMove(): void {
+    const historyEntries = this.globalVariablesService.boardHelper.history;
+    const historyLength = Object.keys(historyEntries).length;
+    if (historyLength < 1) {
+      return;
+    }
+    const lastMove = historyEntries[`${historyLength}`];
+    if (!lastMove || lastMove.includes('½-½')) {
+      return;
+    }
+    historyEntries[`${historyLength}`] = `${lastMove} ½-½`;
+  }
+
+  private ensureRepetitionTrackingState(): void {
+    const historyLength = this.globalVariablesService.history.length;
+    if (this.trackedHistoryLength === historyLength && Object.keys(this.repetitionCounts).length > 0) {
+      return;
+    }
+
+    this.repetitionCounts = {};
+    this.recordPositionKey(this.getPositionKey(this.globalVariablesService.field, this.globalVariablesService.boardHelper.colorTurn));
+    this.trackedHistoryLength = historyLength;
+  }
+
+  private recordCurrentPosition(): void {
+    const positionKey = this.getPositionKey(
+      this.globalVariablesService.field,
+      this.globalVariablesService.boardHelper.colorTurn
+    );
+    this.recordPositionKey(positionKey);
+    this.trackedHistoryLength = this.globalVariablesService.history.length;
+  }
+
+  private recordPositionKey(positionKey: string): void {
+    const currentCount = this.repetitionCounts[positionKey] || 0;
+    this.repetitionCounts[positionKey] = currentCount + 1;
+  }
+
+  private isThreefoldRepetition(): boolean {
+    return Object.values(this.repetitionCounts).some(count => count >= 3);
+  }
+
+  private getPositionKey(board: ChessPieceDto[][][], turn: ChessColorsEnum): string {
+    const squares: string[] = [];
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        const cell = board[row][col];
+        if (!(cell && cell[0])) {
+          continue;
+        }
+        const piece = cell[0];
+        squares.push(`${row}${col}:${piece.color}${piece.piece}`);
+      }
+    }
+    return `${turn}|${squares.join('|')}`;
+  }
+
+  private isFiftyMoveRule(): boolean {
+    const history = this.globalVariablesService.history;
+    if (history.length < 100) {
+      return false;
+    }
+
+    const lastHundredHalfMoves = history.slice(-100);
+    return lastHundredHalfMoves.every(move => this.isNonPawnNonCaptureMove(move));
+  }
+
+  private isNonPawnNonCaptureMove(notation: string): boolean {
+    if (!notation || notation.includes('x')) {
+      return false;
+    }
+
+    if (notation === 'O-O' || notation === 'O-O-O') {
+      return true;
+    }
+
+    const pieceMovePrefix = notation.charAt(0);
+    return pieceMovePrefix === 'K' || pieceMovePrefix === 'Q' || pieceMovePrefix === 'R' ||
+      pieceMovePrefix === 'B' || pieceMovePrefix === 'N';
+  }
+
+  private isInsufficientMaterial(board: ChessPieceDto[][][]): boolean {
+    const whiteMinorPieces: {piece: ChessPiecesEnum, row: number, col: number}[] = [];
+    const blackMinorPieces: {piece: ChessPiecesEnum, row: number, col: number}[] = [];
+    let whiteHasMajorOrPawn = false;
+    let blackHasMajorOrPawn = false;
+
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        const cell = board[row][col];
+        if (!(cell && cell[0])) {
+          continue;
+        }
+        const piece = cell[0];
+        if (piece.piece === ChessPiecesEnum.King) {
+          continue;
+        }
+        const isMinorPiece = piece.piece === ChessPiecesEnum.Bishop || piece.piece === ChessPiecesEnum.Knight;
+        if (!isMinorPiece) {
+          if (piece.color === ChessColorsEnum.White) {
+            whiteHasMajorOrPawn = true;
+          } else {
+            blackHasMajorOrPawn = true;
+          }
+          continue;
+        }
+        if (piece.color === ChessColorsEnum.White) {
+          whiteMinorPieces.push({ piece: piece.piece, row, col });
+        } else {
+          blackMinorPieces.push({ piece: piece.piece, row, col });
+        }
+      }
+    }
+
+    if (whiteHasMajorOrPawn || blackHasMajorOrPawn) {
+      return false;
+    }
+
+    const totalMinorCount = whiteMinorPieces.length + blackMinorPieces.length;
+    if (totalMinorCount === 0) {
+      return true;
+    }
+
+    if (totalMinorCount === 1) {
+      return true;
+    }
+
+    if (totalMinorCount === 2 && whiteMinorPieces.length === 1 && blackMinorPieces.length === 1 &&
+      whiteMinorPieces[0].piece === ChessPiecesEnum.Bishop && blackMinorPieces[0].piece === ChessPiecesEnum.Bishop) {
+      const whiteBishopOnLightSquare = this.isLightSquare(whiteMinorPieces[0].row, whiteMinorPieces[0].col);
+      const blackBishopOnLightSquare = this.isLightSquare(blackMinorPieces[0].row, blackMinorPieces[0].col);
+      return whiteBishopOnLightSquare === blackBishopOnLightSquare;
+    }
+
+    return false;
+  }
+
+  private isLightSquare(row: number, col: number): boolean {
+    return (row + col) % 2 === 0;
   }
 }
