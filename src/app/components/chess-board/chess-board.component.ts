@@ -3,7 +3,6 @@ import { CdkDrag, CdkDragDrop, CdkDropList, transferArrayItem } from '@angular/c
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
-import { DomSanitizer, SafeStyle } from '@angular/platform-browser';
 import { ChessPositionDto } from '../../model/chess-position.dto';
 import { ChessColorsEnum } from '../../model/chess.colors';
 import { ChessPiecesEnum } from '../../model/chess.pieces';
@@ -19,8 +18,7 @@ export class ChessBoardComponent implements AfterViewInit {
 
   dropLists: CdkDropList[] = undefined;
 
-  constructor(public globalVariablesService: GlobalVariablesService,
-              private sanitizer: DomSanitizer) {}
+  constructor(public globalVariablesService: GlobalVariablesService) {}
 
   ngAfterViewInit(): void {
     if (this.dropListElements) {
@@ -365,9 +363,5 @@ export class ChessBoardComponent implements AfterViewInit {
       ofColor = enemyColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     }
     return {ofColor, enemyColor};
-  }
-
-  sanitizeScale(text: string): SafeStyle {
-    return this.sanitizer.bypassSecurityTrustStyle(text);
   }
 }

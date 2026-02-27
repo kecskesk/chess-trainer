@@ -29,8 +29,11 @@
       </div>
       <div class="arrowPointer" *ngFor="let arrow of globalVariablesService.arrows; index as arrowIdx"
            [style.top]="arrow.top" [style.left]="arrow.left" [style.color]="arrow.color"
-           [style.transform]="sanitizeScale(arrow.transform)" [style.rotate]="arrow.rotate">
-        <i class="fas fa-arrow-right"></i>
+           [style.width]="arrow.length"
+           [style.--arrow-thickness]="arrow.thickness"
+           [style.transform]="'translate(-50%, -50%) rotate(' + arrow.rotate + ')'">
+        <span class="arrow-shaft"></span>
+        <span class="arrow-head"></span>
       </div>
     </div>
   </section>

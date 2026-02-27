@@ -100,15 +100,40 @@
 }
 
 .arrowPointer {
+  --arrow-thickness: 4px;
+  --arrow-head-size: calc(var(--arrow-thickness) * 2.8);
+  height: calc(var(--arrow-thickness) * 2.4);
   line-height: 0;
-  font-size: 75px;
-  margin-top: -37px;
-  opacity: 0.92;
+  opacity: 0.95;
   position: absolute;
   pointer-events: none;
-  text-shadow: 0 0 2px rgba(7, 12, 24, 0.95), 0 0 6px currentColor;
-  filter: saturate(1.15) contrast(1.08);
+  filter: saturate(1.15) contrast(1.06);
   mix-blend-mode: normal;
+}
+
+.arrow-shaft {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: calc(100% - var(--arrow-head-size));
+  height: var(--arrow-thickness);
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 2px rgba(7, 12, 24, 0.85);
+}
+
+.arrow-head {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: translateY(-50%);
+  border-top: calc(var(--arrow-head-size) * 0.58) solid transparent;
+  border-bottom: calc(var(--arrow-head-size) * 0.58) solid transparent;
+  border-left: var(--arrow-head-size) solid currentColor;
+  filter: drop-shadow(0 0 1px rgba(7, 12, 24, 0.8));
 }
 
 .sidebar-panel {

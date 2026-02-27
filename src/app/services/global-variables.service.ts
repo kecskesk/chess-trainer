@@ -139,30 +139,27 @@ export class GlobalVariablesService {
       return;
     }
     const arrowKey = `${arrowParam.left}${arrowParam.top}${arrowParam.rotate}` +
-      `${arrowParam.color}${arrowParam.transform}`;
+      `${arrowParam.color}${arrowParam.length}${arrowParam.thickness}`;
     this.BOARD_HELPER.arrows[arrowKey] = arrowParam;
   }
 
-  /**
-   * top: '250px',
-   * left: '130px',
-   * rotate: '45deg',
-   * transform: 'scaleX(5.5)'
-   */
   static createArrow(from: ChessPositionDto, to: ChessPositionDto, arrowColor: string, width: number): void {
     const boxSize = 76;
-    const midX = ((-1 + ((from.col + to.col) / 2)) * boxSize) + 9;
-    const midY = ((8.5 - ((from.row + to.row) / 2)) * boxSize);
+    const midX = (((from.col + to.col) / 2) - 0.5) * boxSize;
+    const midY = (8.5 - ((from.row + to.row) / 2)) * boxSize;
 
     const stepRow = from.row - to.row;
     const stepCol = to.col - from.col;
     const deg = Math.atan2(stepRow, stepCol) * (180 / Math.PI);
+    const distancePx = Math.sqrt((stepCol * boxSize) * (stepCol * boxSize) + (stepRow * boxSize) * (stepRow * boxSize));
+    const thicknessPx = Math.max(2, Math.min(8, 2 + (width * 8)));
 
     const arTop = `${midY}px`;
     const arLeft = `${midX}px`;
     const arRot = `${deg}deg`;
-    const arTransf = `scaleX(${0.5 + Math.sqrt(stepCol * stepCol + stepRow * stepRow)}) scaleY(${width})`;
-    const newArrow = new ChessArrowDto(arTop, arLeft, arRot, arrowColor, arTransf);
+    const arLength = `${Math.max(20, distancePx)}px`;
+    const arThickness = `${thicknessPx}px`;
+    const newArrow = new ChessArrowDto(arTop, arLeft, arRot, arrowColor, arLength, arThickness);
     GlobalVariablesService.addArrow(newArrow);
   }
 
