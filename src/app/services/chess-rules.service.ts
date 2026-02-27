@@ -11,7 +11,14 @@ export class ChessRulesService {
 
   constructor() {}
 
-  public static canStepThere(targetRow: number, targetCol: number, targetData: ChessPieceDto[], srcRow: number, srcCol: number, justLookingWithPiece: ChessPieceDto = null): boolean {
+  public static canStepThere(
+    targetRow: number,
+    targetCol: number,
+    targetData: ChessPieceDto[],
+    srcRow: number,
+    srcCol: number,
+    justLookingWithPiece: ChessPieceDto = null
+  ): boolean {
       let targetObj = null;
       let targetPiece = null;
       let targetColor = null;
@@ -26,7 +33,7 @@ export class ChessRulesService {
       if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
         return false;
       }
-      const moveHistory = GlobalVariablesService.BOARD_HELPER.history
+      const moveHistory = GlobalVariablesService.BOARD_HELPER.history;
       sourceData = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
       if (justLookingWithPiece) {
         sourceData = [justLookingWithPiece];
@@ -35,14 +42,14 @@ export class ChessRulesService {
         return false;
       }
       sourceColor = sourceData[0].color;
-      let enemyColor: ChessColorsEnum = sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+      const enemyColor: ChessColorsEnum = sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
       sourcePiece = sourceData[0].piece;
       if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn && !justLookingWithPiece) {
         return false;
       }
       const cmResult = new ChessMoveResultDto(
         targetData.length < 1, false, false, targetData.length < 1);
-      if (targetData.length === 1 && targetData[0].color != sourceColor) {
+      if (targetData.length === 1 && targetData[0].color !== sourceColor) {
         cmResult.canDrop = true;
         cmResult.canHit = true;
       }
@@ -77,7 +84,7 @@ export class ChessRulesService {
           break;
       }
 
-      let enemyKingPos = { row: null, col: null };
+      const enemyKingPos = { row: null, col: null };
       GlobalVariablesService.CHESS_FIELD.forEach((row, rowIdx) => {
         const kingIndex = row.findIndex(
           cell => cell && cell[0] && cell[0].piece === ChessPiecesEnum.King && cell[0].color === enemyColor);
@@ -107,7 +114,7 @@ export class ChessRulesService {
             }
             GlobalVariablesService.addCheck({ row: targetRow, col: targetCol });
             GlobalVariablesService.createArrow(
-              { row: 8-srcRow, col: srcCol+1 }, { row: 8-targetRow, col: targetCol+1 }, 'red', 0.25);
+              { row: 8 - srcRow, col: srcCol + 1 }, { row: 8 - targetRow, col: targetCol + 1 }, 'red', 0.25);
           }
         }
       }

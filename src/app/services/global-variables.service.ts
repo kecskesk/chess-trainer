@@ -22,14 +22,50 @@ export class GlobalVariablesService {
               null,
               null);
   field = [
-    [[new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)]],
-    [[new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)]],
+    [
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)]
+    ],
+    [
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)]
+    ],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
     [[], [], [], [], [], [], [], []],
-    [[new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]],
-    [[new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)], [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)]]
+    [
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]
+    ],
+    [
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
+      [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)]
+    ]
   ];
 
   constructor() {
@@ -102,7 +138,9 @@ export class GlobalVariablesService {
       console.error('BOARD_HELPER is not initialized');
       return;
     }
-    this.BOARD_HELPER.arrows[`${arrowParam.left}${arrowParam.top}${arrowParam.rotate}${arrowParam.color}${arrowParam.transform}`] = arrowParam;
+    const arrowKey = `${arrowParam.left}${arrowParam.top}${arrowParam.rotate}` +
+      `${arrowParam.color}${arrowParam.transform}`;
+    this.BOARD_HELPER.arrows[arrowKey] = arrowParam;
   }
 
   /**
@@ -123,7 +161,7 @@ export class GlobalVariablesService {
     const arTop = `${midY}px`;
     const arLeft = `${midX}px`;
     const arRot = `${deg}deg`;
-    const arTransf = `scaleX(${0.5 + Math.sqrt(stepCol*stepCol + stepRow*stepRow)}) scaleY(${width})`;
+    const arTransf = `scaleX(${0.5 + Math.sqrt(stepCol * stepCol + stepRow * stepRow)}) scaleY(${width})`;
     const newArrow = new ChessArrowDto(arTop, arLeft, arRot, arrowColor, arTransf);
     GlobalVariablesService.addArrow(newArrow);
   }
@@ -136,7 +174,7 @@ export class GlobalVariablesService {
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,
                     piece: ChessPiecesEnum, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
-    let pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
+    const pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + targetCol);
     const letterCharSrc = String.fromCharCode('a'.charCodeAt(0) + srcCol);
@@ -151,7 +189,7 @@ export class GlobalVariablesService {
   }
 
   static translatePieceNotation(piece: ChessPiecesEnum): string {
-    switch(piece) {
+    switch (piece) {
       case ChessPiecesEnum.Pawn: return '';
       case ChessPiecesEnum.Bishop: return 'B';
       case ChessPiecesEnum.King: return 'K';

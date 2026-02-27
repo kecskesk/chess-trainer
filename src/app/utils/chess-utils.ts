@@ -148,11 +148,9 @@ export class ChessBoardUtils {
     let rowDir = 0;
     let colDir = 0;
 
-    if (toRow > fromRow) rowDir = 1;
-    else if (toRow < fromRow) rowDir = -1;
+    if (toRow > fromRow) { rowDir = 1; } else if (toRow < fromRow) { rowDir = -1; }
 
-    if (toCol > fromCol) colDir = 1;
-    else if (toCol < fromCol) colDir = -1;
+    if (toCol > fromCol) { colDir = 1; } else if (toCol < fromCol) { colDir = -1; }
 
     return { rowDir, colDir };
   }
