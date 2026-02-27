@@ -29,39 +29,3 @@ export interface IChessMove {
   castleType?: 'O-O' | 'O-O-O' | null;
 }
 
-/**
- * Interface for validation result of a potential move
- */
-export interface IMoveValidationResult {
-  /** Whether the move is allowed */
-  isValid: boolean;
-  /** Error message if invalid */
-  errorMessage?: string;
-  /** Whether the target square is empty */
-  isEmptyTarget: boolean;
-  /** Whether the target has an enemy piece */
-  isEnemyPiece: boolean;
-}
-
-/**
- * Interface for board position highlighting
- */
-export interface IBoardHighlight {
-  row: number;
-  col: number;
-  type: 'possible' | 'capture' | 'check';
-}
-
-/**
- * Interface for visualization arrow
- */
-export interface IVisualizationArrow {
-  fromRow: number;
-  fromCol: number;
-  toRow: number;
-  toCol: number;
-  color: 'blue' | 'red' | 'yellow' | 'green';
-  intensity: number; // 0-1
-  label?: string;
-}
-

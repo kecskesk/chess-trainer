@@ -17,6 +17,7 @@ export class ChessBoardComponent implements AfterViewInit {
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
   dropLists: CdkDropList[] = undefined;
+  mateInOneTargets: {[key: string]: boolean} = {};
 
   constructor(public globalVariablesService: GlobalVariablesService) {}
 
@@ -47,6 +48,7 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.boardHelper.hits = {};
     this.globalVariablesService.boardHelper.checks = {};
     this.globalVariablesService.boardHelper.arrows = {};
+    this.mateInOneTargets = {};
     if (event.previousContainer === event.container) {
       return;
     } else {
@@ -133,6 +135,10 @@ export class ChessBoardComponent implements AfterViewInit {
       .some(({row, col}) => row === targetRow && col === targetCol);
   }
 
+  isMateInOneTarget(targetRow: number, targetCol: number): boolean {
+    return !!this.mateInOneTargets[`${targetRow}${targetCol}`];
+  }
+
   translateFieldNames(idxX: number, idxY: number): string {
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + idxY);
@@ -161,6 +167,7 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.boardHelper.hits = {};
     this.globalVariablesService.boardHelper.checks = {};
     this.globalVariablesService.boardHelper.arrows = {};
+    this.mateInOneTargets = {};
     if (ofColor) {
       this.globalVariablesService.field.forEach((row, rowIdx) => {
         row.forEach((cell, cellIdx) => {
@@ -176,6 +183,69 @@ export class ChessBoardComponent implements AfterViewInit {
         });
       });
     }
+  }
+
+  showMateInOne(): void {
+    this.globalVariablesService.boardHelper.possibles = {};
+    this.globalVariablesService.boardHelper.hits = {};
+    this.globalVariablesService.boardHelper.checks = {};
+    this.globalVariablesService.boardHelper.arrows = {};
+    this.mateInOneTargets = {};
+
+    const forColor = this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
+    const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    const board = this.cloneBoard(this.globalVariablesService.field);
+
+    for (let srcRow = 0; srcRow <= 7; srcRow++) {
+      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+        const sourceCell = board[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
+          continue;
+        }
+        const sourcePiece = sourceCell[0];
+        for (let targetRow = 0; targetRow <= 7; targetRow++) {
+          for (let targetCol = 0; targetCol <= 7; targetCol++) {
+            if (srcRow === targetRow && srcCol === targetCol) {
+              continue;
+            }
+            const canMove = this.withBoardContext(board, forColor, () =>
+              ChessRulesService.canStepThere(
+                targetRow,
+                targetCol,
+                board[targetRow][targetCol],
+                srcRow,
+                srcCol,
+                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+              )
+            );
+
+            if (!canMove) {
+              continue;
+            }
+
+            const afterOurMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            if (this.isKingInCheck(afterOurMove, forColor)) {
+              continue;
+            }
+
+            const enemyInCheck = this.isKingInCheck(afterOurMove, enemyColor);
+            if (!enemyInCheck) {
+              continue;
+            }
+
+            const enemyHasResponse = this.hasAnyLegalMove(afterOurMove, enemyColor);
+            if (!enemyHasResponse) {
+              this.mateInOneTargets[`${targetRow}${targetCol}`] = true;
+            }
+          }
+        }
+      }
+    }
+
+    const mateCount = Object.keys(this.mateInOneTargets).length;
+    this.globalVariablesService.boardHelper.debugText = mateCount > 0
+      ? `Mate in one found: ${mateCount} move${mateCount > 1 ? 's' : ''}`
+      : 'No mate in one found.';
   }
 
   showThreats(ofEnemy = false): void {
@@ -375,5 +445,126 @@ export class ChessBoardComponent implements AfterViewInit {
       ofColor = enemyColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     }
     return {ofColor, enemyColor};
+  }
+
+  private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
+    const previousField = GlobalVariablesService.CHESS_FIELD;
+    const previousTurn = this.globalVariablesService.boardHelper.colorTurn;
+    const previousCastle = this.globalVariablesService.boardHelper.justDidCastle;
+    try {
+      GlobalVariablesService.CHESS_FIELD = board;
+      this.globalVariablesService.boardHelper.colorTurn = turn;
+      this.globalVariablesService.boardHelper.justDidCastle = null;
+      return callback();
+    } finally {
+      GlobalVariablesService.CHESS_FIELD = previousField;
+      this.globalVariablesService.boardHelper.colorTurn = previousTurn;
+      this.globalVariablesService.boardHelper.justDidCastle = previousCastle;
+    }
+  }
+
+  private cloneBoard(board: ChessPieceDto[][][]): ChessPieceDto[][][] {
+    return board.map(row => row.map(cell => {
+      if (!cell || cell.length < 1) {
+        return [];
+      }
+      return [new ChessPieceDto(cell[0].color, cell[0].piece)];
+    }));
+  }
+
+  private simulateMove(
+    board: ChessPieceDto[][][],
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number
+  ): ChessPieceDto[][][] {
+    const nextBoard = this.cloneBoard(board);
+    const movingPiece = nextBoard[srcRow][srcCol] && nextBoard[srcRow][srcCol][0]
+      ? new ChessPieceDto(nextBoard[srcRow][srcCol][0].color, nextBoard[srcRow][srcCol][0].piece)
+      : null;
+    nextBoard[srcRow][srcCol] = [];
+    nextBoard[targetRow][targetCol] = movingPiece ? [movingPiece] : [];
+    return nextBoard;
+  }
+
+  private findKing(board: ChessPieceDto[][][], color: ChessColorsEnum): ChessPositionDto | null {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        const cell = board[row][col];
+        if (cell && cell[0] && cell[0].color === color && cell[0].piece === ChessPiecesEnum.King) {
+          return new ChessPositionDto(row, col);
+        }
+      }
+    }
+    return null;
+  }
+
+  private isKingInCheck(board: ChessPieceDto[][][], kingColor: ChessColorsEnum): boolean {
+    const king = this.findKing(board, kingColor);
+    if (!king) {
+      return false;
+    }
+    const attackerColor = kingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        const attackerCell = board[row][col];
+        if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
+          continue;
+        }
+        const attacker = attackerCell[0];
+        const canHitKing = this.withBoardContext(board, attackerColor, () =>
+          ChessRulesService.canStepThere(
+            king.row,
+            king.col,
+            [new ChessPieceDto(kingColor, ChessPiecesEnum.King)],
+            row,
+            col,
+            new ChessPieceDto(attacker.color, attacker.piece)
+          )
+        );
+        if (canHitKing) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private hasAnyLegalMove(board: ChessPieceDto[][][], forColor: ChessColorsEnum): boolean {
+    for (let srcRow = 0; srcRow <= 7; srcRow++) {
+      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+        const sourceCell = board[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
+          continue;
+        }
+        const sourcePiece = sourceCell[0];
+        for (let targetRow = 0; targetRow <= 7; targetRow++) {
+          for (let targetCol = 0; targetCol <= 7; targetCol++) {
+            if (srcRow === targetRow && srcCol === targetCol) {
+              continue;
+            }
+            const canMove = this.withBoardContext(board, forColor, () =>
+              ChessRulesService.canStepThere(
+                targetRow,
+                targetCol,
+                board[targetRow][targetCol],
+                srcRow,
+                srcCol,
+                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+              )
+            );
+            if (!canMove) {
+              continue;
+            }
+            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            if (!this.isKingInCheck(afterMove, forColor)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 }

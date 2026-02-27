@@ -12,6 +12,7 @@
                    id="field{{idxX}}{{idxY}}"
                    [class.shaded]="isTarget(idxX, idxY) && !isHit(idxX, idxY)"
                    [class.killer]="isHit(idxX, idxY)"
+                   [class.mate-one]="isMateInOneTarget(idxX, idxY)"
                    [cdkDropListData]="cellY"
                    [cdkDropListConnectedTo]="dropLists"
                    (cdkDropListDropped)="onDrop($event)"
@@ -74,6 +75,7 @@
       <div class="actions-grid actions-grid--compact">
         <button class="action-btn" (click)="showHangingPieces()">my hanging piece (blundered)</button>
         <button class="action-btn" (click)="showHangingPieces(true)">hanging enemy (hittable)</button>
+        <button class="action-btn" (click)="showMateInOne()">highlight mate in 1</button>
       </div>
     </div>
 
