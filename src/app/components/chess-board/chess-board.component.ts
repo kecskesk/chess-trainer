@@ -25,6 +25,7 @@ export class ChessBoardComponent implements AfterViewInit {
   private lastMatePreviewKey = '';
   private repetitionCounts: {[positionKey: string]: number} = {};
   private trackedHistoryLength = -1;
+  pendingDrawOfferBy: ChessColorsEnum | null = null;
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
@@ -84,13 +85,14 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   onDragStarted(): void {
-    this.clearTransientHighlights();
     this.isDragPreviewActive = true;
   }
 
   onDragEnded(): void {
-    this.clearTransientHighlights();
     this.isDragPreviewActive = false;
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+    this.lastMatePreviewKey = '';
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
@@ -106,8 +108,6 @@ export class ChessBoardComponent implements AfterViewInit {
     if (!event.previousContainer.data[0]) {
       return;
     }
-
-    this.clearTransientHighlights();
 
     if (event.previousContainer === event.container) {
       return;
@@ -134,8 +134,21 @@ export class ChessBoardComponent implements AfterViewInit {
         return;
       }
 
-      const srcPiece = event.previousContainer.data[0].piece;
       const srcColor = event.previousContainer.data[0].color;
+      if (this.pendingDrawOfferBy !== null && this.pendingDrawOfferBy !== srcColor) {
+        this.pendingDrawOfferBy = null;
+      }
+
+      // Reset drops and hits
+      this.globalVariablesService.boardHelper.debugText = '';
+      this.globalVariablesService.boardHelper.possibles = {};
+      this.globalVariablesService.boardHelper.hits = {};
+      this.globalVariablesService.boardHelper.checks = {};
+      this.globalVariablesService.boardHelper.arrows = {};
+      this.mateInOneTargets = {};
+      this.mateInOneBlunderTargets = {};
+
+      const srcPiece = event.previousContainer.data[0].piece;
       const promotionTargetRow = srcColor === ChessColorsEnum.White ? 0 : 7;
       if (srcPiece === ChessPiecesEnum.Pawn && targetRow === promotionTargetRow) {
         this.globalVariablesService.boardHelper.canPromote = targetCell;
@@ -251,6 +264,29 @@ export class ChessBoardComponent implements AfterViewInit {
     return '';
   }
 
+  getStatusTitle(): string {
+    const boardHelper = this.globalVariablesService.boardHelper;
+    if (!boardHelper) {
+      return '';
+    }
+    if (!boardHelper.gameOver) {
+      return `${boardHelper.colorTurn} to move`;
+    }
+    if (boardHelper.checkmateColor !== null) {
+      return `Checkmate - ${boardHelper.checkmateColor === ChessColorsEnum.White ? 'Black' : 'White'} wins`;
+    }
+    return boardHelper.debugText || 'Draw';
+  }
+
+  getAmbientThemeClass(): string {
+    if (this.pendingDrawOfferBy !== null) {
+      return 'ambient-math--draw-pending';
+    }
+    return this.globalVariablesService.boardHelper.colorTurn === ChessColorsEnum.White
+      ? 'ambient-math--white-turn'
+      : 'ambient-math--black-turn';
+  }
+
   translateFieldNames(idxX: number, idxY: number): string {
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + idxY);
@@ -305,6 +341,74 @@ export class ChessBoardComponent implements AfterViewInit {
           }
         });
       });
+    }
+  }
+
+  offerDraw(): void {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return;
+    }
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return;
+    }
+    if (!this.canOfferDraw()) {
+      return;
+    }
+    this.pendingDrawOfferBy = this.getOpponentColor(this.globalVariablesService.boardHelper.colorTurn);
+  }
+
+  canOfferDraw(): boolean {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return false;
+    }
+    return !this.globalVariablesService.boardHelper.gameOver && this.pendingDrawOfferBy === null;
+  }
+
+  canRespondToDrawOffer(): boolean {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return false;
+    }
+    if (this.globalVariablesService.boardHelper.gameOver || this.pendingDrawOfferBy === null) {
+      return false;
+    }
+    return this.pendingDrawOfferBy !== this.globalVariablesService.boardHelper.colorTurn;
+  }
+
+  acceptDrawOffer(): void {
+    if (!this.canRespondToDrawOffer()) {
+      return;
+    }
+    this.setDrawState('Draw by agreement.');
+  }
+
+  declineDrawOffer(): void {
+    if (!this.canRespondToDrawOffer()) {
+      return;
+    }
+    this.pendingDrawOfferBy = null;
+  }
+
+  canClaimDraw(): boolean {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return false;
+    }
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      return false;
+    }
+    this.ensureRepetitionTrackingState();
+    return this.isThreefoldRepetition() || this.isFiftyMoveRule();
+  }
+
+  claimDraw(): void {
+    if (!this.canClaimDraw()) {
+      return;
+    }
+    if (this.isThreefoldRepetition()) {
+      this.setDrawState('Draw by threefold repetition (claimed).');
+      return;
+    }
+    if (this.isFiftyMoveRule()) {
+      this.setDrawState('Draw by 50-move rule (claimed).');
     }
   }
 
@@ -639,17 +743,6 @@ export class ChessBoardComponent implements AfterViewInit {
     };
   }
 
-  private clearTransientHighlights(): void {
-    this.globalVariablesService.boardHelper.debugText = '';
-    this.globalVariablesService.boardHelper.possibles = {};
-    this.globalVariablesService.boardHelper.hits = {};
-    this.globalVariablesService.boardHelper.checks = {};
-    this.globalVariablesService.boardHelper.arrows = {};
-    this.mateInOneTargets = {};
-    this.mateInOneBlunderTargets = {};
-    this.lastMatePreviewKey = '';
-  }
-
   private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
     const previousField = GlobalVariablesService.CHESS_FIELD;
     const previousTurn = this.globalVariablesService.boardHelper.colorTurn;
@@ -814,13 +907,14 @@ export class ChessBoardComponent implements AfterViewInit {
     }
 
     this.recordCurrentPosition();
-    if (this.isThreefoldRepetition()) {
-      this.setDrawState('Draw by threefold repetition.');
+    if (this.isFivefoldRepetition()) {
+      this.setDrawState('Draw by fivefold repetition.');
       return;
     }
 
-    if (this.isFiftyMoveRule()) {
-      this.setDrawState('Draw by 50-move rule.');
+    if (this.isSeventyFiveMoveRule()) {
+      this.setDrawState('Draw by 75-move rule.');
+      return;
     }
   }
 
@@ -828,7 +922,12 @@ export class ChessBoardComponent implements AfterViewInit {
     this.globalVariablesService.boardHelper.gameOver = true;
     this.globalVariablesService.boardHelper.checkmateColor = null;
     this.globalVariablesService.boardHelper.debugText = message;
+    this.pendingDrawOfferBy = null;
     this.appendDrawMarkerToLastMove();
+  }
+
+  private getOpponentColor(color: ChessColorsEnum): ChessColorsEnum {
+    return color === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
   }
 
   private appendDrawMarkerToLastMove(): void {
@@ -870,7 +969,35 @@ export class ChessBoardComponent implements AfterViewInit {
   }
 
   private isThreefoldRepetition(): boolean {
-    return Object.values(this.repetitionCounts).some(count => count >= 3);
+    return this.hasNfoldRepetition(3);
+  }
+
+  private isFivefoldRepetition(): boolean {
+    return this.hasNfoldRepetition(5);
+  }
+
+  private hasNfoldRepetition(requiredCount: number): boolean {
+    return Object.values(this.repetitionCounts).some(count => count >= requiredCount);
+  }
+
+  getDebugPositionKey(): string {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+      return '';
+    }
+    return this.getPositionKey(
+      this.globalVariablesService.field,
+      this.globalVariablesService.boardHelper.colorTurn
+    );
+  }
+
+  getDebugCastlingRights(): string {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+      return '-';
+    }
+    return ChessRulesService.getCastlingRightsNotation(
+      this.globalVariablesService.field,
+      this.globalVariablesService.boardHelper.history
+    );
   }
 
   private getPositionKey(board: ChessPieceDto[][][], turn: ChessColorsEnum): string {
@@ -885,17 +1012,34 @@ export class ChessBoardComponent implements AfterViewInit {
         squares.push(`${row}${col}:${piece.color}${piece.piece}`);
       }
     }
-    return `${turn}|${squares.join('|')}`;
+    const castlingRights = ChessRulesService.getCastlingRightsNotation(
+      board,
+      this.globalVariablesService.boardHelper ? this.globalVariablesService.boardHelper.history : {}
+    );
+    const enPassantRights = ChessRulesService.getEnPassantRightsNotation(
+      board,
+      this.globalVariablesService.boardHelper ? this.globalVariablesService.boardHelper.history : {},
+      turn
+    );
+    return `${turn}|${castlingRights}|${enPassantRights}|${squares.join('|')}`;
   }
 
   private isFiftyMoveRule(): boolean {
+    return this.isNMoveRule(100);
+  }
+
+  private isSeventyFiveMoveRule(): boolean {
+    return this.isNMoveRule(150);
+  }
+
+  private isNMoveRule(halfMoveCount: number): boolean {
     const history = this.globalVariablesService.history;
-    if (history.length < 100) {
+    if (history.length < halfMoveCount) {
       return false;
     }
 
-    const lastHundredHalfMoves = history.slice(-100);
-    return lastHundredHalfMoves.every(move => this.isNonPawnNonCaptureMove(move));
+    const recentHalfMoves = history.slice(-halfMoveCount);
+    return recentHalfMoves.every(move => this.isNonPawnNonCaptureMove(move));
   }
 
   private isNonPawnNonCaptureMove(notation: string): boolean {
@@ -958,17 +1102,20 @@ export class ChessBoardComponent implements AfterViewInit {
       return true;
     }
 
-    if (totalMinorCount === 2 && whiteMinorPieces.length === 1 && blackMinorPieces.length === 1 &&
-      whiteMinorPieces[0].piece === ChessPiecesEnum.Bishop && blackMinorPieces[0].piece === ChessPiecesEnum.Bishop) {
-      const whiteBishopOnLightSquare = this.isLightSquare(whiteMinorPieces[0].row, whiteMinorPieces[0].col);
-      const blackBishopOnLightSquare = this.isLightSquare(blackMinorPieces[0].row, blackMinorPieces[0].col);
-      return whiteBishopOnLightSquare === blackBishopOnLightSquare;
+    if (totalMinorCount === 2) {
+      if (whiteMinorPieces.length === 1 && blackMinorPieces.length === 1) {
+        return true;
+      }
+
+      if (whiteMinorPieces.length === 2 && blackMinorPieces.length === 0) {
+        return whiteMinorPieces.every(minorPiece => minorPiece.piece === ChessPiecesEnum.Knight);
+      }
+
+      if (blackMinorPieces.length === 2 && whiteMinorPieces.length === 0) {
+        return blackMinorPieces.every(minorPiece => minorPiece.piece === ChessPiecesEnum.Knight);
+      }
     }
 
     return false;
-  }
-
-  private isLightSquare(row: number, col: number): boolean {
-    return (row + col) % 2 === 0;
   }
 }

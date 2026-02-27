@@ -297,6 +297,123 @@ export class ChessRulesService {
     GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
   }
 
+  static getCastlingRightsNotation(
+    board: ChessPieceDto[][][],
+    moveHistory: {[name: string]: string}
+  ): string {
+    if (!board) {
+      return '-';
+    }
+
+    const rights: string[] = [];
+    if (ChessRulesService.canCastleByState(board, moveHistory, ChessColorsEnum.White, true)) {
+      rights.push('K');
+    }
+    if (ChessRulesService.canCastleByState(board, moveHistory, ChessColorsEnum.White, false)) {
+      rights.push('Q');
+    }
+    if (ChessRulesService.canCastleByState(board, moveHistory, ChessColorsEnum.Black, true)) {
+      rights.push('k');
+    }
+    if (ChessRulesService.canCastleByState(board, moveHistory, ChessColorsEnum.Black, false)) {
+      rights.push('q');
+    }
+
+    return rights.length > 0 ? rights.join('') : '-';
+  }
+
+  static getEnPassantRightsNotation(
+    board: ChessPieceDto[][][],
+    moveHistory: {[name: string]: string},
+    turn: ChessColorsEnum
+  ): string {
+    if (!board || !moveHistory || !turn) {
+      return '-';
+    }
+
+    const historyEntries = ChessRulesService.getSortedHistoryEntries(moveHistory);
+    if (historyEntries.length < 1) {
+      return '-';
+    }
+
+    const lastMove = historyEntries[historyEntries.length - 1];
+    const parsedMove = ChessRulesService.parseMoveNotation(lastMove.notation);
+    if (!parsedMove || parsedMove.piece !== ChessPiecesEnum.Pawn || !parsedMove.targetSquare) {
+      return '-';
+    }
+
+    const sourcePos = ChessRulesService.fromSquareNotation(parsedMove.sourceSquare);
+    const targetPos = ChessRulesService.fromSquareNotation(parsedMove.targetSquare);
+    if (!sourcePos || !targetPos) {
+      return '-';
+    }
+
+    if (sourcePos.col !== targetPos.col || Math.abs(sourcePos.row - targetPos.row) !== 2) {
+      return '-';
+    }
+
+    const movingColor = lastMove.index % 2 === 1 ? ChessColorsEnum.White : ChessColorsEnum.Black;
+    const capturingColor = movingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    if (turn !== capturingColor) {
+      return '-';
+    }
+
+    if (!ChessRulesService.hasPieceAtOnBoard(board, targetPos.row, targetPos.col, movingColor, ChessPiecesEnum.Pawn)) {
+      return '-';
+    }
+
+    const adjacentCols = [targetPos.col - 1, targetPos.col + 1].filter(col => col >= 0 && col <= 7);
+    const hasCapturingPawn = adjacentCols.some(col =>
+      ChessRulesService.hasPieceAtOnBoard(board, targetPos.row, col, capturingColor, ChessPiecesEnum.Pawn)
+    );
+    if (!hasCapturingPawn) {
+      return '-';
+    }
+
+    const epRow = (sourcePos.row + targetPos.row) / 2;
+    return ChessRulesService.toSquareNotation(epRow, targetPos.col);
+  }
+
+  private static canCastleByState(
+    board: ChessPieceDto[][][],
+    moveHistory: {[name: string]: string},
+    color: ChessColorsEnum,
+    kingSide: boolean
+  ): boolean {
+    const sourceRow = color === ChessColorsEnum.White ? 7 : 0;
+    const kingSourceCol = 4;
+    const rookSourceCol = kingSide ? 7 : 0;
+
+    if (!ChessRulesService.hasPieceAtOnBoard(board, sourceRow, kingSourceCol, color, ChessPiecesEnum.King)) {
+      return false;
+    }
+
+    if (!ChessRulesService.hasPieceAtOnBoard(board, sourceRow, rookSourceCol, color, ChessPiecesEnum.Rook)) {
+      return false;
+    }
+
+    if (ChessRulesService.hasPieceMoved(color, ChessPiecesEnum.King, sourceRow, kingSourceCol, moveHistory)) {
+      return false;
+    }
+
+    if (ChessRulesService.hasPieceMoved(color, ChessPiecesEnum.Rook, sourceRow, rookSourceCol, moveHistory)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private static hasPieceAtOnBoard(
+    board: ChessPieceDto[][][],
+    row: number,
+    col: number,
+    color: ChessColorsEnum,
+    pieceType: ChessPiecesEnum
+  ): boolean {
+    const cell = board[row] && board[row][col];
+    return !!(cell && cell[0] && cell[0].color === color && cell[0].piece === pieceType);
+  }
+
   private static hasPieceMoved(
     sourceColor: ChessColorsEnum,
     piece: ChessPiecesEnum,
@@ -308,10 +425,7 @@ export class ChessRulesService {
       return false;
     }
     const sourceSquare = ChessRulesService.toSquareNotation(sourceRow, sourceCol);
-    const historyEntries = Object.keys(moveHistory)
-      .map(key => ({ index: Number(key), notation: moveHistory[key] }))
-      .filter(entry => !isNaN(entry.index) && !!entry.notation)
-      .sort((a, b) => a.index - b.index);
+    const historyEntries = ChessRulesService.getSortedHistoryEntries(moveHistory);
 
     for (const entry of historyEntries) {
       if (piece === ChessPiecesEnum.King && (entry.notation === 'O-O' || entry.notation === 'O-O-O')) {
@@ -334,11 +448,11 @@ export class ChessRulesService {
 
   private static parseMoveNotation(
     notation: string
-  ): { piece: ChessPiecesEnum, sourceSquare: string } | null {
+  ): { piece: ChessPiecesEnum, sourceSquare: string, targetSquare: string } | null {
     if (!notation || notation === 'O-O' || notation === 'O-O-O') {
       return null;
     }
-    const match = notation.match(/^([KQRBN]?)([a-h][1-8])(?:-|x)?[a-h][1-8]/);
+    const match = notation.match(/^([KQRBN]?)([a-h][1-8])(?:-|x)?([a-h][1-8])/);
     if (!match) {
       return null;
     }
@@ -372,8 +486,33 @@ export class ChessRulesService {
     }
     return {
       piece,
-      sourceSquare: match[2]
+      sourceSquare: match[2],
+      targetSquare: match[3]
     };
+  }
+
+  private static fromSquareNotation(square: string): { row: number, col: number } | null {
+    if (!square || square.length !== 2) {
+      return null;
+    }
+
+    const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
+    const rank = Number(square.charAt(1));
+    if (file < 0 || file > 7 || rank < 1 || rank > 8) {
+      return null;
+    }
+
+    return {
+      row: 8 - rank,
+      col: file
+    };
+  }
+
+  private static getSortedHistoryEntries(moveHistory: {[name: string]: string}): Array<{ index: number, notation: string }> {
+    return Object.keys(moveHistory)
+      .map(key => ({ index: Number(key), notation: moveHistory[key] }))
+      .filter(entry => !isNaN(entry.index) && !!entry.notation)
+      .sort((a, b) => a.index - b.index);
   }
 
   private static toSquareNotation(row: number, col: number): string {

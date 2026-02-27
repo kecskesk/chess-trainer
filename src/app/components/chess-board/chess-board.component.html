@@ -1,4 +1,5 @@
 <div class="trainer-layout">
+  <div class="ambient-math" [ngClass]="getAmbientThemeClass()" aria-hidden="true"></div>
   <section class="board-panel">
     <div class="outer-container board-shell">
       <div class="container" #chessField>
@@ -43,15 +44,15 @@
   <section class="sidebar-panel">
     <div class="status-card">
       <h3 class="section-title">
-        {{globalVariablesService.boardHelper.gameOver
-          ? ('Checkmate - ' +
-            (globalVariablesService.boardHelper.checkmateColor === 'white' ? 'Black' : 'White') +
-            ' wins')
-          : (globalVariablesService.boardHelper.colorTurn + ' to move')}}
+        {{getStatusTitle()}}
       </h3>
       <div class="actions-row">
         <button class="action-btn" (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button>
         <button class="action-btn action-btn--secondary" (click)="showPossibleMoves(null)">clear</button>
+        <button class="action-btn" *ngIf="canOfferDraw()" (click)="offerDraw()">offer draw</button>
+        <button class="action-btn" *ngIf="canRespondToDrawOffer()" (click)="acceptDrawOffer()">accept draw</button>
+        <button class="action-btn action-btn--secondary" *ngIf="canRespondToDrawOffer()" (click)="declineDrawOffer()">decline draw</button>
+        <button class="action-btn action-btn--secondary" *ngIf="canClaimDraw()" (click)="claimDraw()">claim draw</button>
       </div>
     </div>
 
@@ -94,8 +95,9 @@
       </div>
     </div>
 
-    <div class="debug-card" *ngIf="globalVariablesService.boardHelper && globalVariablesService.boardHelper.debugText">
-      {{globalVariablesService.boardHelper.debugText}}
+    <div class="debug-card" *ngIf="globalVariablesService.boardHelper">
+      <div *ngIf="globalVariablesService.boardHelper.debugText">{{globalVariablesService.boardHelper.debugText}}</div>
+      <div>Position key: {{getDebugPositionKey()}}</div>
     </div>
   </section>
 </div>

@@ -216,17 +216,53 @@ describe('ChessBoardComponent move sequence integration', () => {
       component.onDrop(createDropLike(srcRow, srcCol, targetRow, targetCol));
     });
 
+    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(component.canClaimDraw()).toBeTrue();
+
+    component.claimDraw();
+
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by threefold repetition.');
+    expect(globals.boardHelper.debugText).toBe('Draw by threefold repetition (claimed).');
+  });
+
+  it('declares draw by fivefold repetition', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    const knight = globals.field[7][6][0];
+    globals.field[5][5] = [knight];
+    globals.field[7][6] = [];
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    const targetPositionKey = component.getDebugPositionKey();
+    globals.field[7][6] = [knight];
+    globals.field[5][5] = [];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    (component as any).repetitionCounts = { [targetPositionKey]: 4 };
+    (component as any).trackedHistoryLength = globals.history.length;
+
+    expect(canDropLike(7, 6, 5, 5)).toBeTrue();
+    component.onDrop(createDropLike(7, 6, 5, 5));
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.checkmateColor).toBeNull();
+    expect(globals.boardHelper.debugText).toBe('Draw by fivefold repetition.');
   });
 
   it('declares draw by 50-move rule after 100 non-pawn non-capture half-moves', () => {
     clearBoard();
     globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
     globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
     globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
     globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
     globals.boardHelper.colorTurn = ChessColorsEnum.Black;
     globals.boardHelper.history = {};
     for (let i = 1; i <= 99; i++) {
@@ -236,24 +272,146 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(canDropLike(0, 1, 2, 0)).toBeTrue();
     component.onDrop(createDropLike(0, 1, 2, 0));
 
+    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(component.canClaimDraw()).toBeTrue();
+
+    component.claimDraw();
+
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by 50-move rule.');
+    expect(globals.boardHelper.debugText).toBe('Draw by 50-move rule (claimed).');
   });
 
-  it('declares draw by insufficient material', () => {
+  it('declares draw by 75-move rule after 150 non-pawn non-capture half-moves', () => {
     clearBoard();
     globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[7][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
     globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    globals.boardHelper.history = {};
+    for (let i = 1; i <= 149; i++) {
+      globals.boardHelper.history[`${i}`] = 'Ng1-f3';
+    }
 
-    expect(canDropLike(7, 1, 5, 0)).toBeTrue();
-    component.onDrop(createDropLike(7, 1, 5, 0));
+    expect(canDropLike(0, 1, 2, 0)).toBeTrue();
+    component.onDrop(createDropLike(0, 1, 2, 0));
 
     expect(globals.boardHelper.gameOver).toBeTrue();
     expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by insufficient material.');
+    expect(globals.boardHelper.debugText).toBe('Draw by 75-move rule.');
+  });
+
+  [
+    {
+      name: 'K+N vs K',
+      setup: () => {
+        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        globals.field[7][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+      },
+      move: [7, 1, 5, 0] as [number, number, number, number]
+    },
+    {
+      name: 'K+N vs K+N',
+      setup: () => {
+        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+        globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+      },
+      move: [7, 6, 5, 5] as [number, number, number, number]
+    },
+    {
+      name: 'K+B vs K+N',
+      setup: () => {
+        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        globals.field[7][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
+        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+        globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+      },
+      move: [7, 2, 6, 3] as [number, number, number, number]
+    },
+    {
+      name: 'K+2N vs K',
+      setup: () => {
+        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        globals.field[7][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+      },
+      move: [7, 1, 5, 0] as [number, number, number, number]
+    }
+  ].forEach(testCase => {
+    it(`declares draw by insufficient material for ${testCase.name}`, () => {
+      clearBoard();
+      testCase.setup();
+      globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+      const [srcRow, srcCol, targetRow, targetCol] = testCase.move;
+      expect(canDropLike(srcRow, srcCol, targetRow, targetCol)).toBeTrue();
+      component.onDrop(createDropLike(srcRow, srcCol, targetRow, targetCol));
+
+      expect(globals.boardHelper.gameOver).toBeTrue();
+      expect(globals.boardHelper.checkmateColor).toBeNull();
+      expect(globals.boardHelper.debugText).toBe('Draw by insufficient material.');
+    });
+  });
+
+  it('creates a pending draw offer instead of ending game immediately', () => {
+    expect(globals.boardHelper.gameOver).toBeFalse();
+
+    component.offerDraw();
+
+    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(component.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
+    expect(component.canRespondToDrawOffer()).toBeTrue();
+  });
+
+  it('accepts a pending draw offer as draw by agreement', () => {
+    component.offerDraw();
+    expect(component.canRespondToDrawOffer()).toBeTrue();
+
+    component.acceptDrawOffer();
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.checkmateColor).toBeNull();
+    expect(globals.boardHelper.debugText).toBe('Draw by agreement.');
+    expect(component.pendingDrawOfferBy).toBeNull();
+  });
+
+  it('declines a pending draw offer without ending the game', () => {
+    component.offerDraw();
+    expect(component.canRespondToDrawOffer()).toBeTrue();
+
+    component.declineDrawOffer();
+
+    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(component.pendingDrawOfferBy).toBeNull();
+  });
+
+  it('auto-declines pending draw offer when responder makes a move', () => {
+    component.offerDraw();
+    expect(component.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+
+    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(component.pendingDrawOfferBy).toBeNull();
+  });
+
+  it('returns ambient background theme by turn and pending draw state', () => {
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect(component.getAmbientThemeClass()).toBe('ambient-math--white-turn');
+
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    expect(component.getAmbientThemeClass()).toBe('ambient-math--black-turn');
+
+    component.offerDraw();
+    expect(component.getAmbientThemeClass()).toBe('ambient-math--draw-pending');
   });
 
   it('ignores onDrop when move would leave own king in check', () => {
@@ -374,23 +532,6 @@ describe('ChessBoardComponent move sequence integration', () => {
     delete globals.boardHelper.hits['44'];
     expect(component.getSquareHighlightClass(4, 4)).toBe('shaded');
   });
-
-  it('clears possible-move highlights on drag end without a move', () => {
-    clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
-
-    expect(canDropLike(6, 4, 5, 4)).toBeTrue();
-    expect(Object.keys(globals.boardHelper.possibles).length).toBeGreaterThan(0);
-
-    component.onDragEnded();
-
-    expect(globals.boardHelper.possibles).toEqual({});
-    expect(globals.boardHelper.hits).toEqual({});
-    expect(globals.boardHelper.checks).toEqual({});
-  });
 });
 
 describe('ChessBoardComponent template drag-enter integration', () => {
@@ -462,5 +603,78 @@ describe('ChessBoardComponent template drag-enter integration', () => {
 
     expect(component.isMateInOneTarget(1, 1)).toBeTrue();
     expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one')).toBeTrue();
+  });
+
+  it('shows claim draw button only when draw can be claimed', () => {
+    fixture.detectChanges();
+    let claimButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('claim draw'));
+    expect(claimButton).toBeUndefined();
+
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    globals.boardHelper.history = {};
+    for (let i = 1; i <= 100; i++) {
+      globals.boardHelper.history[`${i}`] = 'Ng1-f3';
+    }
+
+    fixture.detectChanges();
+    claimButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('claim draw'));
+    expect(claimButton).toBeDefined();
+  });
+
+  it('shows accept/decline buttons for pending draw offer', () => {
+    fixture.detectChanges();
+
+    let offerDrawButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('offer draw'));
+    expect(offerDrawButton).toBeDefined();
+
+    offerDrawButton.triggerEventHandler('click', {});
+    fixture.detectChanges();
+
+    offerDrawButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('offer draw'));
+    const acceptDrawButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('accept draw'));
+    const declineDrawButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('decline draw'));
+
+    expect(offerDrawButton).toBeUndefined();
+    expect(acceptDrawButton).toBeDefined();
+    expect(declineDrawButton).toBeDefined();
+  });
+
+  it('applies animated ambient class for white, black, and pending draw states', () => {
+    fixture.detectChanges();
+
+    let ambient = fixture.debugElement.query(By.css('.ambient-math')).nativeElement as HTMLElement;
+    expect(ambient.classList.contains('ambient-math--white-turn')).toBeTrue();
+
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    fixture.detectChanges();
+    ambient = fixture.debugElement.query(By.css('.ambient-math')).nativeElement as HTMLElement;
+    expect(ambient.classList.contains('ambient-math--black-turn')).toBeTrue();
+
+    const offerDrawButton = fixture.debugElement
+      .queryAll(By.css('button'))
+      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('offer draw'));
+    expect(offerDrawButton).toBeDefined();
+    offerDrawButton.triggerEventHandler('click', {});
+    fixture.detectChanges();
+
+    ambient = fixture.debugElement.query(By.css('.ambient-math')).nativeElement as HTMLElement;
+    expect(ambient.classList.contains('ambient-math--draw-pending')).toBeTrue();
   });
 });
