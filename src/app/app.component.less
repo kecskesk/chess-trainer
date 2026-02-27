@@ -4,11 +4,56 @@
 	padding: 24px 20px 32px;
 }
 
+.app-brand {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 12px;
+	width: fit-content;
+	max-width: 100%;
+	padding: 10px 14px;
+	margin-bottom: 14px;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 14px;
+	background: rgba(15, 22, 44, 0.72);
+	backdrop-filter: blur(4px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.app-logo {
+	width: 52px;
+	height: auto;
+	display: block;
+	flex-shrink: 0;
+}
+
 .app-title {
-	margin: 0 0 16px;
-	font-size: 30px;
+	margin: 0;
+	font-size: 24px;
 	line-height: 1.2;
-	letter-spacing: 0.4px;
+	letter-spacing: 0.3px;
 	color: #f5f7ff;
-	text-align: center;
+	text-align: left;
+}
+
+@media (max-width: 768px) {
+	.app-shell {
+		padding: 14px 12px 20px;
+	}
+
+	.app-brand {
+		padding: 8px 10px;
+		gap: 8px;
+		border-radius: 12px;
+		margin-bottom: 10px;
+	}
+
+	.app-logo {
+		width: 38px;
+	}
+
+	.app-title {
+		font-size: 18px;
+		line-height: 1.15;
+	}
 }
