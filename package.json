@@ -5,6 +5,9 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:prod": "ng build --configuration production",
+    "firebase:deploy": "npm run build:prod && npx firebase-tools deploy --only hosting",
+    "firebase:preview": "npm run build:prod && npx firebase-tools hosting:channel:deploy preview",
     "test": "ng test"
   },
   "private": true,
