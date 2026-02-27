@@ -1,64 +1,92 @@
-<div class="outer-container">
-  <div class="container" #chessField>
-    <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
-      <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
-        <div class="piece-box">
-          <div class="square"
-               cdkDropList
-               cdkDropListOrientation="horizontal"
-               [cdkDropListEnterPredicate]="canDrop"
-               id="field{{idxX}}{{idxY}}"
-               [class.shaded]="isTarget(idxX, idxY) && !isHit(idxX, idxY)"
-               [class.killer]="isHit(idxX, idxY)"
-               [cdkDropListData]="cellY"
-               [cdkDropListConnectedTo]="dropLists"
-               (cdkDropListDropped)="onDrop($event)"
-               [class.white-square]="(idxY + idxX) % 2 === 0"
-               [class.black-square]="(idxY + idxX) % 2 === 1">
-            <div class="drag-box" cdkDrag
-                 [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.boardHelper.colorTurn">
-              <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
+<div class="trainer-layout">
+  <section class="board-panel">
+    <div class="outer-container board-shell">
+      <div class="container" #chessField>
+        <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
+          <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
+            <div class="piece-box">
+              <div class="square"
+                   cdkDropList
+                   cdkDropListOrientation="horizontal"
+                   [cdkDropListEnterPredicate]="canDrop"
+                   id="field{{idxX}}{{idxY}}"
+                   [class.shaded]="isTarget(idxX, idxY) && !isHit(idxX, idxY)"
+                   [class.killer]="isHit(idxX, idxY)"
+                   [cdkDropListData]="cellY"
+                   [cdkDropListConnectedTo]="dropLists"
+                   (cdkDropListDropped)="onDrop($event)"
+                   [class.white-square]="(idxY + idxX) % 2 === 0"
+                   [class.black-square]="(idxY + idxX) % 2 === 1">
+                <div class="drag-box" cdkDrag
+                     [cdkDragDisabled]="!cellY || !cellY[0] || cellY[0].color !== globalVariablesService.boardHelper.colorTurn">
+                  <app-chess-piece [piece]="cellY[0]" *ngIf="cellY && cellY[0]" cdkDragHandle></app-chess-piece>
+                </div>
+                <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
+              </div>
             </div>
-            <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
           </div>
         </div>
       </div>
+      <div class="arrowPointer" *ngFor="let arrow of globalVariablesService.arrows; index as arrowIdx"
+           [style.top]="arrow.top" [style.left]="arrow.left" [style.color]="arrow.color"
+           [style.transform]="sanitizeScale(arrow.transform)" [style.rotate]="arrow.rotate">
+        <i class="fas fa-arrow-right"></i>
+      </div>
     </div>
-  </div>
-  <div class="arrowPointer" *ngFor="let arrow of globalVariablesService.arrows; index as arrowIdx"
-       [style.top]="arrow.top" [style.left]="arrow.left" [style.color]="arrow.color"
-       [style.transform]="sanitizeScale(arrow.transform)" [style.rotate]="arrow.rotate">
-    <i class="fas fa-arrow-right"></i>
-  </div>
-</div>
-<div *ngIf="globalVariablesService.boardHelper.canPromote">
-  <h3>Promote!</h3>
-  <button (click)="promotePiece('rook')">Rook</button>
-  <button (click)="promotePiece('bishop')">Bishop</button>
-  <button (click)="promotePiece('knight')">Knight</button>
-  <button (click)="promotePiece('queen')">Queen</button>
-</div>
-<div>
-  <h3>{{globalVariablesService.boardHelper.colorTurn}} to move
-    <button (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button> -
-    <button (click)="showPossibleMoves(null)">clear</button>
-  </h3>
-  <h3>Magic Toolkit
-    <button (click)="showThreats()">my threats</button> -
-    <button (click)="showProtected()">my protected</button> -
-    <button (click)="showThreats(true)">threats from enemy</button> -
-    <button (click)="showProtected(true)">protected enemy</button>
-  </h3>
-  <h3>Magicer Toolkit
-    <button (click)="showHangingPieces()">my hanging piece (blundered)</button> -
-    <button (click)="showHangingPieces(true)">hanging enemy (hittable)</button>
-  </h3>
-  <h3>History</h3>
-  <span *ngFor="let histItem of globalVariablesService.history; index as histIdx">
-    <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
-    {{histItem}}
-    <br *ngIf="histIdx % 2 === 1" /></span>
-</div>
-<div *ngIf="globalVariablesService.boardHelper">
-  {{globalVariablesService.boardHelper.debugText}}
+  </section>
+
+  <section class="sidebar-panel">
+    <div class="status-card">
+      <h3 class="section-title">
+        {{globalVariablesService.boardHelper.colorTurn}} to move
+      </h3>
+      <div class="actions-row">
+        <button class="action-btn" (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button>
+        <button class="action-btn action-btn--secondary" (click)="showPossibleMoves(null)">clear</button>
+      </div>
+    </div>
+
+    <div class="tool-card" *ngIf="globalVariablesService.boardHelper.canPromote">
+      <h3 class="section-title">Promote</h3>
+      <div class="actions-grid actions-grid--compact">
+        <button class="action-btn" (click)="promotePiece('rook')">Rook</button>
+        <button class="action-btn" (click)="promotePiece('bishop')">Bishop</button>
+        <button class="action-btn" (click)="promotePiece('knight')">Knight</button>
+        <button class="action-btn" (click)="promotePiece('queen')">Queen</button>
+      </div>
+    </div>
+
+    <div class="tool-card">
+      <h3 class="section-title">Magic Toolkit</h3>
+      <div class="actions-grid">
+        <button class="action-btn" (click)="showThreats()">my threats</button>
+        <button class="action-btn" (click)="showProtected()">my protected</button>
+        <button class="action-btn" (click)="showThreats(true)">threats from enemy</button>
+        <button class="action-btn" (click)="showProtected(true)">protected enemy</button>
+      </div>
+    </div>
+
+    <div class="tool-card">
+      <h3 class="section-title">Magicer Toolkit</h3>
+      <div class="actions-grid actions-grid--compact">
+        <button class="action-btn" (click)="showHangingPieces()">my hanging piece (blundered)</button>
+        <button class="action-btn" (click)="showHangingPieces(true)">hanging enemy (hittable)</button>
+      </div>
+    </div>
+
+    <div class="history-card">
+      <h3 class="section-title">History</h3>
+      <div class="history-log">
+        <span class="history-entry" *ngFor="let histItem of globalVariablesService.history; index as histIdx">
+          <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
+          {{histItem}}
+          <br *ngIf="histIdx % 2 === 1" />
+        </span>
+      </div>
+    </div>
+
+    <div class="debug-card" *ngIf="globalVariablesService.boardHelper && globalVariablesService.boardHelper.debugText">
+      {{globalVariablesService.boardHelper.debugText}}
+    </div>
+  </section>
 </div>
