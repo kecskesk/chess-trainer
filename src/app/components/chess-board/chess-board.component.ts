@@ -60,6 +60,7 @@ export class ChessBoardComponent implements AfterViewInit {
       const srcRow = Number(srcLocSplit[1][0]);
       const srcCell = Number(srcLocSplit[1][1]);
       const srcPiece = event.previousContainer.data[0].piece;
+      const srcColor = event.previousContainer.data[0].color;
       if (srcPiece === ChessPiecesEnum.Pawn && targetRow === 0) {
         this.globalVariablesService.boardHelper.canPromote = targetCell;
       }
@@ -74,13 +75,24 @@ export class ChessBoardComponent implements AfterViewInit {
         this.globalVariablesService.field[targetRow][targetCell].splice(0, 1);
         isHit = true;
       }
-      const justDidEP = this.globalVariablesService.boardHelper.justDidEnPassant;
-      if (justDidEP) {
-        this.globalVariablesService.field[justDidEP.row][justDidEP.col].splice(0, 1);
-        isHit = true;
-        isEP = true;
-        this.globalVariablesService.boardHelper.justDidEnPassant = null;
+      const isPawnDiagonalToEmpty = srcPiece === ChessPiecesEnum.Pawn
+        && Math.abs(targetCell - srcCell) === 1
+        && (!event.container.data || event.container.data.length < 1);
+      const targetDirectionStep = srcColor === ChessColorsEnum.White ? -1 : 1;
+      const enemyFirstStep = srcColor === ChessColorsEnum.Black ? 5 : 2;
+      if (isPawnDiagonalToEmpty && (targetRow - srcRow) === targetDirectionStep && targetRow === enemyFirstStep) {
+        const epTargetRow = srcColor === ChessColorsEnum.White ? 3 : 4;
+        const epSourceRow = srcColor === ChessColorsEnum.White ? 1 : 6;
+        const lastHistory = this.globalVariablesService.history[this.globalVariablesService.history.length - 1];
+        const possibleEP = GlobalVariablesService.translateNotation(
+          epTargetRow, targetCell, epSourceRow, targetCell, ChessPiecesEnum.Pawn, false, false, false, false, null);
+        if (lastHistory === possibleEP && this.globalVariablesService.field[epTargetRow][targetCell].length > 0) {
+          this.globalVariablesService.field[epTargetRow][targetCell].splice(0, 1);
+          isHit = true;
+          isEP = true;
+        }
       }
+      this.globalVariablesService.boardHelper.justDidEnPassant = null;
       const justDidCastle = this.globalVariablesService.boardHelper.justDidCastle;
       if (justDidCastle) {
         const rookCol = justDidCastle.col === 2 ? 0 : 7;

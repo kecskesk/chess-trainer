@@ -158,7 +158,7 @@ export class ChessRulesService {
     }
     // Pawn magic 3 (en passant)
     const historyLength = Object.keys(cmParams.moveHistory).length;
-    const lastHistory = cmParams.moveHistory[historyLength - 1];
+    const lastHistory = cmParams.moveHistory[historyLength];
     const epTargetRow = cmParams.sourceColor === ChessColorsEnum.White ? 3 : 4;
     const epSourceRow = cmParams.sourceColor === ChessColorsEnum.White ? 1 : 6;
     const possibleEP = GlobalVariablesService.translateNotation(
@@ -166,7 +166,6 @@ export class ChessRulesService {
     if (stepX === 1 && stepY === targetDirectionStep && cmParams.targetRow === enemyFirstStep && lastHistory === possibleEP) {
       cmResult.canDrop = true;
       cmResult.canHit = true;
-      GlobalVariablesService.BOARD_HELPER.justDidEnPassant = { row: epTargetRow, col: cmParams.targetCol };
     }
   }
 
