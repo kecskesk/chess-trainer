@@ -3,10 +3,14 @@
   z-index: 0;
   isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, max-content) minmax(340px, 560px);
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: clamp(24px, 3.5vw, 44px);
   align-items: start;
   justify-content: center;
+  width: min(100%, 1140px);
+  margin: 0 auto;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
 .info-hover {
@@ -93,20 +97,26 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .board-stack {
   display: grid;
   gap: 8px;
+  width: max-content;
+  max-width: none;
 }
 
 .position-key-panel {
   width: 100%;
+  max-width: none;
   border: 1px solid rgba(219, 230, 255, 0.2);
   border-radius: 8px;
   background: rgba(18, 26, 46, 0.9);
   color: #dce5ff;
   padding: 6px 8px;
+  box-sizing: border-box;
+  overflow: hidden;
 
   summary {
     cursor: pointer;
@@ -122,6 +132,7 @@
   font-size: 11px;
   line-height: 1.35;
   word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .position-key-value + .position-key-value {
@@ -130,9 +141,9 @@
 }
 
 .board-shell {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
+  display: inline-grid;
+  width: max-content;
+  min-width: max-content;
   padding: 0;
   box-shadow: none;
   overflow: visible;
@@ -329,6 +340,8 @@
   display: flex;
   flex-wrap: wrap;
   flex-direction: column;
+  width: max-content;
+  max-width: none;
   outline: 2px solid rgba(13, 20, 37, 0.92);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
@@ -408,6 +421,10 @@
   font-size: 16px;
   color: #f3f6ff;
   letter-spacing: 0.2px;
+}
+
+.status-card .section-title {
+  text-transform: capitalize;
 }
 
 .actions-row,
@@ -648,6 +665,31 @@
   background: linear-gradient(180deg, #bf3b3b 0%, #8a2929 100%);
 }
 
+.action-btn:disabled,
+.time-btn:disabled,
+.icon-action-btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.45);
+  opacity: 0.55;
+}
+
+.icon-action-btn--secondary {
+  background: linear-gradient(180deg, #3f4456 0%, #2b3040 100%);
+}
+
+.icon-actions-row--status {
+  margin-top: 2px;
+  grid-auto-flow: row dense;
+}
+
+.icon-actions-row--status .icon-action-btn__text {
+  white-space: nowrap;
+}
+
+.status-action-new-game {
+  grid-column: 2;
+}
+
 .mini-modal {
   margin-top: 8px;
   border: 1px solid rgba(219, 230, 255, 0.2);
@@ -715,15 +757,8 @@
 .action-btn--magicer {
   border-color: rgba(189, 206, 255, 0.55);
   background: linear-gradient(180deg, #4164be 0%, #304a8b 100%);
-  border-radius: 8px;
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 8px;
-  font-size: 11px;
-  letter-spacing: 0.2px;
+  padding: 8px 10px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -908,12 +943,33 @@
 @media (max-width: 1280px) {
   .trainer-layout {
     grid-template-columns: 1fr;
-    justify-items: center;
+    justify-items: stretch;
     gap: 14px;
+    padding: 8px;
+  }
+
+  .board-panel {
+    width: 100%;
+    display: block;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .board-stack {
+    display: inline-grid;
+    width: max-content;
+    min-width: max-content;
+    max-width: none;
+  }
+
+  .position-key-panel {
+    max-width: calc(100vw - 16px);
   }
 
   .sidebar-panel {
-    width: min(100%, 700px);
+    width: 100%;
+    max-width: 700px;
     max-height: none;
     overflow: visible;
   }
@@ -934,13 +990,69 @@
 }
 
 @media (max-width: 820px) {
+  .trainer-layout {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+    width: 100%;
+    padding: 8px;
+    gap: 10px;
+    box-sizing: border-box;
+  }
+
+  .board-panel {
+    width: 100%;
+    display: block;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .board-stack {
+    display: inline-grid;
+    width: max-content;
+    min-width: max-content;
+    max-width: none;
+    margin: 0;
+  }
+
+  .position-key-panel {
+    width: 100%;
+    max-width: calc(100vw - 16px);
+    margin-top: 6px;
+    padding: 6px;
+    box-sizing: border-box;
+  }
+
+  .position-key-value {
+    font-size: 10px;
+    line-height: 1.25;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+  }
+
   .sidebar-panel {
     grid-template-columns: 1fr;
-    width: min(100%, 520px);
+    width: 100%;
+    max-width: 100%;
+    padding-right: 0;
   }
 
   .panel-card--wide {
     grid-column: auto;
+  }
+
+  .status-card,
+  .clock-card,
+  .tool-card,
+  .history-card,
+  .debug-card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .clock-controls-grid {
+    gap: 5px;
   }
 }
 

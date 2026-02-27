@@ -105,20 +105,20 @@
         <div class="clock-controls">
           <div class="clock-controls-grid">
             <button class="time-btn"
-              *ngIf="!clockRunning"
+              [disabled]="clockStarted"
               [class.time-btn--selected]="selectedClockPresetLabel === '1+0'"
               (click)="applyTimeControl(1, 0, '1+0')">1+0</button>
             <button class="time-btn"
-              *ngIf="!clockRunning"
+              [disabled]="clockStarted"
               [class.time-btn--selected]="selectedClockPresetLabel === '3+2'"
               (click)="applyTimeControl(3, 2, '3+2')">3+2</button>
             <button class="action-btn action-btn--large" (click)="startOrPauseClock()">{{getClockButtonLabel()}}</button>
             <button class="time-btn"
-              *ngIf="!clockRunning"
+              [disabled]="clockStarted"
               [class.time-btn--selected]="selectedClockPresetLabel === '5+0'"
               (click)="applyTimeControl(5, 0, '5+0')">5+0</button>
             <button class="time-btn"
-              *ngIf="!clockRunning"
+              [disabled]="clockStarted"
               [class.time-btn--selected]="selectedClockPresetLabel === '10+0'"
               (click)="applyTimeControl(10, 0, '10+0')">10+0</button>
             <button class="action-btn action-btn--secondary action-btn--large" (click)="resetClock()">Reset</button>
@@ -131,29 +131,61 @@
       <h3 class="section-title">
         {{getStatusTitle()}}
       </h3>
-      <div class="actions-row">
-        <button class="action-btn"
-          [class.action-btn--magicer]="globalVariablesService.boardHelper.colorTurn === chessColors.White"
-          (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)">show possible moves</button>
-        <button class="action-btn action-btn--secondary"
-          [class.action-btn--magicer]="globalVariablesService.boardHelper.colorTurn === chessColors.White"
-          (click)="showPossibleMoves(null)">clear</button>
-        <button class="action-btn"
-          [class.action-btn--magicer]="globalVariablesService.boardHelper.colorTurn === chessColors.White"
+      <div class="icon-actions-row icon-actions-row--compact icon-actions-row--status">
+        <button class="icon-action-btn"
+          (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)"
+          title="Show possible moves"
+          aria-label="Show possible moves">
+          <span class="icon-action-btn__icon">👁</span>
+          <span class="icon-action-btn__text">Show moves</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary"
+          (click)="showPossibleMoves(null)"
+          title="Clear highlights"
+          aria-label="Clear highlights">
+          <span class="icon-action-btn__icon">⌫</span>
+          <span class="icon-action-btn__text">Clear highlights</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary status-action-new-game"
+          *ngIf="pendingDrawOfferBy === null"
+          (click)="startNewGame()"
+          title="Start new game"
+          aria-label="Start new game">
+          <span class="icon-action-btn__icon">↻</span>
+          <span class="icon-action-btn__text">New game</span>
+        </button>
+        <button class="icon-action-btn"
           *ngIf="canOfferDraw()"
-          (click)="offerDraw()">offer draw</button>
-        <button class="action-btn"
-          [class.action-btn--magicer]="globalVariablesService.boardHelper.colorTurn === chessColors.White"
+          (click)="offerDraw()"
+          title="Offer draw"
+          aria-label="Offer draw">
+          <span class="icon-action-btn__icon">🤝</span>
+          <span class="icon-action-btn__text">Offer draw</span>
+        </button>
+        <button class="icon-action-btn"
           *ngIf="canRespondToDrawOffer()"
-          (click)="acceptDrawOffer()">accept draw</button>
-        <button class="action-btn action-btn--secondary"
-          [class.action-btn--magicer]="globalVariablesService.boardHelper.colorTurn === chessColors.White"
+          (click)="acceptDrawOffer()"
+          title="Accept draw"
+          aria-label="Accept draw">
+          <span class="icon-action-btn__icon">✔</span>
+          <span class="icon-action-btn__text">Accept draw</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary"
           *ngIf="canRespondToDrawOffer()"
-          (click)="declineDrawOffer()">decline draw</button>
-        <button class="action-btn action-btn--secondary"
-          [class.action-btn--magicer]="globalVariablesService.boardHelper.colorTurn === chessColors.White"
+          (click)="declineDrawOffer()"
+          title="Decline draw"
+          aria-label="Decline draw">
+          <span class="icon-action-btn__icon">✖</span>
+          <span class="icon-action-btn__text">Decline draw</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--secondary"
           *ngIf="canClaimDraw()"
-          (click)="claimDraw()">claim draw</button>
+          (click)="claimDraw()"
+          title="Claim draw"
+          aria-label="Claim draw">
+          <span class="icon-action-btn__icon">⚖</span>
+          <span class="icon-action-btn__text">Claim draw</span>
+        </button>
       </div>
       <div class="icon-actions-row icon-actions-row--resign" *ngIf="clockRunning">
         <button class="icon-action-btn icon-action-btn--danger"
@@ -173,14 +205,19 @@
           <span class="icon-action-btn__text">Black</span>
         </button>
       </div>
-      <div class="mini-modal" *ngIf="resignConfirmColor !== null" role="dialog" aria-modal="false" aria-label="Confirm resignation">
-        <div class="mini-modal__text">
-          Are you sure {{resignConfirmColor === chessColors.White ? 'White' : 'Black'}} resigns?
-        </div>
-        <div class="mini-modal__actions">
-          <button class="action-btn action-btn--secondary" (click)="cancelResignConfirm()">Cancel</button>
-          <button class="action-btn action-btn--danger" (click)="confirmResign()">Resign</button>
-        </div>
+    </div>
+
+    <div class="status-card panel-card panel-card--wide" *ngIf="resignConfirmColor !== null" role="dialog" aria-modal="false" aria-label="Confirm resignation">
+      <h3 class="section-title">Are You Sure {{resignConfirmColor === chessColors.White ? 'White' : 'Black'}} Resigns?</h3>
+      <div class="icon-actions-row icon-actions-row--compact">
+        <button class="icon-action-btn icon-action-btn--secondary" (click)="cancelResignConfirm()" title="Cancel resignation" aria-label="Cancel resignation">
+          <span class="icon-action-btn__icon">✖</span>
+          <span class="icon-action-btn__text">Cancel</span>
+        </button>
+        <button class="icon-action-btn icon-action-btn--danger" (click)="confirmResign()" title="Confirm resignation" aria-label="Confirm resignation">
+          <span class="icon-action-btn__icon">⚑</span>
+          <span class="icon-action-btn__text">Resign</span>
+        </button>
       </div>
     </div>
 
@@ -318,21 +355,33 @@
       <div class="cct-row cct-row--capture" title="Captures: forcing moves that win or trade material.">
         <span class="cct-row__icon" title="Captures">✕</span>
         <ng-container *ngIf="getCctRecommendations('captures') as captureRecs">
-          <span class="cct-step" *ngFor="let rec of captureRecs" [title]="rec.tooltip">{{rec.move}}</span>
+              <span class="cct-step"
+                *ngFor="let rec of captureRecs"
+                [title]="rec.tooltip"
+                (mouseenter)="previewSuggestedMoveArrows(rec.move)"
+                (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
           <span class="cct-empty" *ngIf="captureRecs.length < 1" title="No immediate forcing captures found.">—</span>
         </ng-container>
       </div>
       <div class="cct-row cct-row--check" title="Checks: direct king pressure that forces responses.">
         <span class="cct-row__icon" title="Checks">♔</span>
         <ng-container *ngIf="getCctRecommendations('checks') as checkRecs">
-          <span class="cct-step" *ngFor="let rec of checkRecs" [title]="rec.tooltip">{{rec.move}}</span>
+              <span class="cct-step"
+                *ngFor="let rec of checkRecs"
+                [title]="rec.tooltip"
+                (mouseenter)="previewSuggestedMoveArrows(rec.move)"
+                (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
           <span class="cct-empty" *ngIf="checkRecs.length < 1" title="No immediate forcing checks found.">—</span>
         </ng-container>
       </div>
       <div class="cct-row cct-row--threat" title="Threats: moves that create tactical pressure next move.">
         <span class="cct-row__icon" title="Threats">⚠</span>
         <ng-container *ngIf="getCctRecommendations('threats') as threatRecs">
-          <span class="cct-step" *ngFor="let rec of threatRecs" [title]="rec.tooltip">{{rec.move}}</span>
+              <span class="cct-step"
+                *ngFor="let rec of threatRecs"
+                [title]="rec.tooltip"
+                (mouseenter)="previewSuggestedMoveArrows(rec.move)"
+                (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
           <span class="cct-empty" *ngIf="threatRecs.length < 1" title="No immediate forcing threats found.">—</span>
         </ng-container>
       </div>

@@ -503,7 +503,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return '';
     }
     if (!boardHelper.gameOver) {
-      return `${boardHelper.colorTurn} to move`;
+      return `${boardHelper.colorTurn} To Move`;
     }
     if (boardHelper.checkmateColor !== null) {
       return `Checkmate - ${boardHelper.checkmateColor === ChessColorsEnum.White ? 'Black' : 'White'} wins`;
@@ -575,6 +575,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         });
       });
     }
+  }
+
+  startNewGame(): void {
+    this.stopClock();
+    this.resetBoardState();
+    this.resetTransientUiState();
+    this.resetClock();
+    this.randomizeAmbientStyle();
   }
 
   offerDraw(): void {
@@ -882,8 +890,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         }
 
         const suggestionArrow = this.createVisualizationArrow(
-          { row: srcRow, col: srcCol },
-          { row: parsedMove.targetRow, col: parsedMove.targetCol },
+          { row: 8 - srcRow, col: srcCol + 1 },
+          { row: 8 - parsedMove.targetRow, col: parsedMove.targetCol + 1 },
           'yellow',
           0.45
         );
@@ -1726,6 +1734,93 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private getOpponentColor(color: ChessColorsEnum): ChessColorsEnum {
     return color === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+  }
+
+  private resetBoardState(): void {
+    this.globalVariablesService.field = this.createInitialField();
+    GlobalVariablesService.CHESS_FIELD = this.globalVariablesService.field;
+
+    this.globalVariablesService.boardHelper.debugText = '';
+    this.globalVariablesService.boardHelper.possibles = {};
+    this.globalVariablesService.boardHelper.hits = {};
+    this.globalVariablesService.boardHelper.checks = {};
+    this.globalVariablesService.boardHelper.arrows = {};
+    this.globalVariablesService.boardHelper.history = {};
+    this.globalVariablesService.boardHelper.colorTurn = ChessColorsEnum.White;
+    this.globalVariablesService.boardHelper.canPromote = null;
+    this.globalVariablesService.boardHelper.justDidEnPassant = null;
+    this.globalVariablesService.boardHelper.justDidCastle = null;
+    this.globalVariablesService.boardHelper.gameOver = false;
+    this.globalVariablesService.boardHelper.checkmateColor = null;
+    GlobalVariablesService.BOARD_HELPER = this.globalVariablesService.boardHelper;
+  }
+
+  private resetTransientUiState(): void {
+    this.pendingDrawOfferBy = null;
+    this.resignConfirmColor = null;
+    this.mockHistoryCursor = null;
+    this.mockExportMessage = '';
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+    this.lastMatePreviewKey = '';
+    this.suggestedMoveArrowSnapshot = null;
+    this.cctRecommendationsCacheKey = '';
+    this.cctRecommendationsCache = {
+      captures: [],
+      checks: [],
+      threats: []
+    };
+    this.repetitionCounts = {};
+    this.trackedHistoryLength = -1;
+  }
+
+  private createInitialField(): ChessPieceDto[][][] {
+    return [
+      [
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)]
+      ],
+      [
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)]
+      ],
+      [[], [], [], [], [], [], [], []],
+      [[], [], [], [], [], [], [], []],
+      [[], [], [], [], [], [], [], []],
+      [[], [], [], [], [], [], [], []],
+      [
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]
+      ],
+      [
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
+        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)]
+      ]
+    ];
   }
 
   private randomizeAmbientStyle(): void {
