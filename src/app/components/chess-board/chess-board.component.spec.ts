@@ -454,6 +454,34 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.history.length).toBe(0);
   });
 
+  it('writes debug reason when drag target is invalid', () => {
+    const canDrop = canDropLike(6, 0, 5, 1);
+
+    expect(canDrop).toBeFalse();
+    expect(globals.boardHelper.debugText).toBe('');
+  });
+
+  it('writes zero-target reason when dragged piece has no legal targets', () => {
+    clearBoard();
+    globals.field[0][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    globals.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    globals.field[1][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    globals.field[7][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.onDragStarted({
+      source: {
+        dropContainer: {
+          id: 'field00',
+          data: globals.field[0][0]
+        }
+      }
+    } as any);
+
+    expect(globals.boardHelper.debugText).toBe('· No legal targets for this king.');
+  });
+
   it('shows protection arrows for defended targets in threat view', () => {
     clearBoard();
     globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];

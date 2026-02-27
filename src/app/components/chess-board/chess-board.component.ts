@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
-import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
@@ -8,6 +8,17 @@ import { ChessColorsEnum } from '../../model/chess.colors';
 import { ChessPiecesEnum } from '../../model/chess.pieces';
 import { IBoardHighlight } from '../../model/board-highlight.interface';
 import { IVisualizationArrow } from '../../model/visualization-arrow.interface';
+
+type CctCategory = 'captures' | 'checks' | 'threats';
+
+interface ICctRecommendation {
+  move: string;
+  tooltip: string;
+}
+
+interface ICctRecommendationScored extends ICctRecommendation {
+  score: number;
+}
 
 @Component({
   selector: 'app-chess-board',
@@ -46,6 +57,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   mockHistoryCursor: number | null = null;
   isBoardFlipped = false;
   mockExportMessage = '';
+  areMockControlsDisabled = true;
+  isDebugPanelOpen = false;
+  isInfoOverlayOpen = false;
+  private readonly debugPanelStorageKey = 'chess-trainer.debug-panel-open';
+  private cctRecommendationsCacheKey = '';
+  private cctRecommendationsCache: Record<CctCategory, ICctRecommendation[]> = {
+    captures: [],
+    checks: [],
+    threats: []
+  };
   private readonly mockEvalCycle: string[] = [
     '+0.1', '+0.3', '+0.0', '-0.2', '+0.5', '+0.8', '-0.1', '+1.1'
   ];
@@ -55,6 +76,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     'Italian Game (mock)',
     'Sicilian Defense (mock)'
   ];
+  private suggestedMoveArrowSnapshot: {[key: string]: any} | null = null;
   ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
@@ -62,6 +84,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   constructor(public globalVariablesService: GlobalVariablesService) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, '5+0');
+    this.isDebugPanelOpen = this.readDebugPanelOpenState();
   }
 
   ngOnDestroy(): void {
@@ -81,6 +104,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
     if (this.globalVariablesService.boardHelper.gameOver) {
+      this.setSubtleDebugReason('Game is over. No more moves allowed.');
       return false;
     }
     if (!drag || !drop || !drag.dropContainer || !drop.data || !drag.dropContainer.data) {
@@ -97,7 +121,29 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const sourceRow = Number(sourceLocSplit[1][0]);
     const sourceCol = Number(sourceLocSplit[1][1]);
 
-    return ChessRulesService.validateMove(targetRow, targetCol, drop.data , sourceRow, sourceCol).isValid;
+    if (sourceRow === targetRow && sourceCol === targetCol) {
+      return false;
+    }
+
+    const sourcePiece = drag.dropContainer.data[0];
+    if (!sourcePiece) {
+      return false;
+    }
+    if (sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
+      this.setSubtleDebugReason(`It is ${this.globalVariablesService.boardHelper.colorTurn}'s move.`);
+      return false;
+    }
+
+    const validationResult = ChessRulesService.validateMove(targetRow, targetCol, drop.data, sourceRow, sourceCol);
+    if (!validationResult.isValid) {
+      const dragFailureReason = this.getDragFailureReason(sourceRow, sourceCol, sourcePiece);
+      if (dragFailureReason) {
+        this.setSubtleDebugReason(dragFailureReason);
+      }
+      return false;
+    }
+
+    return true;
   }
 
   onDropListEntered(event: CdkDragEnter<ChessPieceDto[]>): void {
@@ -121,8 +167,54 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.previewHoverMateInOne(sourceRow, sourceCol, targetRow, targetCol, isValidMove);
   }
 
-  onDragStarted(): void {
+  onDragStarted(event?: CdkDragStart<ChessPieceDto>): void {
     this.isDragPreviewActive = true;
+    if (!event || !event.source || !event.source.dropContainer || !event.source.dropContainer.data) {
+      return;
+    }
+
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return;
+    }
+
+    const sourcePiece = event.source.dropContainer.data[0];
+    if (!sourcePiece || sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
+      return;
+    }
+
+    const sourcePosition = this.parseFieldId(event.source.dropContainer.id);
+    if (!sourcePosition) {
+      return;
+    }
+
+    const legalTargetCount = this.getLegalTargetCount(sourcePosition.row, sourcePosition.col);
+    if (legalTargetCount < 1) {
+      const dragFailureReason = this.getDragFailureReason(sourcePosition.row, sourcePosition.col, sourcePiece);
+      if (dragFailureReason) {
+        this.setSubtleDebugReason(dragFailureReason);
+      }
+    }
+  }
+
+  onSquarePointerDown(cell: ChessPieceDto[]): void {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+      return;
+    }
+
+    if (this.globalVariablesService.boardHelper.gameOver) {
+      this.setSubtleDebugReason('Game is over. Start a new game to move pieces.');
+      return;
+    }
+
+    if (!(cell && cell[0])) {
+      this.setSubtleDebugReason('No piece on this square.');
+      return;
+    }
+
+    const piece = cell[0];
+    if (piece.color !== this.globalVariablesService.boardHelper.colorTurn) {
+      this.setSubtleDebugReason(`It is ${this.globalVariablesService.boardHelper.colorTurn}'s move.`);
+    }
   }
 
   onDragEnded(): void {
@@ -137,6 +229,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
     if (this.globalVariablesService.boardHelper.gameOver) {
+      this.setSubtleDebugReason('Game is over. No more moves allowed.');
       return;
     }
     if (!event || !event.previousContainer || !event.container || !event.previousContainer.data || !event.container.data) {
@@ -168,6 +261,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         srcCell
       ).isValid;
       if (!isValidMove) {
+        const sourcePiece = event.previousContainer.data[0];
+        const dragFailureReason = this.getDragFailureReason(srcRow, srcCell, sourcePiece);
+        if (dragFailureReason) {
+          this.setSubtleDebugReason(dragFailureReason);
+        }
         return;
       }
 
@@ -273,6 +371,81 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  private setSubtleDebugReason(reason: string): void {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !reason) {
+      return;
+    }
+    const subtleReason = `· ${reason}`;
+    if (this.globalVariablesService.boardHelper.debugText === subtleReason) {
+      return;
+    }
+    this.globalVariablesService.boardHelper.debugText = subtleReason;
+  }
+
+  private getDragFailureReason(sourceRow: number, sourceCol: number, sourcePiece: ChessPieceDto): string | null {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !sourcePiece) {
+      return null;
+    }
+
+    if (sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
+      return `It is ${this.globalVariablesService.boardHelper.colorTurn}'s move.`;
+    }
+
+    if (this.getLegalTargetCount(sourceRow, sourceCol) < 1) {
+      return `No legal targets for this ${sourcePiece.piece}.`;
+    }
+
+    return null;
+  }
+
+  private getLegalTargetCount(sourceRow: number, sourceCol: number): number {
+    if (!this.globalVariablesService || !this.globalVariablesService.field) {
+      return 0;
+    }
+
+    let legalTargetCount = 0;
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        if (row === sourceRow && col === sourceCol) {
+          continue;
+        }
+        const targetCell = this.globalVariablesService.field[row][col];
+        if (ChessRulesService.validateMove(row, col, targetCell, sourceRow, sourceCol).isValid) {
+          legalTargetCount += 1;
+        }
+      }
+    }
+    return legalTargetCount;
+  }
+
+  private parseFieldId(fieldId: string): { row: number, col: number } | null {
+    if (!fieldId || !fieldId.startsWith('field') || fieldId.length < 7) {
+      return null;
+    }
+    const row = Number(fieldId.charAt(5));
+    const col = Number(fieldId.charAt(6));
+    if (isNaN(row) || isNaN(col) || row < 0 || row > 7 || col < 0 || col > 7) {
+      return null;
+    }
+    return { row, col };
+  }
+
+  private readDebugPanelOpenState(): boolean {
+    try {
+      return localStorage.getItem(this.debugPanelStorageKey) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private persistDebugPanelOpenState(isOpen: boolean): void {
+    try {
+      localStorage.setItem(this.debugPanelStorageKey, isOpen ? '1' : '0');
+    } catch {
+      return;
+    }
+  }
+
   isTarget(targetRow: number, targetCol: number): boolean {
     return this.hasBoardHighlight(targetRow, targetCol, 'possible');
   }
@@ -307,6 +480,21 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return 'shaded';
     }
     return '';
+  }
+
+  isWhiteSquare(targetRow: number, targetCol: number): boolean {
+    const flipOffset = this.isBoardFlipped ? 1 : 0;
+    return ((targetRow + targetCol + flipOffset) % 2) === 0;
+  }
+
+  onDebugPanelToggle(event: Event): void {
+    const detailsElement = event && event.target ? event.target as HTMLDetailsElement : null;
+    this.isDebugPanelOpen = !!(detailsElement && detailsElement.open);
+    this.persistDebugPanelOpenState(this.isDebugPanelOpen);
+  }
+
+  toggleInfoOverlay(): void {
+    this.isInfoOverlayOpen = !this.isInfoOverlayOpen;
   }
 
   getStatusTitle(): string {
@@ -633,12 +821,376 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return 'Not endgame yet (mock)';
   }
 
+  getMockSuggestedMoves(): string[] {
+    const turn = this.globalVariablesService.boardHelper.colorTurn;
+    if (turn === ChessColorsEnum.White) {
+      return ['Qh5+', 'Nxe5', 'd4'];
+    }
+    return ['...Qh4+', '...Nxe4', '...d5'];
+  }
+
+  getSuggestedMoveClass(move: string): string {
+    if (!move) {
+      return 'suggested-move--threat';
+    }
+
+    const normalized = move.replace(/^\.\.\./, '');
+    if (normalized.includes('+')) {
+      return 'suggested-move--check';
+    }
+    if (normalized.includes('x')) {
+      return 'suggested-move--capture';
+    }
+    return 'suggested-move--threat';
+  }
+
+  previewSuggestedMoveArrows(move: string): void {
+    if (!move || !this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+      return;
+    }
+
+    this.clearSuggestedMoveArrows();
+    this.suggestedMoveArrowSnapshot = { ...this.globalVariablesService.boardHelper.arrows };
+
+    const parsedMove = this.parseSuggestedMove(move);
+    if (!parsedMove) {
+      return;
+    }
+
+    const turnColor = this.globalVariablesService.boardHelper.colorTurn;
+    const targetCell = this.globalVariablesService.field[parsedMove.targetRow][parsedMove.targetCol];
+    for (let srcRow = 0; srcRow <= 7; srcRow++) {
+      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+        const sourceCell = this.globalVariablesService.field[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0])) {
+          continue;
+        }
+        const sourcePiece = sourceCell[0];
+        if (sourcePiece.color !== turnColor || sourcePiece.piece !== parsedMove.piece) {
+          continue;
+        }
+
+        const isValidMove = ChessRulesService.validateMove(
+          parsedMove.targetRow,
+          parsedMove.targetCol,
+          targetCell,
+          srcRow,
+          srcCol
+        ).isValid;
+        if (!isValidMove) {
+          continue;
+        }
+
+        const suggestionArrow = this.createVisualizationArrow(
+          { row: srcRow, col: srcCol },
+          { row: parsedMove.targetRow, col: parsedMove.targetCol },
+          'yellow',
+          0.45
+        );
+        GlobalVariablesService.createArrowFromVisualization(suggestionArrow);
+      }
+    }
+  }
+
+  clearSuggestedMoveArrows(): void {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || this.suggestedMoveArrowSnapshot === null) {
+      return;
+    }
+    this.globalVariablesService.boardHelper.arrows = { ...this.suggestedMoveArrowSnapshot };
+    this.suggestedMoveArrowSnapshot = null;
+  }
+
+  getCctRecommendations(category: CctCategory): ICctRecommendation[] {
+    this.ensureCctRecommendations();
+    return this.cctRecommendationsCache[category];
+  }
+
   exportPgnMock(): void {
     this.mockExportMessage = `Mock export: PGN ready (${new Date().toLocaleTimeString()})`;
   }
 
   exportBoardImageMock(): void {
     this.mockExportMessage = `Mock export: Board image ready (${new Date().toLocaleTimeString()})`;
+  }
+
+  showForkIdeasMock(): void {
+    this.globalVariablesService.boardHelper.debugText = 'Mock: Fork ideas highlighted (coming soon).';
+  }
+
+  showPinIdeasMock(): void {
+    this.globalVariablesService.boardHelper.debugText = 'Mock: Pin opportunities highlighted (coming soon).';
+  }
+
+  exportFenMock(): void {
+    this.mockExportMessage = `Mock export: FEN copied (${new Date().toLocaleTimeString()})`;
+  }
+
+  private ensureCctRecommendations(): void {
+    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+      this.cctRecommendationsCache = { captures: [], checks: [], threats: [] };
+      this.cctRecommendationsCacheKey = '';
+      return;
+    }
+
+    const board = this.cloneBoard(this.globalVariablesService.field);
+    const forColor = this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
+    const positionKey = this.getPositionKey(board, forColor);
+    if (positionKey === this.cctRecommendationsCacheKey) {
+      return;
+    }
+
+    const enemyColor = this.getOpponentColor(forColor);
+    const captures: ICctRecommendationScored[] = [];
+    const checks: ICctRecommendationScored[] = [];
+    const threats: ICctRecommendationScored[] = [];
+
+    for (let srcRow = 0; srcRow <= 7; srcRow++) {
+      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+        const sourceCell = board[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
+          continue;
+        }
+
+        const sourcePiece = sourceCell[0];
+        for (let targetRow = 0; targetRow <= 7; targetRow++) {
+          for (let targetCol = 0; targetCol <= 7; targetCol++) {
+            if (srcRow === targetRow && srcCol === targetCol) {
+              continue;
+            }
+
+            const targetCell = board[targetRow][targetCol];
+            const canMove = this.withBoardContext(board, forColor, () =>
+              ChessRulesService.canStepThere(
+                targetRow,
+                targetCol,
+                targetCell,
+                srcRow,
+                srcCol,
+                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+              )
+            );
+            if (!canMove) {
+              continue;
+            }
+
+            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            if (this.isKingInCheck(afterMove, forColor)) {
+              continue;
+            }
+
+            const isCapture = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
+            const isCheck = this.isKingInCheck(afterMove, enemyColor);
+            const threatenedPieces = this.getThreatenedEnemyPiecesByMovedPiece(
+              afterMove,
+              targetRow,
+              targetCol,
+              forColor,
+              enemyColor
+            );
+
+            const move = this.formatCctMove(sourcePiece.piece, srcRow, srcCol, targetRow, targetCol, isCapture, isCheck);
+            const from = this.toAlgebraicSquare(srcRow, srcCol);
+            const to = this.toAlgebraicSquare(targetRow, targetCol);
+
+            if (isCapture && targetCell && targetCell[0]) {
+              const capturedPieceValue = ChessRulesService.valueOfPiece(targetCell[0].piece);
+              const attackerValue = ChessRulesService.valueOfPiece(sourcePiece.piece);
+              captures.push({
+                move,
+                tooltip: `${from} → ${to}: captures ${this.pieceName(targetCell[0].piece)}`,
+                score: (capturedPieceValue * 10) - attackerValue
+              });
+            }
+
+            if (isCheck) {
+              checks.push({
+                move,
+                tooltip: `${from} → ${to}: check${isCapture ? ' with capture' : ''}`,
+                score: (isCapture ? 50 : 0) + threatenedPieces.length
+              });
+            }
+
+            if (!isCapture && !isCheck && threatenedPieces.length > 0) {
+              const threatTargets = threatenedPieces.map(piece => this.pieceName(piece));
+              const threatScore = threatenedPieces
+                .map(piece => ChessRulesService.valueOfPiece(piece))
+                .reduce((acc, value) => acc + value, 0);
+              threats.push({
+                move,
+                tooltip: `${from} → ${to}: threatens ${threatTargets.join(', ')}`,
+                score: threatScore
+              });
+            }
+          }
+        }
+      }
+    }
+
+    this.cctRecommendationsCache = {
+      captures: this.pickTopCctRecommendations(captures),
+      checks: this.pickTopCctRecommendations(checks),
+      threats: this.pickTopCctRecommendations(threats)
+    };
+    this.cctRecommendationsCacheKey = positionKey;
+  }
+
+  private parseSuggestedMove(move: string): { piece: ChessPiecesEnum, targetRow: number, targetCol: number } | null {
+    const normalized = move.replace(/^\.\.\./, '').replace(/[+#?!]/g, '');
+    const targetMatch = normalized.match(/([a-h][1-8])$/);
+    if (!targetMatch) {
+      return null;
+    }
+
+    const targetSquare = targetMatch[1];
+    const fileChar = targetSquare.charAt(0);
+    const rankChar = targetSquare.charAt(1);
+    const targetCol = fileChar.charCodeAt(0) - 'a'.charCodeAt(0);
+    const targetRow = 8 - Number(rankChar);
+    if (targetCol < 0 || targetCol > 7 || targetRow < 0 || targetRow > 7) {
+      return null;
+    }
+
+    const pieceChar = normalized.charAt(0);
+    let piece = ChessPiecesEnum.Pawn;
+    if (pieceChar === 'K') {
+      piece = ChessPiecesEnum.King;
+    } else if (pieceChar === 'Q') {
+      piece = ChessPiecesEnum.Queen;
+    } else if (pieceChar === 'R') {
+      piece = ChessPiecesEnum.Rook;
+    } else if (pieceChar === 'B') {
+      piece = ChessPiecesEnum.Bishop;
+    } else if (pieceChar === 'N') {
+      piece = ChessPiecesEnum.Knight;
+    }
+
+    return { piece, targetRow, targetCol };
+  }
+
+  private pickTopCctRecommendations(items: ICctRecommendationScored[]): ICctRecommendation[] {
+    const bestByMove: {[move: string]: ICctRecommendationScored} = {};
+    items.forEach(item => {
+      const existing = bestByMove[item.move];
+      if (!existing || item.score > existing.score) {
+        bestByMove[item.move] = item;
+      }
+    });
+
+    return Object.values(bestByMove)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(item => ({ move: item.move, tooltip: item.tooltip }));
+  }
+
+  private getThreatenedEnemyPiecesByMovedPiece(
+    board: ChessPieceDto[][][],
+    sourceRow: number,
+    sourceCol: number,
+    attackerColor: ChessColorsEnum,
+    enemyColor: ChessColorsEnum
+  ): ChessPiecesEnum[] {
+    const sourceCell = board[sourceRow][sourceCol];
+    if (!(sourceCell && sourceCell[0])) {
+      return [];
+    }
+
+    const sourcePiece = sourceCell[0];
+    const threatenedPieces: ChessPiecesEnum[] = [];
+    for (let targetRow = 0; targetRow <= 7; targetRow++) {
+      for (let targetCol = 0; targetCol <= 7; targetCol++) {
+        const targetCell = board[targetRow][targetCol];
+        if (!(targetCell && targetCell[0] && targetCell[0].color === enemyColor)) {
+          continue;
+        }
+
+        const canAttack = this.withBoardContext(board, attackerColor, () =>
+          ChessRulesService.canStepThere(
+            targetRow,
+            targetCol,
+            targetCell,
+            sourceRow,
+            sourceCol,
+            new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+          )
+        );
+        if (canAttack) {
+          threatenedPieces.push(targetCell[0].piece);
+        }
+      }
+    }
+
+    return threatenedPieces;
+  }
+
+  private formatCctMove(
+    piece: ChessPiecesEnum,
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    isCapture: boolean,
+    isCheck: boolean
+  ): string {
+    const to = this.toAlgebraicSquare(targetRow, targetCol);
+    const pieceNotation = this.pieceNotation(piece);
+    let notation = '';
+
+    if (piece === ChessPiecesEnum.Pawn) {
+      const from = this.toAlgebraicSquare(srcRow, srcCol);
+      notation = isCapture ? `${from.charAt(0)}x${to}` : to;
+    } else {
+      notation = `${pieceNotation}${isCapture ? 'x' : ''}${to}`;
+    }
+
+    if (isCheck) {
+      notation += '+';
+    }
+
+    return notation;
+  }
+
+  private toAlgebraicSquare(row: number, col: number): string {
+    const file = String.fromCharCode('a'.charCodeAt(0) + col);
+    const rank = 8 - row;
+    return `${file}${rank}`;
+  }
+
+  private pieceNotation(piece: ChessPiecesEnum): string {
+    if (piece === ChessPiecesEnum.King) {
+      return 'K';
+    }
+    if (piece === ChessPiecesEnum.Queen) {
+      return 'Q';
+    }
+    if (piece === ChessPiecesEnum.Rook) {
+      return 'R';
+    }
+    if (piece === ChessPiecesEnum.Bishop) {
+      return 'B';
+    }
+    if (piece === ChessPiecesEnum.Knight) {
+      return 'N';
+    }
+    return '';
+  }
+
+  private pieceName(piece: ChessPiecesEnum): string {
+    if (piece === ChessPiecesEnum.King) {
+      return 'king';
+    }
+    if (piece === ChessPiecesEnum.Queen) {
+      return 'queen';
+    }
+    if (piece === ChessPiecesEnum.Rook) {
+      return 'rook';
+    }
+    if (piece === ChessPiecesEnum.Bishop) {
+      return 'bishop';
+    }
+    if (piece === ChessPiecesEnum.Knight) {
+      return 'knight';
+    }
+    return 'pawn';
   }
 
   resign(color: ChessColorsEnum): void {
