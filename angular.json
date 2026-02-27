@@ -24,7 +24,12 @@
             "tsConfig": "src/tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              {
+                "glob": "horse.svg",
+                "input": "./",
+                "output": "/"
+              }
             ],
             "styles": [
               "src/styles.less"
@@ -91,7 +96,12 @@
             "scripts": [],
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              {
+                "glob": "horse.svg",
+                "input": "./",
+                "output": "/"
+              }
             ]
           }
         }
