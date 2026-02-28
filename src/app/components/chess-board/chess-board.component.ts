@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, QueryList, ViewChild, 
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
-import { GlobalVariablesService } from '../../services/global-variables.service';
+import { ChessBoardStateService, GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessPositionDto } from '../../model/chess-position.dto';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
@@ -14,6 +14,7 @@ import { ICctRecommendation, ICctRecommendationScored } from '../../model/interf
 import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
 import { ChessMoveNotation } from '../../utils/chess-utils';
+import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
 
 @Component({
   selector: 'app-chess-board',
@@ -32,13 +33,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private repetitionCounts: {[positionKey: string]: number} = {};
   private trackedHistoryLength = -1;
   chessColors = ChessColorsEnum;
-  clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = [
-    { label: '1+0', baseMinutes: 1, incrementSeconds: 0 },
-    { label: '3+2', baseMinutes: 3, incrementSeconds: 2 },
-    { label: '5+0', baseMinutes: 5, incrementSeconds: 0 },
-    { label: '10+0', baseMinutes: 10, incrementSeconds: 0 }
-  ];
-  selectedClockPresetLabel = '5+0';
+  clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = ChessBoardUiConstants.CLOCK_PRESETS;
+  selectedClockPresetLabel = ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL;
   whiteClockMs = 0;
   blackClockMs = 0;
   clockRunning = false;
@@ -46,7 +42,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private clockIntervalId: number | null = null;
   private lastClockTickAt = 0;
   private incrementMs = 0;
-  private readonly clockTickIntervalMs = 200;
+  private readonly clockTickIntervalMs = ChessBoardUiConstants.CLOCK_TICK_INTERVAL_MS;
   pendingDrawOfferBy: ChessColorsEnum | null = null;
   resignConfirmColor: ChessColorsEnum | null = null;
   mockHistoryCursor: number | null = null;
@@ -56,7 +52,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   isDebugPanelOpen = false;
   isInfoOverlayOpen = false;
   cctCategory = CctCategoryEnum;
-  private readonly debugPanelStorageKey = 'chess-trainer.debug-panel-open';
+  private readonly debugPanelStorageKey = ChessBoardUiConstants.DEBUG_PANEL_STORAGE_KEY;
   private readonly windowRef: Pick<Window, 'location'> = window;
   private cctRecommendationsCacheKey = '';
   private cctRecommendationsCache: Record<CctCategoryEnum, ICctRecommendation[]> = {
@@ -76,9 +72,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
-  constructor(public globalVariablesService: GlobalVariablesService, private readonly http: HttpClient) {
+  constructor(public globalVariablesService: ChessBoardStateService, private readonly http: HttpClient) {
     this.randomizeAmbientStyle();
-    this.applyTimeControl(5, 0, '5+0');
+    this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
     this.isDebugPanelOpen = this.readDebugPanelOpenState();
     this.loadOpeningsFromAssets();
   }
@@ -100,7 +96,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
     if (this.globalVariablesService.boardHelper.gameOver) {
-      this.setSubtleDebugReason('Game is over. No more moves allowed.');
+      this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_NO_MOVES);
       return false;
     }
     if (!drag || !drop || !drag.dropContainer || !drop.data || !drag.dropContainer.data) {
@@ -110,12 +106,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    const targetLocSplit = drop.id.split('field');
-    const targetRow = Number(targetLocSplit[1][0]);
-    const targetCol = Number(targetLocSplit[1][1]);
-    const sourceLocSplit = drag.dropContainer.id.split('field');
-    const sourceRow = Number(sourceLocSplit[1][0]);
-    const sourceCol = Number(sourceLocSplit[1][1]);
+    const targetPosition = this.parseFieldId(drop.id);
+    const sourcePosition = this.parseFieldId(drag.dropContainer.id);
+    if (!targetPosition || !sourcePosition) {
+      return false;
+    }
+    const targetRow = targetPosition.row;
+    const targetCol = targetPosition.col;
+    const sourceRow = sourcePosition.row;
+    const sourceCol = sourcePosition.col;
 
     if (sourceRow === targetRow && sourceCol === targetCol) {
       return false;
@@ -126,7 +125,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
     if (sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
-      this.setSubtleDebugReason(`It is ${this.globalVariablesService.boardHelper.colorTurn}'s move.`);
+      this.setSubtleDebugReason(ChessBoardMessageConstants.turnMessage(this.globalVariablesService.boardHelper.colorTurn));
       return false;
     }
 
@@ -148,15 +147,19 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     const sourceId = event.item.dropContainer.id;
     const targetId = event.container.id;
-    if (!sourceId || !targetId || !sourceId.startsWith('field') || !targetId.startsWith('field')) {
+    if (!sourceId || !targetId ||
+      !sourceId.startsWith(ChessBoardUiConstants.FIELD_ID_PREFIX) || !targetId.startsWith(ChessBoardUiConstants.FIELD_ID_PREFIX)) {
       return;
     }
-    const sourceLocSplit = sourceId.split('field');
-    const targetLocSplit = targetId.split('field');
-    const sourceRow = Number(sourceLocSplit[1][0]);
-    const sourceCol = Number(sourceLocSplit[1][1]);
-    const targetRow = Number(targetLocSplit[1][0]);
-    const targetCol = Number(targetLocSplit[1][1]);
+    const sourcePosition = this.parseFieldId(sourceId);
+    const targetPosition = this.parseFieldId(targetId);
+    if (!sourcePosition || !targetPosition) {
+      return;
+    }
+    const sourceRow = sourcePosition.row;
+    const sourceCol = sourcePosition.col;
+    const targetRow = targetPosition.row;
+    const targetCol = targetPosition.col;
 
     const targetData = this.globalVariablesService.field[targetRow][targetCol];
     const isValidMove = ChessRulesService.validateMove(targetRow, targetCol, targetData, sourceRow, sourceCol).isValid;
@@ -198,18 +201,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     if (this.globalVariablesService.boardHelper.gameOver) {
-      this.setSubtleDebugReason('Game is over. Start a new game to move pieces.');
+      this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_START_NEW);
       return;
     }
 
     if (!(cell && cell[0])) {
-      this.setSubtleDebugReason('No piece on this square.');
+      this.setSubtleDebugReason(ChessBoardMessageConstants.NO_PIECE_ON_SQUARE);
       return;
     }
 
     const piece = cell[0];
     if (piece.color !== this.globalVariablesService.boardHelper.colorTurn) {
-      this.setSubtleDebugReason(`It is ${this.globalVariablesService.boardHelper.colorTurn}'s move.`);
+      this.setSubtleDebugReason(ChessBoardMessageConstants.turnMessage(this.globalVariablesService.boardHelper.colorTurn));
     }
   }
 
@@ -225,7 +228,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
     if (this.globalVariablesService.boardHelper.gameOver) {
-      this.setSubtleDebugReason('Game is over. No more moves allowed.');
+      this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_NO_MOVES);
       return;
     }
     if (!event || !event.previousContainer || !event.container || !event.previousContainer.data || !event.container.data) {
@@ -239,15 +242,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     } else {
       this.ensureRepetitionTrackingState();
-      const targetId = event.container.id;
-      const targetLocSplit = targetId.split('field');
-      const targetRow = Number(targetLocSplit[1][0]);
-      const targetCell = Number(targetLocSplit[1][1]);
-
-      const srcId = event.previousContainer.id;
-      const srcLocSplit = srcId.split('field');
-      const srcRow = Number(srcLocSplit[1][0]);
-      const srcCell = Number(srcLocSplit[1][1]);
+      const targetPosition = this.parseFieldId(event.container.id);
+      const sourcePosition = this.parseFieldId(event.previousContainer.id);
+      if (!targetPosition || !sourcePosition) {
+        return;
+      }
+      const targetRow = targetPosition.row;
+      const targetCell = targetPosition.col;
+      const srcRow = sourcePosition.row;
+      const srcCell = sourcePosition.col;
 
       const isValidMove = ChessRulesService.validateMove(
         targetRow,
@@ -384,11 +387,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     if (sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
-      return `It is ${this.globalVariablesService.boardHelper.colorTurn}'s move.`;
+      return ChessBoardMessageConstants.turnMessage(this.globalVariablesService.boardHelper.colorTurn);
     }
 
     if (this.getLegalTargetCount(sourceRow, sourceCol) < 1) {
-      return `No legal targets for this ${sourcePiece.piece}.`;
+      return ChessBoardMessageConstants.noLegalTargetsMessage(sourcePiece.piece);
     }
 
     return null;
@@ -400,8 +403,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     let legalTargetCount = 0;
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         if (row === sourceRow && col === sourceCol) {
           continue;
         }
@@ -415,12 +418,17 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private parseFieldId(fieldId: string): { row: number, col: number } | null {
-    if (!fieldId || !fieldId.startsWith('field') || fieldId.length < 7) {
+    // Expected id format: `fieldRC`, where R=row digit and C=column digit.
+    // Example: `field34` => row=3, col=4.
+    if (!fieldId || !fieldId.startsWith(ChessBoardUiConstants.FIELD_ID_PREFIX) ||
+      fieldId.length < ChessBoardUiConstants.FIELD_ID_MIN_LENGTH) {
       return null;
     }
-    const row = Number(fieldId.charAt(5));
-    const col = Number(fieldId.charAt(6));
-    if (isNaN(row) || isNaN(col) || row < 0 || row > 7 || col < 0 || col > 7) {
+    const row = Number(fieldId.charAt(ChessBoardUiConstants.FIELD_ID_ROW_INDEX));
+    const col = Number(fieldId.charAt(ChessBoardUiConstants.FIELD_ID_COL_INDEX));
+    if (isNaN(row) || isNaN(col) ||
+      row < ChessConstants.MIN_INDEX || row > ChessConstants.MAX_INDEX ||
+      col < ChessConstants.MIN_INDEX || col > ChessConstants.MAX_INDEX) {
       return null;
     }
     return { row, col };
@@ -428,7 +436,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private readDebugPanelOpenState(): boolean {
     try {
-      return localStorage.getItem(this.debugPanelStorageKey) === '1';
+      return localStorage.getItem(this.debugPanelStorageKey) === ChessBoardUiConstants.STORAGE_OPEN;
     } catch {
       return false;
     }
@@ -436,7 +444,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private persistDebugPanelOpenState(isOpen: boolean): void {
     try {
-      localStorage.setItem(this.debugPanelStorageKey, isOpen ? '1' : '0');
+      localStorage.setItem(this.debugPanelStorageKey, isOpen ? ChessBoardUiConstants.STORAGE_OPEN : ChessBoardUiConstants.STORAGE_CLOSED);
     } catch {
       return;
     }
@@ -520,15 +528,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     // A = 0 - H = 7
     const letterChar = String.fromCharCode('a'.charCodeAt(0) + idxY);
     // Flip table count bottom-up
-    const numberChar = (8 - idxX);
+    const numberChar = (ChessConstants.BOARD_SIZE - idxX);
     return `${letterChar}${numberChar}`;
   }
 
   promotePiece(toPiece: ChessPiecesEnum): void {
     if (this.globalVariablesService.boardHelper.canPromote !== null) {
       const targetCol = Number(this.globalVariablesService.boardHelper.canPromote);
-      const whitePromotionSquare = this.globalVariablesService.field[0][targetCol];
-      const blackPromotionSquare = this.globalVariablesService.field[7][targetCol];
+      const whitePromotionSquare = this.globalVariablesService.field[ChessConstants.MIN_INDEX][targetCol];
+      const blackPromotionSquare = this.globalVariablesService.field[ChessConstants.MAX_INDEX][targetCol];
       let targetSquare = null;
       if (whitePromotionSquare && whitePromotionSquare[0] && whitePromotionSquare[0].piece === ChessPiecesEnum.Pawn) {
         targetSquare = whitePromotionSquare;
@@ -561,8 +569,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         row.forEach((cell, cellIdx) => {
           // All pieces of the color
           if (cell && cell[0] && cell[0].color === ofColor) {
-            for (let targetRow = 0; targetRow <= 7; targetRow++) {
-              for (let targetCol = 0; targetCol <= 7; targetCol++) {
+            for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+              for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
                 const data = this.globalVariablesService.field[targetRow][targetCol];
                 ChessRulesService.canStepThere(targetRow, targetCol, data, rowIdx, cellIdx);
               }
@@ -612,7 +620,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.canRespondToDrawOffer()) {
       return;
     }
-    this.setDrawState('Draw by agreement.', 'Draw agreed');
+    this.setDrawState(ChessBoardMessageConstants.DRAW_BY_AGREEMENT_TEXT, ChessBoardMessageConstants.DRAW_BY_AGREEMENT_TITLE);
     this.randomizeAmbientStyle();
   }
 
@@ -700,11 +708,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
     if (this.isThreefoldRepetition()) {
-      this.setDrawState('Draw by threefold repetition (claimed).', 'Draw by threefold repetition');
+      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_THREEFOLD_TEXT, ChessBoardMessageConstants.DRAW_BY_THREEFOLD_TITLE);
       return;
     }
     if (this.isFiftyMoveRule()) {
-      this.setDrawState('Draw by fifty-move rule (claimed).', 'Draw by fifty-move rule');
+      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_FIFTY_MOVE_TEXT, ChessBoardMessageConstants.DRAW_BY_FIFTY_MOVE_TITLE);
     }
   }
 
@@ -1143,8 +1151,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     const turnColor = this.globalVariablesService.boardHelper.colorTurn;
     const targetCell = this.globalVariablesService.field[parsedMove.targetRow][parsedMove.targetCol];
-    for (let srcRow = 0; srcRow <= 7; srcRow++) {
-      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
         const sourceCell = this.globalVariablesService.field[srcRow][srcCol];
         if (!(sourceCell && sourceCell[0])) {
           continue;
@@ -1232,16 +1240,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const checks: ICctRecommendationScored[] = [];
     const threats: ICctRecommendationScored[] = [];
 
-    for (let srcRow = 0; srcRow <= 7; srcRow++) {
-      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
         const sourceCell = board[srcRow][srcCol];
         if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
           continue;
         }
 
         const sourcePiece = sourceCell[0];
-        for (let targetRow = 0; targetRow <= 7; targetRow++) {
-          for (let targetCol = 0; targetCol <= 7; targetCol++) {
+        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
             if (srcRow === targetRow && srcCol === targetCol) {
               continue;
             }
@@ -1333,8 +1341,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const fileChar = targetSquare.charAt(0);
     const rankChar = targetSquare.charAt(1);
     const targetCol = fileChar.charCodeAt(0) - 'a'.charCodeAt(0);
-    const targetRow = 8 - Number(rankChar);
-    if (targetCol < 0 || targetCol > 7 || targetRow < 0 || targetRow > 7) {
+    const targetRow = ChessConstants.BOARD_SIZE - Number(rankChar);
+    if (targetCol < ChessConstants.MIN_INDEX || targetCol > ChessConstants.MAX_INDEX ||
+      targetRow < ChessConstants.MIN_INDEX || targetRow > ChessConstants.MAX_INDEX) {
       return null;
     }
 
@@ -1384,8 +1393,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     const sourcePiece = sourceCell[0];
     const threatenedPieces: ChessPiecesEnum[] = [];
-    for (let targetRow = 0; targetRow <= 7; targetRow++) {
-      for (let targetCol = 0; targetCol <= 7; targetCol++) {
+    for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+      for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
         const targetCell = board[targetRow][targetCol];
         if (!(targetCell && targetCell[0] && targetCell[0].color === enemyColor)) {
           continue;
@@ -1439,7 +1448,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private toAlgebraicSquare(row: number, col: number): string {
     const file = String.fromCharCode('a'.charCodeAt(0) + col);
-    const rank = 8 - row;
+    const rank = ChessConstants.BOARD_SIZE - row;
     return `${file}${rank}`;
   }
 
@@ -1504,15 +1513,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     defenderColor: ChessColorsEnum
   ): {[key: string]: boolean} {
     const targets: {[key: string]: boolean} = {};
-    for (let srcRow = 0; srcRow <= 7; srcRow++) {
-      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
         const sourceCell = board[srcRow][srcCol];
         if (!(sourceCell && sourceCell[0] && sourceCell[0].color === attackerColor)) {
           continue;
         }
         const sourcePiece = sourceCell[0];
-        for (let targetRow = 0; targetRow <= 7; targetRow++) {
-          for (let targetCol = 0; targetCol <= 7; targetCol++) {
+        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
             if (srcRow === targetRow && srcCol === targetCol) {
               continue;
             }
@@ -1659,8 +1668,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     enemyColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
     const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
-    for (let targetRow = 0; targetRow <= 7; targetRow++) {
-      for (let targetCol = 0; targetCol <= 7; targetCol++) {
+    for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+      for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
           const targetCell = this.globalVariablesService.field[targetRow][targetCol];
           const currentPiece = { color: ofColor, piece: cell[0].piece } as ChessPieceDto;
@@ -1689,8 +1698,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     enemyColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
     const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
-    for (let targetRow = 0; targetRow <= 7; targetRow++) {
-      for (let targetCol = 0; targetCol <= 7; targetCol++) {
+    for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+      for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
           const targetCell = this.globalVariablesService.field[targetRow][targetCol];
           const currentPiece = { color: ofColor, piece: cell[0].piece } as ChessPieceDto;
@@ -1888,7 +1897,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    const promotionRow = movingPiece.color === ChessColorsEnum.White ? 0 : 7;
+    const promotionRow = movingPiece.color === ChessColorsEnum.White ? ChessConstants.MIN_INDEX : ChessConstants.MAX_INDEX;
     if (movingPiece.piece === ChessPiecesEnum.Pawn && targetRow === promotionRow) {
       nextBoard[targetRow][targetCol][0].piece = ChessPiecesEnum.Queen;
     }
@@ -1897,8 +1906,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private findKing(board: ChessPieceDto[][][], color: ChessColorsEnum): ChessPositionDto | null {
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const cell = board[row][col];
         if (cell && cell[0] && cell[0].color === color && cell[0].piece === ChessPiecesEnum.King) {
           return new ChessPositionDto(row, col);
@@ -1914,8 +1923,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
     const attackerColor = kingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const attackerCell = board[row][col];
         if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
           continue;
@@ -1940,15 +1949,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private hasAnyLegalMove(board: ChessPieceDto[][][], forColor: ChessColorsEnum): boolean {
-    for (let srcRow = 0; srcRow <= 7; srcRow++) {
-      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
         const sourceCell = board[srcRow][srcCol];
         if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
           continue;
         }
         const sourcePiece = sourceCell[0];
-        for (let targetRow = 0; targetRow <= 7; targetRow++) {
-          for (let targetCol = 0; targetCol <= 7; targetCol++) {
+        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
             if (srcRow === targetRow && srcCol === targetCol) {
               continue;
             }
@@ -1981,25 +1990,28 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    // Draw precedence mirrors practical game flow:
+    // 1) immediate board-state draw (stalemate / insufficient material)
+    // 2) history-dependent automatic draws (fivefold / seventy-five-move)
     const isStalemate = !isCurrentTurnInCheck && !hasLegalMovesForCurrentTurn;
     if (isStalemate) {
-      this.setDrawState('Draw by stalemate.', 'Draw by stalemate');
+      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_STALEMATE_TEXT, ChessBoardMessageConstants.DRAW_BY_STALEMATE_TITLE);
       return;
     }
 
     if (this.isInsufficientMaterial(this.globalVariablesService.field)) {
-      this.setDrawState('Draw by insufficient material.', 'Draw by insufficient material');
+      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_INSUFFICIENT_TEXT, ChessBoardMessageConstants.DRAW_BY_INSUFFICIENT_TITLE);
       return;
     }
 
     this.recordCurrentPosition();
     if (this.isFivefoldRepetition()) {
-      this.setDrawState('Draw by fivefold repetition.', 'Draw by fivefold repetition');
+      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_FIVEFOLD_TEXT, ChessBoardMessageConstants.DRAW_BY_FIVEFOLD_TITLE);
       return;
     }
 
     if (this.isSeventyFiveMoveRule()) {
-      this.setDrawState('Draw by seventy-five-move rule.', 'Draw by seventy-five-move rule');
+      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_SEVENTYFIVE_TEXT, ChessBoardMessageConstants.DRAW_BY_SEVENTYFIVE_TITLE);
       return;
     }
   }
@@ -2315,8 +2327,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private getPositionKey(board: ChessPieceDto[][][], turn: ChessColorsEnum): string {
     const squares: string[] = [];
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const cell = board[row][col];
         if (!(cell && cell[0])) {
           continue;
@@ -2375,8 +2387,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     let whiteHasMajorOrPawn = false;
     let blackHasMajorOrPawn = false;
 
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const cell = board[row][col];
         if (!(cell && cell[0])) {
           continue;

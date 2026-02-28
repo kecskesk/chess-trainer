@@ -9,6 +9,7 @@ import { IMoveValidationResult } from '../model/interfaces/move-validation-resul
 import { IBoardHighlight } from '../model/interfaces/board-highlight.interface';
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
 import { ChessMoveNotation } from '../utils/chess-utils';
+import { ChessConstants } from '../constants/chess.constants';
 
 @Injectable()
 export class ChessRulesService {
@@ -23,17 +24,7 @@ export class ChessRulesService {
     srcCol: number,
     virtualSourcePiece: ChessPieceDto = null
   ): boolean {
-      let targetPieceState = null;
-      let targetPieceType = null;
-      let targetColor = null;
-      if (targetCell && targetCell[0]) {
-        targetPieceState = targetCell[0];
-        targetColor = targetPieceState.color;
-        targetPieceType = targetPieceState.piece;
-      }
       let sourceCell = null;
-      let sourcePieceType = null;
-      let sourceColor: ChessColorsEnum = null;
       if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
         return false;
       }
@@ -45,9 +36,10 @@ export class ChessRulesService {
       if (!(sourceCell && sourceCell[0])) {
         return false;
       }
-      sourceColor = sourceCell[0].color;
-      const enemyColor: ChessColorsEnum = sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-      sourcePieceType = sourceCell[0].piece;
+      const sourcePiece = sourceCell[0];
+      const sourceColor = sourcePiece.color;
+      const sourcePieceType = sourcePiece.piece;
+      const enemyColor = ChessRulesService.getEnemyColor(sourceColor);
       const moveValidationResult: IMoveValidationResult = {
         isValid: targetCell.length < 1,
         isEmptyTarget: targetCell.length < 1,
@@ -66,34 +58,7 @@ export class ChessRulesService {
         moveValidationResult.isValid, moveValidationResult.isEnemyPiece, false, moveValidationResult.isEmptyTarget);
       const cmParams = new ChessMoveParamsDto(
         targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory, !!virtualSourcePiece);
-      switch (sourcePieceType) {
-        case ChessPiecesEnum.Pawn: {
-          ChessRulesService.pawnRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Knight: {
-          ChessRulesService.knightRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.King: {
-          ChessRulesService.kingRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Queen: {
-          ChessRulesService.queenRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Rook: {
-          ChessRulesService.rookRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Bishop: {
-          ChessRulesService.bishopRules(cmResult, cmParams);
-          break;
-        }
-        default:
-          break;
-      }
+      ChessRulesService.applyPieceRules(sourcePieceType, cmResult, cmParams);
 
       if (cmResult.canDrop && !virtualSourcePiece && ChessRulesService.isMoveLeavingOwnKingInCheck(
         srcRow,
@@ -105,50 +70,104 @@ export class ChessRulesService {
         cmResult.canDrop = false;
       }
 
-      const enemyKingPos = { row: null, col: null };
-      GlobalVariablesService.CHESS_FIELD.forEach((row, rowIdx) => {
-        const kingIndex = row.findIndex(
-          cell => cell && cell[0] && cell[0].piece === ChessPiecesEnum.King && cell[0].color === enemyColor);
-        if (kingIndex >= 0) {
-          enemyKingPos.row = rowIdx;
-          enemyKingPos.col = kingIndex;
-        }
-      });
+      const enemyKingPos = ChessRulesService.findKingPosition(GlobalVariablesService.CHESS_FIELD, enemyColor);
       if (!virtualSourcePiece) {
+        if (!enemyKingPos) {
+          return cmResult.canDrop;
+        }
         const isCheck = ChessRulesService.canStepThere(
           enemyKingPos.row, enemyKingPos.col, [new ChessPieceDto(enemyColor, ChessPiecesEnum.King)],
           targetRow, targetCol, { color: sourceColor, piece: sourcePieceType });
-        if (GlobalVariablesService.BOARD_HELPER && cmResult.canDrop) {
-          if (!GlobalVariablesService.BOARD_HELPER.possibles) {
-            GlobalVariablesService.BOARD_HELPER.possibles = {};
-          }
-          GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'possible' });
-          if (cmResult.canHit) {
-            if (!GlobalVariablesService.BOARD_HELPER.hits) {
-              GlobalVariablesService.BOARD_HELPER.hits = {};
-            }
-            GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'capture' });
-          }
-          if (isCheck) {
-            if (!GlobalVariablesService.BOARD_HELPER.checks) {
-              GlobalVariablesService.BOARD_HELPER.checks = {};
-            }
-            const checkHighlight: IBoardHighlight = { row: targetRow, col: targetCol, type: 'check' };
-            GlobalVariablesService.addHighlight(checkHighlight);
-            const checkArrow: IVisualizationArrow = {
-              fromRow: 8 - srcRow,
-              fromCol: srcCol + 1,
-              toRow: 8 - targetRow,
-              toCol: targetCol + 1,
-              color: 'red',
-              intensity: 0.25
-            };
-            GlobalVariablesService.createArrowFromVisualization(checkArrow);
-          }
-        }
+        ChessRulesService.addMoveHighlights(srcRow, srcCol, targetRow, targetCol, cmResult.canDrop, cmResult.canHit, isCheck);
       }
 
       return cmResult.canDrop;
+  }
+
+  private static getEnemyColor(sourceColor: ChessColorsEnum): ChessColorsEnum {
+    return sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+  }
+
+  private static applyPieceRules(
+    sourcePieceType: ChessPiecesEnum,
+    cmResult: ChessMoveResultDto,
+    cmParams: ChessMoveParamsDto
+  ): void {
+    switch (sourcePieceType) {
+      case ChessPiecesEnum.Pawn:
+        ChessRulesService.pawnRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Knight:
+        ChessRulesService.knightRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.King:
+        ChessRulesService.kingRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Queen:
+        ChessRulesService.queenRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Rook:
+        ChessRulesService.rookRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Bishop:
+        ChessRulesService.bishopRules(cmResult, cmParams);
+        return;
+      default:
+        return;
+    }
+  }
+
+  private static ensureHighlightCollectionsInitialized(): void {
+    if (!GlobalVariablesService.BOARD_HELPER) {
+      return;
+    }
+    if (!GlobalVariablesService.BOARD_HELPER.possibles) {
+      GlobalVariablesService.BOARD_HELPER.possibles = {};
+    }
+    if (!GlobalVariablesService.BOARD_HELPER.hits) {
+      GlobalVariablesService.BOARD_HELPER.hits = {};
+    }
+    if (!GlobalVariablesService.BOARD_HELPER.checks) {
+      GlobalVariablesService.BOARD_HELPER.checks = {};
+    }
+  }
+
+  private static addMoveHighlights(
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    canDrop: boolean,
+    canHit: boolean,
+    isCheck: boolean
+  ): void {
+    if (!GlobalVariablesService.BOARD_HELPER || !canDrop) {
+      return;
+    }
+
+    ChessRulesService.ensureHighlightCollectionsInitialized();
+    GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'possible' });
+
+    if (canHit) {
+      GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'capture' });
+    }
+
+    if (!isCheck) {
+      return;
+    }
+
+    const checkHighlight: IBoardHighlight = { row: targetRow, col: targetCol, type: 'check' };
+    GlobalVariablesService.addHighlight(checkHighlight);
+
+    const checkArrow: IVisualizationArrow = {
+      fromRow: 8 - srcRow,
+      fromCol: srcCol + 1,
+      toRow: 8 - targetRow,
+      toCol: targetCol + 1,
+      color: 'red',
+      intensity: 0.25
+    };
+    GlobalVariablesService.createArrowFromVisualization(checkArrow);
   }
 
   public static validateMove(
@@ -355,7 +374,7 @@ export class ChessRulesService {
     }
 
     const movingColor = lastMove.index % 2 === 1 ? ChessColorsEnum.White : ChessColorsEnum.Black;
-    const capturingColor = movingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    const capturingColor = ChessRulesService.getEnemyColor(movingColor);
     if (turn !== capturingColor) {
       return '-';
     }
@@ -364,7 +383,9 @@ export class ChessRulesService {
       return '-';
     }
 
-    const adjacentCols = [targetPos.col - 1, targetPos.col + 1].filter(col => col >= 0 && col <= 7);
+    const adjacentCols = [targetPos.col - 1, targetPos.col + 1].filter(
+      col => col >= ChessConstants.MIN_INDEX && col <= ChessConstants.MAX_INDEX
+    );
     const hasCapturingPawn = adjacentCols.some(col =>
       ChessRulesService.hasPieceAtOnBoard(board, targetPos.row, col, capturingColor, ChessPiecesEnum.Pawn)
     );
@@ -470,37 +491,29 @@ export class ChessRulesService {
     }
     const pieceChar = match[1];
     let piece = ChessPiecesEnum.Pawn;
-    switch (pieceChar) {
-      case 'K': {
-        piece = ChessPiecesEnum.King;
-        break;
-      }
-      case 'Q': {
-        piece = ChessPiecesEnum.Queen;
-        break;
-      }
-      case 'R': {
-        piece = ChessPiecesEnum.Rook;
-        break;
-      }
-      case 'B': {
-        piece = ChessPiecesEnum.Bishop;
-        break;
-      }
-      case 'N': {
-        piece = ChessPiecesEnum.Knight;
-        break;
-      }
-      default: {
-        piece = ChessPiecesEnum.Pawn;
-        break;
-      }
-    }
+    piece = ChessRulesService.fromNotationPiece(pieceChar);
     return {
       piece,
       sourceSquare: match[2],
       targetSquare: match[3]
     };
+  }
+
+  private static fromNotationPiece(pieceChar: string): ChessPiecesEnum {
+    switch (pieceChar) {
+      case 'K':
+        return ChessPiecesEnum.King;
+      case 'Q':
+        return ChessPiecesEnum.Queen;
+      case 'R':
+        return ChessPiecesEnum.Rook;
+      case 'B':
+        return ChessPiecesEnum.Bishop;
+      case 'N':
+        return ChessPiecesEnum.Knight;
+      default:
+        return ChessPiecesEnum.Pawn;
+    }
   }
 
   private static fromSquareNotation(square: string): { row: number, col: number } | null {
@@ -510,7 +523,8 @@ export class ChessRulesService {
 
     const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
     const rank = Number(square.charAt(1));
-    if (file < 0 || file > 7 || rank < 1 || rank > 8) {
+    if (file < ChessConstants.MIN_INDEX ||
+      file > ChessConstants.MAX_INDEX || rank < 1 || rank > ChessConstants.BOARD_SIZE) {
       return null;
     }
 
@@ -534,9 +548,9 @@ export class ChessRulesService {
   }
 
   private static isSquareUnderAttack(row: number, col: number, attackerColor: ChessColorsEnum): boolean {
-    const targetColor = attackerColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    for (let srcRow = 0; srcRow <= 7; srcRow++) {
-      for (let srcCol = 0; srcCol <= 7; srcCol++) {
+    const targetColor = ChessRulesService.getEnemyColor(attackerColor);
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
         const attackerCell = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
         if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
           continue;
@@ -622,8 +636,8 @@ export class ChessRulesService {
     board: ChessPieceDto[][][],
     kingColor: ChessColorsEnum
   ): { row: number, col: number } | null {
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const cell = board[row][col];
         if (cell && cell[0] && cell[0].piece === ChessPiecesEnum.King && cell[0].color === kingColor) {
           return { row, col };
@@ -639,9 +653,9 @@ export class ChessRulesService {
       return false;
     }
 
-    const attackerColor = kingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    const attackerColor = ChessRulesService.getEnemyColor(kingColor);
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const attackerCell = board[row][col];
         if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
           continue;
