@@ -1030,9 +1030,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return value;
     }
     const parsed = Number(match[1]);
-    if (isNaN(parsed)) {
-      return value;
-    }
     return `${Number((100 - parsed).toFixed(4))}%`;
   }
 
@@ -1045,9 +1042,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return value;
     }
     const parsed = Number(match[1]);
-    if (isNaN(parsed)) {
-      return value;
-    }
     let rotated = parsed + 180;
     while (rotated >= 360) {
       rotated -= 360;

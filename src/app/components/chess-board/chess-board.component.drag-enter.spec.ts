@@ -2,7 +2,7 @@ import { ChessBoardComponent } from './chess-board.component';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
@@ -150,6 +150,39 @@ describe('ChessBoardComponent template drag-enter integration - UI buttons', () 
     expect(acceptDrawButton).toBeDefined();
     expect(declineDrawButton).toBeDefined();
   });
+
+  it('renders flipped mapping and remapped arrow styles through template bindings', () => {
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.boardHelper.arrows = {
+      a: {
+        top: '25%',
+        left: '25%',
+        color: 'red',
+        length: '20%',
+        thickness: '2px',
+        rotate: '30deg'
+      } as any
+    };
+    component.isBoardFlipped = true;
+
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('#field77'))).toBeTruthy();
+
+    const arrowEl = fixture.debugElement.query(By.css('.arrowPointer')).nativeElement as HTMLElement;
+    expect(arrowEl.style.top).toBe('75%');
+    expect(arrowEl.style.left).toBe('75%');
+    expect(arrowEl.style.transform).toContain('rotate(210deg)');
+  });
+
+  it('populates drop lists after view init and tears down on destroy', fakeAsync(() => {
+    const stopClockSpy = spyOn<any>(component, 'stopClock').and.callThrough();
+    fixture.detectChanges();
+    tick(0);
+    expect(component.dropLists.length).toBeGreaterThan(0);
+    fixture.destroy();
+    expect(stopClockSpy).toHaveBeenCalled();
+  }));
 });
 
 describe('ChessBoardComponent template drag-enter integration - theming', () => {

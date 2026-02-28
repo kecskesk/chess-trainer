@@ -177,6 +177,101 @@ describe('ChessBoardComponent opening recognition', () => {
   });
 });
 
+describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
+  it('covers display mapping and arrow remap helpers across flip states', () => {
+    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    component.mateInOneTargets['77'] = true;
+
+    component.isBoardFlipped = false;
+    expect(component.getDisplayFieldId(0, 0)).toBe('field00');
+    expect(component.getDisplayNotation(0, 0)).toBe('a8');
+    expect(component.getDisplayCell(0, 0)).toBe(chessBoardStateService.field[0][0]);
+    expect(component.getDisplayPiece(0, 0)?.piece).toBe(ChessPiecesEnum.Rook);
+
+    component.isBoardFlipped = true;
+    expect(component.getDisplayFieldId(0, 0)).toBe('field77');
+    expect(component.getDisplayNotation(0, 0)).toBe('h1');
+    expect(component.getDisplayCell(0, 0)).toBe(chessBoardStateService.field[7][7]);
+    expect(component.getDisplayPiece(0, 0)?.piece).toBe(ChessPiecesEnum.King);
+    expect(component.getDisplaySquareHighlightClass(0, 0)).toBe('mate-one');
+    expect(component.isDisplaySquareWhite(0, 0)).toBeTrue();
+
+    expect(component.getArrowTopForDisplay({ top: '25%' } as any)).toBe('75%');
+    expect(component.getArrowLeftForDisplay({ left: '12.5%' } as any)).toBe('87.5%');
+    expect(component.getArrowTransformForDisplay({ rotate: '390deg' } as any)).toBe('translate(-50%, -50%) rotate(210deg)');
+
+    expect(component.getArrowTopForDisplay({ top: 'calc(20%)' } as any)).toBe('calc(20%)');
+    expect(component.getArrowTransformForDisplay({ rotate: 'angle(10)' } as any)).toBe('translate(-50%, -50%) rotate(angle(10))');
+    expect(component.getArrowTopForDisplay(undefined as any)).toBe('');
+    expect(component.getArrowLeftForDisplay(undefined as any)).toBe('');
+    expect(component.getArrowTransformForDisplay(undefined as any)).toBe('translate(-50%, -50%) rotate()');
+  });
+
+  it('covers private flip mapping branches and related helpers', () => {
+    component.isBoardFlipped = false;
+    expect((component as any).mapPercentCoordinateForDisplay('25%')).toBe('25%');
+    expect((component as any).mapRotationForDisplay('30deg')).toBe('30deg');
+
+    component.isBoardFlipped = true;
+    expect((component as any).getBoardIndexForDisplay(2)).toBe(5);
+    expect((component as any).mapPercentCoordinateForDisplay('')).toBe('');
+    expect((component as any).mapPercentCoordinateForDisplay('text')).toBe('text');
+    expect((component as any).mapPercentCoordinateForDisplay('-20%')).toBe('120%');
+
+    expect((component as any).mapRotationForDisplay('text')).toBe('text');
+    expect((component as any).mapRotationForDisplay('-300deg')).toBe('240deg');
+    expect((component as any).mapRotationForDisplay('540deg')).toBe('0deg');
+
+    expect(component.translateFieldNames(6, 4)).toBe('e2');
+    expect(component.formatClock(65000)).toBe('01:05');
+    component.whiteClockMs = 9000;
+    component.blackClockMs = 12000;
+    expect(component.isClockLow(ChessColorsEnum.White)).toBeTrue();
+    expect(component.isClockLow(ChessColorsEnum.Black)).toBeFalse();
+
+    const boardHelperBackup = chessBoardStateService.boardHelper;
+    (chessBoardStateService as any).boardHelper = null;
+    expect(component.getStatusTitle()).toBe('');
+    component.onSquarePointerDown([] as any);
+    (chessBoardStateService as any).boardHelper = boardHelperBackup;
+    chessBoardStateService.boardHelper.gameOver = false;
+    expect(component.getStatusTitle()).toContain(component.uiText.status.toMoveSuffix);
+  });
+
+  it('covers lifecycle hooks used by template wiring', (done: DoneFn) => {
+    const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+    spyOnProperty(document, 'body', 'get').and.returnValue(null as any);
+    (component as any).syncFlippedDragClass();
+    component.isBoardFlipped = true;
+    component.isDragPreviewActive = true;
+    component.ngOnDestroy();
+    expect(stopClockSpy).toHaveBeenCalled();
+
+    component.dropListElements = { toArray: () => ['drop-list'] } as any;
+    component.ngAfterViewInit();
+    setTimeout(() => {
+      expect(component.dropLists).toEqual(['drop-list'] as any);
+      done();
+    }, 0);
+  });
+
+  it('covers guard-return and active-status branches explicitly', () => {
+    const source = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    const target: any[] = [];
+    (component as any).movePieceBetweenCells(null, target);
+    expect(target.length).toBe(0);
+
+    chessBoardStateService.boardHelper.gameOver = false;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect(component.getStatusTitle()).toBe(`${ChessColorsEnum.White} ${component.uiText.status.toMoveSuffix}`);
+
+    (component as any).movePieceBetweenCells(source, target);
+    expect(source.length).toBe(0);
+    expect(target.length).toBe(1);
+  });
+});
+
 describe('ChessBoardComponent capture transfer consistency', () => {
   it('keeps only the capturing piece on target square for both colors', () => {
     clearBoard();
