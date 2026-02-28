@@ -227,15 +227,50 @@ export class ChessMoveNotation {
   }
 
   /**
-   * Checks if notation is valid algebraic format
+   * Checks if notation is valid long notation format
+   * Examples: e2e4, e2-e4, Ne2xe4+, O-O, O-O-O, exd6 e.p.
    */
-  static isValidAlgebraic(notation: string): boolean {
-    if (notation.length < 2 || notation.length > 6) {
+  static isValidLongNotation(notation: string): boolean {
+    const normalized = (notation || '').trim();
+    if (!normalized) {
       return false;
     }
 
-    const parts = notation.match(/^([a-h][1-8])([a-h][1-8])(=[QRBN])?(\+|#)?$/);
-    return parts !== null;
+    const patterns: RegExp[] = [
+      /^(O-O|O-O-O)([+#])?$/,
+      /^[KQRBN][a-h][1-8][a-h][1-8]([+#])?$/,
+      /^[a-h][1-8][a-h][1-8](=[QRBN])?([+#])?$/,
+      /^[KQRBN](?:[a-h]|[1-8])?[a-h][1-8][-x][a-h][1-8]([+#])?(?: e\.p\.)?$/,
+      /^[a-h][1-8][-x][a-h][1-8](=[QRBN])?([+#])?(?: e\.p\.)?$/,
+    ];
+
+    return patterns.some(pattern => pattern.test(normalized));
+  }
+
+  /**
+   * Checks if notation is valid short (SAN-like) notation format
+   * Examples: e4, Nf3, Rxe7+, exd8=Q#, O-O, O-O-O
+   */
+  static isValidShortNotation(notation: string): boolean {
+    const normalized = (notation || '').trim();
+    if (!normalized) {
+      return false;
+    }
+
+    const patterns: RegExp[] = [
+      /^(O-O|O-O-O)([+#])?$/,
+      /^(?:[KQRBN])(?:[a-h]|[1-8]|[a-h][1-8])?x?[a-h][1-8]([+#])?$/,
+      /^(?:[a-h]x)?[a-h][1-8](=[QRBN])?([+#])?$/
+    ];
+
+    return patterns.some(pattern => pattern.test(normalized));
+  }
+
+  /**
+   * Backward-compatible umbrella validator (short OR long)
+   */
+  static isValidAlgebraic(notation: string): boolean {
+    return ChessMoveNotation.isValidLongNotation(notation) || ChessMoveNotation.isValidShortNotation(notation);
   }
 
   /**

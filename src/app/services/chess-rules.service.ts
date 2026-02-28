@@ -8,6 +8,7 @@ import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { IMoveValidationResult } from '../model/interfaces/move-validation-result.interface';
 import { IBoardHighlight } from '../model/interfaces/board-highlight.interface';
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
+import { ChessMoveNotation } from '../utils/chess-utils';
 
 @Injectable()
 export class ChessRulesService {
@@ -449,10 +450,20 @@ export class ChessRulesService {
   private static parseMoveNotation(
     notation: string
   ): { piece: ChessPiecesEnum, sourceSquare: string, targetSquare: string } | null {
-    if (!notation || notation === 'O-O' || notation === 'O-O-O') {
+    if (!notation) {
       return null;
     }
-    const match = notation.match(/^([KQRBN]?)([a-h][1-8])(?:-|x)?([a-h][1-8])/);
+
+    const firstToken = notation.trim().split(/\s+/)[0];
+    if (!firstToken || firstToken === 'O-O' || firstToken === 'O-O-O') {
+      return null;
+    }
+
+    if (!ChessMoveNotation.isValidLongNotation(firstToken)) {
+      return null;
+    }
+
+    const match = firstToken.match(/^([KQRBN]?)([a-h][1-8])(?:-|x)?([a-h][1-8])/);
     if (!match) {
       return null;
     }

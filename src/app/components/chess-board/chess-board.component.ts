@@ -13,6 +13,7 @@ import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 import { ICctRecommendation, ICctRecommendationScored } from '../../model/interfaces/cct-recommendation.interface';
 import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
+import { ChessMoveNotation } from '../../utils/chess-utils';
 
 @Component({
   selector: 'app-chess-board',
@@ -905,6 +906,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       .filter(token => token.length > 0)
       .filter(token => !/^\d+\.{1,3}$/.test(token))
       .map(token => this.normalizeNotationToken(token))
+        .filter(token => ChessMoveNotation.isValidLongNotation(token))
       .filter(token => token.length > 0);
   }
 
@@ -2353,7 +2355,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private isNonPawnNonCaptureMove(notation: string): boolean {
-    if (!notation || notation.includes('x')) {
+    if (!notation || !ChessMoveNotation.isValidLongNotation(notation) || notation.includes('x')) {
       return false;
     }
 

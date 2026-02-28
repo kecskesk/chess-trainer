@@ -990,6 +990,108 @@ describe('ChessBoardComponent move sequence integration', () => {
     (component as any).tickClock();
     expect(stopClockSpy).toHaveBeenCalled();
   });
+
+  it('toggles debug panel and info overlay state', () => {
+    component.onDebugPanelToggle({ target: { open: true } } as any);
+    expect(component.isDebugPanelOpen).toBeTrue();
+
+    component.onDebugPanelToggle({ target: { open: false } } as any);
+    expect(component.isDebugPanelOpen).toBeFalse();
+
+    expect(component.isInfoOverlayOpen).toBeFalse();
+    component.toggleInfoOverlay();
+    expect(component.isInfoOverlayOpen).toBeTrue();
+    component.toggleInfoOverlay();
+    expect(component.isInfoOverlayOpen).toBeFalse();
+  });
+
+  it('reads check highlight through isCheck helper', () => {
+    globals.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
+    expect(component.isCheck(3, 3)).toBeTrue();
+    expect(component.isCheck(2, 2)).toBeFalse();
+  });
+
+  it('handles resign confirmation workflow wrappers', () => {
+    const resignSpy = spyOn(component, 'resign').and.callFake(() => undefined);
+
+    component.openResignConfirm(ChessColorsEnum.White);
+    expect(component.resignConfirmColor).toBe(ChessColorsEnum.White);
+
+    component.cancelResignConfirm();
+    expect(component.resignConfirmColor).toBeNull();
+
+    component.confirmResign();
+    expect(resignSpy).not.toHaveBeenCalled();
+
+    component.openResignConfirm(ChessColorsEnum.Black);
+    component.confirmResign();
+    expect(resignSpy).toHaveBeenCalledWith(ChessColorsEnum.Black);
+    expect(component.resignConfirmColor).toBeNull();
+  });
+
+  it('supports undo and redo mock navigation over visible history', () => {
+    globals.boardHelper.history = {
+      '1': 'e2-e4',
+      '2': 'e7-e5',
+      '3': 'Ng1-f3'
+    } as any;
+
+    expect(component.canUndoMoveMock()).toBeTrue();
+    expect(component.canRedoMoveMock()).toBeFalse();
+
+    component.undoMoveMock();
+    expect(component.mockHistoryCursor).toBe(1);
+    expect(component.canRedoMoveMock()).toBeTrue();
+    expect(component.getVisibleHistory()).toEqual(['e2-e4', 'e7-e5']);
+
+    component.redoMoveMock();
+    expect(component.mockHistoryCursor).toBeNull();
+    expect(component.getVisibleHistory()).toEqual(['e2-e4', 'e7-e5', 'Ng1-f3']);
+  });
+
+  it('toggles board orientation', () => {
+    expect(component.isBoardFlipped).toBeFalse();
+    component.toggleBoardFlip();
+    expect(component.isBoardFlipped).toBeTrue();
+    component.toggleBoardFlip();
+    expect(component.isBoardFlipped).toBeFalse();
+  });
+
+  it('returns debug castling rights notation', () => {
+    const castlingRights = component.getDebugCastlingRights();
+    expect(typeof castlingRights).toBe('string');
+    expect(castlingRights.length).toBeGreaterThan(0);
+  });
+
+  it('produces mock export and annotation helper outputs', () => {
+    component.exportPgnMock();
+    expect(component.mockExportMessage).toContain('Mock export: PGN ready');
+
+    component.exportBoardImageMock();
+    expect(component.mockExportMessage).toContain('Mock export: Board image ready');
+
+    component.exportFenMock();
+    expect(component.mockExportMessage).toContain('Mock export: FEN copied');
+
+    component.showForkIdeasMock();
+    expect(globals.boardHelper.debugText).toContain('Mock: Fork ideas highlighted');
+
+    component.showPinIdeasMock();
+    expect(globals.boardHelper.debugText).toContain('Mock: Pin opportunities highlighted');
+  });
+
+  it('returns move class based on suggested move notation', () => {
+    expect(component.getSuggestedMoveClass('Qh5+')).toBe('suggested-move--check');
+    expect(component.getSuggestedMoveClass('Nxe5')).toBe('suggested-move--capture');
+    expect(component.getSuggestedMoveClass('d4')).toBe('suggested-move--threat');
+    expect(component.getSuggestedMoveClass('')).toBe('suggested-move--threat');
+  });
+
+  it('returns mock opening and endgame defaults', () => {
+    (component as any).openingsLoaded = false;
+    expect(component.getMockOpeningRecognition()).toBe('Waiting for opening line...');
+    expect(component.getMockEndgameRecognition()).toBe('Not endgame yet (mock)');
+  });
 });
 
 describe('ChessBoardComponent template drag-enter integration', () => {
