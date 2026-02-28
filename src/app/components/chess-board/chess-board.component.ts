@@ -241,149 +241,234 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+    if (!this.canProcessDropEvent(event)) {
       return;
+    }
+    if (event.previousContainer === event.container) {
+      return;
+    }
+
+    this.ensureRepetitionTrackingState();
+    const moveContext = this.buildDropMoveContext(event);
+    if (!moveContext) {
+      return;
+    }
+
+    if (!this.validateDropMove(moveContext, event)) {
+      return;
+    }
+
+    this.prepareUiForDrop(moveContext);
+    this.applyPromotionAvailability(moveContext);
+
+    const moveFlags = this.applyPreTransferBoardState(event, moveContext);
+    transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
+    this.finalizeDropState(moveContext, moveFlags);
+  }
+
+  private canProcessDropEvent(event: CdkDragDrop<ChessPieceDto[]>): boolean {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+      return false;
     }
     if (this.chessBoardStateService.boardHelper.gameOver) {
       this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_NO_MOVES);
-      return;
+      return false;
     }
     if (!event || !event.previousContainer || !event.container || !event.previousContainer.data || !event.container.data) {
-      return;
+      return false;
     }
-    if (!event.previousContainer.data[0]) {
-      return;
+    return !!event.previousContainer.data[0];
+  }
+
+  private buildDropMoveContext(event: CdkDragDrop<ChessPieceDto[]>): {
+    targetRow: number;
+    targetCell: number;
+    srcRow: number;
+    srcCell: number;
+    srcPiece: ChessPiecesEnum;
+    srcColor: ChessColorsEnum;
+  } | null {
+    const targetPosition = this.parseFieldId(event.container.id);
+    const sourcePosition = this.parseFieldId(event.previousContainer.id);
+    const sourceData = event.previousContainer.data[0];
+    if (!targetPosition || !sourcePosition || !sourceData) {
+      return null;
     }
 
-    if (event.previousContainer === event.container) {
-      return;
-    } else {
-      this.ensureRepetitionTrackingState();
-      const targetPosition = this.parseFieldId(event.container.id);
-      const sourcePosition = this.parseFieldId(event.previousContainer.id);
-      if (!targetPosition || !sourcePosition) {
-        return;
-      }
-      const targetRow = targetPosition.row;
-      const targetCell = targetPosition.col;
-      const srcRow = sourcePosition.row;
-      const srcCell = sourcePosition.col;
+    return {
+      targetRow: targetPosition.row,
+      targetCell: targetPosition.col,
+      srcRow: sourcePosition.row,
+      srcCell: sourcePosition.col,
+      srcPiece: sourceData.piece,
+      srcColor: sourceData.color
+    };
+  }
 
-      const isValidMove = ChessRulesService.validateMove(
-        targetRow,
-        targetCell,
-        this.chessBoardStateService.field[targetRow][targetCell],
-        srcRow,
-        srcCell
-      ).isValid;
-      if (!isValidMove) {
-        const sourcePiece = event.previousContainer.data[0];
-        const dragFailureReason = this.getDragFailureReason(srcRow, srcCell, sourcePiece);
-        if (dragFailureReason) {
-          this.setSubtleDebugReason(dragFailureReason);
-        }
-        return;
-      }
+  private validateDropMove(
+    moveContext: { targetRow: number; targetCell: number; srcRow: number; srcCell: number; srcPiece: ChessPiecesEnum; srcColor: ChessColorsEnum; },
+    event: CdkDragDrop<ChessPieceDto[]>
+  ): boolean {
+    const isValidMove = ChessRulesService.validateMove(
+      moveContext.targetRow,
+      moveContext.targetCell,
+      this.chessBoardStateService.field[moveContext.targetRow][moveContext.targetCell],
+      moveContext.srcRow,
+      moveContext.srcCell
+    ).isValid;
 
-      if (!this.clockStarted) {
-        this.clockStarted = true;
-        this.startClock();
-      }
+    if (isValidMove) {
+      return true;
+    }
 
-      this.randomizeAmbientStyle();
+    const sourcePiece = event.previousContainer.data[0];
+    const dragFailureReason = this.getDragFailureReason(moveContext.srcRow, moveContext.srcCell, sourcePiece);
+    if (dragFailureReason) {
+      this.setSubtleDebugReason(dragFailureReason);
+    }
+    return false;
+  }
 
-      const srcColor = event.previousContainer.data[0].color;
-      if (this.pendingDrawOfferBy !== null && this.pendingDrawOfferBy !== srcColor) {
-        this.pendingDrawOfferBy = null;
-      }
+  private prepareUiForDrop(moveContext: { srcColor: ChessColorsEnum }): void {
+    if (!this.clockStarted) {
+      this.clockStarted = true;
+      this.startClock();
+    }
 
-      // Reset drops and hits
-      this.chessBoardStateService.boardHelper.debugText = '';
-      this.chessBoardStateService.boardHelper.possibles = {};
-      this.chessBoardStateService.boardHelper.hits = {};
-      this.chessBoardStateService.boardHelper.checks = {};
-      this.chessBoardStateService.boardHelper.arrows = {};
-      this.mateInOneTargets = {};
-      this.mateInOneBlunderTargets = {};
+    this.randomizeAmbientStyle();
+    if (this.pendingDrawOfferBy !== null && this.pendingDrawOfferBy !== moveContext.srcColor) {
+      this.pendingDrawOfferBy = null;
+    }
 
-      const srcPiece = event.previousContainer.data[0].piece;
-      const promotionTargetRow = srcColor === ChessColorsEnum.White ? 0 : 7;
-      if (srcPiece === ChessPiecesEnum.Pawn && targetRow === promotionTargetRow) {
-        this.chessBoardStateService.boardHelper.canPromote = targetCell;
-      }
+    this.chessBoardStateService.boardHelper.debugText = '';
+    this.chessBoardStateService.boardHelper.possibles = {};
+    this.chessBoardStateService.boardHelper.hits = {};
+    this.chessBoardStateService.boardHelper.checks = {};
+    this.chessBoardStateService.boardHelper.arrows = {};
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+  }
 
-      let isHit = false;
-      let isCheck = false;
-      let isMatch = false;
-      let isEP = false;
-      let castleData = null;
-      // Remove target on hit before moving the item in the container
-      if (event.container && event.container.data && event.container.data[0]) {
-        this.chessBoardStateService.field[targetRow][targetCell].splice(0, 1);
+  private applyPromotionAvailability(moveContext: {
+    srcPiece: ChessPiecesEnum;
+    srcColor: ChessColorsEnum;
+    targetRow: number;
+    targetCell: number;
+  }): void {
+    const promotionTargetRow = moveContext.srcColor === ChessColorsEnum.White ? 0 : 7;
+    if (moveContext.srcPiece === ChessPiecesEnum.Pawn && moveContext.targetRow === promotionTargetRow) {
+      this.chessBoardStateService.boardHelper.canPromote = moveContext.targetCell;
+    }
+  }
+
+  private applyPreTransferBoardState(
+    event: CdkDragDrop<ChessPieceDto[]>,
+    moveContext: {
+      targetRow: number;
+      targetCell: number;
+      srcRow: number;
+      srcCell: number;
+      srcPiece: ChessPiecesEnum;
+      srcColor: ChessColorsEnum;
+    }
+  ): { isHit: boolean; isEP: boolean; castleData: string | null } {
+    let isHit = false;
+    let isEP = false;
+    let castleData: string | null = null;
+
+    if (event.container && event.container.data && event.container.data[0]) {
+      this.chessBoardStateService.field[moveContext.targetRow][moveContext.targetCell].splice(0, 1);
+      isHit = true;
+    }
+
+    const isPawnDiagonalToEmpty = moveContext.srcPiece === ChessPiecesEnum.Pawn
+      && Math.abs(moveContext.targetCell - moveContext.srcCell) === 1
+      && (!event.container.data || event.container.data.length < 1);
+    const targetDirectionStep = moveContext.srcColor === ChessColorsEnum.White ? -1 : 1;
+    const enemyFirstStep = moveContext.srcColor === ChessColorsEnum.Black ? 5 : 2;
+    if (isPawnDiagonalToEmpty && (moveContext.targetRow - moveContext.srcRow) === targetDirectionStep &&
+      moveContext.targetRow === enemyFirstStep) {
+      const epTargetRow = moveContext.srcColor === ChessColorsEnum.White ? 3 : 4;
+      const epSourceRow = moveContext.srcColor === ChessColorsEnum.White ? 1 : 6;
+      const lastHistory = this.chessBoardStateService.history[this.chessBoardStateService.history.length - 1];
+      const possibleEP = ChessBoardStateService.translateNotation(
+        epTargetRow,
+        moveContext.targetCell,
+        epSourceRow,
+        moveContext.targetCell,
+        ChessPiecesEnum.Pawn,
+        false,
+        false,
+        false,
+        false,
+        null
+      );
+      if (lastHistory === possibleEP && this.chessBoardStateService.field[epTargetRow][moveContext.targetCell].length > 0) {
+        this.chessBoardStateService.field[epTargetRow][moveContext.targetCell].splice(0, 1);
         isHit = true;
+        isEP = true;
       }
-      const isPawnDiagonalToEmpty = srcPiece === ChessPiecesEnum.Pawn
-        && Math.abs(targetCell - srcCell) === 1
-        && (!event.container.data || event.container.data.length < 1);
-      const targetDirectionStep = srcColor === ChessColorsEnum.White ? -1 : 1;
-      const enemyFirstStep = srcColor === ChessColorsEnum.Black ? 5 : 2;
-      if (isPawnDiagonalToEmpty && (targetRow - srcRow) === targetDirectionStep && targetRow === enemyFirstStep) {
-        const epTargetRow = srcColor === ChessColorsEnum.White ? 3 : 4;
-        const epSourceRow = srcColor === ChessColorsEnum.White ? 1 : 6;
-        const lastHistory = this.chessBoardStateService.history[this.chessBoardStateService.history.length - 1];
-        const possibleEP = ChessBoardStateService.translateNotation(
-          epTargetRow, targetCell, epSourceRow, targetCell, ChessPiecesEnum.Pawn, false, false, false, false, null);
-        if (lastHistory === possibleEP && this.chessBoardStateService.field[epTargetRow][targetCell].length > 0) {
-          this.chessBoardStateService.field[epTargetRow][targetCell].splice(0, 1);
-          isHit = true;
-          isEP = true;
-        }
-      }
-      this.chessBoardStateService.boardHelper.justDidEnPassant = null;
-      const justDidCastle = this.chessBoardStateService.boardHelper.justDidCastle;
-      if (justDidCastle) {
-        const rookCol = justDidCastle.col === 2 ? 0 : 7;
-        const rookDestCol = justDidCastle.col === 2 ? 3 : 5;
-        const castleRook = this.chessBoardStateService.field[justDidCastle.row][rookCol];
-        if (castleRook && castleRook[0]) {
-          const sourceColor = castleRook[0].color as ChessColorsEnum;
-          this.chessBoardStateService.field[justDidCastle.row][rookCol].splice(0, 1);
-          const newCastleRook = new ChessPieceDto(sourceColor, ChessPiecesEnum.Rook);
-          this.chessBoardStateService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
-          this.chessBoardStateService.boardHelper.justDidCastle = null;
-          castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
-        }
-      }
+    }
 
-      if (!event.previousContainer.data || !event.container.data) {
-        return;
+    this.chessBoardStateService.boardHelper.justDidEnPassant = null;
+    const justDidCastle = this.chessBoardStateService.boardHelper.justDidCastle;
+    if (justDidCastle) {
+      const rookCol = justDidCastle.col === 2 ? 0 : 7;
+      const rookDestCol = justDidCastle.col === 2 ? 3 : 5;
+      const castleRook = this.chessBoardStateService.field[justDidCastle.row][rookCol];
+      if (castleRook && castleRook[0]) {
+        const sourceColor = castleRook[0].color as ChessColorsEnum;
+        this.chessBoardStateService.field[justDidCastle.row][rookCol].splice(0, 1);
+        const newCastleRook = new ChessPieceDto(sourceColor, ChessPiecesEnum.Rook);
+        this.chessBoardStateService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
+        this.chessBoardStateService.boardHelper.justDidCastle = null;
+        castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
       }
-      transferArrayItem(event.previousContainer.data,
-        event.container.data,
-        event.previousIndex, event.currentIndex);
+    }
 
-      const enemyColor = srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-      isCheck = this.isKingInCheck(this.chessBoardStateService.field, enemyColor);
-      const hasLegalMoves = this.hasAnyLegalMove(this.chessBoardStateService.field, enemyColor);
-      if (isCheck) {
-        isMatch = !hasLegalMoves;
-        if (isMatch) {
-          this.chessBoardStateService.boardHelper.gameOver = true;
-          this.chessBoardStateService.boardHelper.checkmateColor = enemyColor;
-          this.chessBoardStateService.boardHelper.debugText =
-            `Checkmate! ${srcColor === ChessColorsEnum.White ? 'White' : 'Black'} wins.`;
-        }
-      }
+    return { isHit, isEP, castleData };
+  }
 
-      const lastNotation = ChessBoardStateService.translateNotation(
-        targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
-      ChessBoardStateService.addHistory(lastNotation);
-      this.addIncrementToColor(srcColor);
-      this.chessBoardStateService.boardHelper.colorTurn =
-        this.chessBoardStateService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-      if (!isMatch) {
-        this.applyDrawRules(hasLegalMoves, isCheck);
-      }
+  private finalizeDropState(
+    moveContext: {
+      targetRow: number;
+      targetCell: number;
+      srcRow: number;
+      srcCell: number;
+      srcPiece: ChessPiecesEnum;
+      srcColor: ChessColorsEnum;
+    },
+    moveFlags: { isHit: boolean; isEP: boolean; castleData: string | null }
+  ): void {
+    const enemyColor = moveContext.srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    const isCheck = this.isKingInCheck(this.chessBoardStateService.field, enemyColor);
+    const hasLegalMoves = this.hasAnyLegalMove(this.chessBoardStateService.field, enemyColor);
+    const isMatch = isCheck && !hasLegalMoves;
+    if (isMatch) {
+      this.chessBoardStateService.boardHelper.gameOver = true;
+      this.chessBoardStateService.boardHelper.checkmateColor = enemyColor;
+      this.chessBoardStateService.boardHelper.debugText =
+        `Checkmate! ${moveContext.srcColor === ChessColorsEnum.White ? 'White' : 'Black'} wins.`;
+    }
+
+    const lastNotation = ChessBoardStateService.translateNotation(
+      moveContext.targetRow,
+      moveContext.targetCell,
+      moveContext.srcRow,
+      moveContext.srcCell,
+      moveContext.srcPiece,
+      moveFlags.isHit,
+      isCheck,
+      isMatch,
+      moveFlags.isEP,
+      moveFlags.castleData
+    );
+    ChessBoardStateService.addHistory(lastNotation);
+    this.addIncrementToColor(moveContext.srcColor);
+    this.chessBoardStateService.boardHelper.colorTurn =
+      this.chessBoardStateService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    if (!isMatch) {
+      this.applyDrawRules(hasLegalMoves, isCheck);
     }
   }
 

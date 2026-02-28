@@ -290,6 +290,74 @@ describe('ChessRulesService branch coverage helpers', () => {
     expect(simulated[4][5]).toEqual([]);
   });
 
+  it('returns null errorMessage for a valid move in validateMove', () => {
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    const result = ChessRulesService.validateMove(4, 4, chessBoardStateService.field[4][4], 6, 4);
+
+    expect(result.isValid).toBeTrue();
+    expect(result.errorMessage).toBeNull();
+  });
+
+  it('returns dash castling rights when board is missing', () => {
+    const rights = ChessRulesService.getCastlingRightsNotation(null as any, {});
+    expect(rights).toBe('-');
+  });
+
+  it('removes black castling rights after black has castled in history', () => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+    chessBoardStateService.field[0][0] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
+    chessBoardStateService.field[0][7] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
+
+    const rights = ChessRulesService.getCastlingRightsNotation(
+      chessBoardStateService.field,
+      { 2: 'O-O' }
+    );
+
+    expect(rights).not.toContain('k');
+    expect(rights).not.toContain('q');
+  });
+
+  it('returns en-passant target when last move enables capture', () => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[3][3] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
+    chessBoardStateService.field[3][2] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+
+    const ep = ChessRulesService.getEnPassantRightsNotation(
+      chessBoardStateService.field,
+      { 2: 'd7-d5' },
+      ChessColorsEnum.White
+    );
+
+    expect(ep).toBe('d6');
+  });
+
+  it('returns dash en-passant rights when turn does not match capturing side', () => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[3][3] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
+    chessBoardStateService.field[3][2] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+
+    const ep = ChessRulesService.getEnPassantRightsNotation(
+      chessBoardStateService.field,
+      { 2: 'd7-d5' },
+      ChessColorsEnum.Black
+    );
+
+    expect(ep).toBe('-');
+  });
+
   it('handles withBoardContext when BOARD_HELPER is temporarily null', () => {
     const previousHelper = ChessBoardStateService.BOARD_HELPER;
     try {

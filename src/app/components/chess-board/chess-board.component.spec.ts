@@ -1142,6 +1142,50 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.getSuggestedMoveClass('')).toBe('suggested-move--threat');
   });
 
+  it('covers parseSuggestedMove piece parsing and invalid input branches', () => {
+    expect((component as any).parseSuggestedMove('Qh5+')).toEqual(
+      jasmine.objectContaining({ piece: ChessPiecesEnum.Queen })
+    );
+    expect((component as any).parseSuggestedMove('Nf3')).toEqual(
+      jasmine.objectContaining({ piece: ChessPiecesEnum.Knight })
+    );
+    expect((component as any).parseSuggestedMove('Bc4')).toEqual(
+      jasmine.objectContaining({ piece: ChessPiecesEnum.Bishop })
+    );
+    expect((component as any).parseSuggestedMove('Rxa8')).toEqual(
+      jasmine.objectContaining({ piece: ChessPiecesEnum.Rook })
+    );
+    expect((component as any).parseSuggestedMove('Kh2')).toEqual(
+      jasmine.objectContaining({ piece: ChessPiecesEnum.King })
+    );
+
+    expect((component as any).parseSuggestedMove('invalid')).toBeNull();
+    expect((component as any).parseSuggestedMove('Qa9')).toBeNull();
+  });
+
+  it('covers opening display naming when suggested line starts and prefix is suppressed', () => {
+    const opening = {
+      name: 'Sicilian Defense',
+      steps: ['e2-e4'],
+      raw: {
+        suggested_best_response_name: 'Sicilian Defense: Najdorf',
+        suggested_best_response_notation_step: '... c7-c5'
+      }
+    } as any;
+
+    const displayed = (component as any).getDisplayedOpeningName(opening, ['e2-e4', 'c7-c5']);
+    expect(displayed).toBe('Sicilian Defense: Najdorf');
+  });
+
+  it('covers mock-eval negative index and empty-history cursor branches', () => {
+    expect(component.getMockEvaluationForMove(-1)).toBe('+0.0');
+    expect(typeof component.getMockEvaluationForMove(3)).toBe('string');
+
+    chessBoardStateService.boardHelper.history = {} as any;
+    component.mockHistoryCursor = 2;
+    expect(component.getVisibleHistory()).toEqual([]);
+  });
+
   it('covers opening-name prefix and debug-line fallback branches', () => {
     expect((component as any).shouldPrefixSuggestedOpeningName('', 'Sicilian Defense')).toBeFalse();
     expect((component as any).shouldPrefixSuggestedOpeningName('Sicilian Defense', '')).toBeFalse();
