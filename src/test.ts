@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 // This file is required by karma.conf.js and loads recursively all the .spec and framework files
 
 import 'zone.js/testing';
@@ -12,10 +13,6 @@ function bootstrapEnglishUiTextForTests(): void {
   const xhr = new XMLHttpRequest();
   xhr.open('GET', '/assets/i18n/en_US.properties', false);
   xhr.send();
-  if (xhr.status < 200 || xhr.status >= 300 || !xhr.responseText) {
-    return;
-  }
-
   const root: Record<string, unknown> = {};
   const lines = xhr.responseText.split(/\r?\n/);
 

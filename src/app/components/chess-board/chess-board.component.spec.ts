@@ -3,7 +3,7 @@ import { ChessBoardStateService } from '../../services/chess-board-state.service
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -1691,7 +1691,7 @@ describe('ChessBoardComponent branch coverage helpers (private helpers)', () => 
   });
 });
 
-describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths)', () => {
+describe('ChessBoardComponent branch coverage helpers (canDrop guards)', () => {
   it('covers additional canDrop early-return paths', () => {
     expect(component.canDrop({
       dropContainer: { id: 'field60', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] }
@@ -1742,6 +1742,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     } as any)).toBeFalse();
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (drag and drop guards)', () => {
   it('covers drop-enter, drag-start and pointer guard branches', () => {
     component.onDropListEntered(null as any);
     component.onDropListEntered({ item: { dropContainer: { id: 'x' } }, container: { id: 'y' } } as any);
@@ -1797,6 +1800,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     expect(true).toBeTrue();
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (castling and debug guards)', () => {
   it('covers castling transfer side effects branch', () => {
     clearBoard();
     chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
@@ -1854,6 +1860,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     setSpy.and.callThrough();
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (status and opening fallbacks)', () => {
   it('covers status title branch for black checkmate color', () => {
     chessBoardStateService.boardHelper.gameOver = true;
     chessBoardStateService.boardHelper.checkmateColor = ChessColorsEnum.Black;
@@ -1886,6 +1895,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     expect((component as any).getDisplayedOpeningName(opening, ['e2-e4'])).toBe('X');
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (opening recognition edge paths)', () => {
   it('covers opening tie-break branch for shorter complete line preference', () => {
     (component as any).openingsLoaded = true;
     (component as any).openings = [
@@ -1950,6 +1962,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     expect(true).toBeTrue();
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (mate and threat overlays)', () => {
   it('covers resign guard and mate-preview guard branches', () => {
     chessBoardStateService.boardHelper.gameOver = true;
     component.resign(ChessColorsEnum.White);
@@ -2006,6 +2021,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     expect(onSpy).toHaveBeenCalled();
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (simulation and clock branches)', () => {
   it('covers simulateMove en passant, castling rook shift and king-not-found branch', () => {
     clearBoard();
     chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
@@ -2084,6 +2102,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     nowSpy.and.callThrough();
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (index and evaluation branches)', () => {
   it('covers move-index helpers, debug key guards, notation rule branches and insufficient-material terminal false', () => {
     const savedHistory = { ...(chessBoardStateService.boardHelper.history as any) };
     chessBoardStateService.history.splice(0, chessBoardStateService.history.length);
@@ -2153,6 +2174,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     expect(kingSpy).toHaveBeenCalled();
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (drop validation and opening display)', () => {
   it('covers validateDropMove invalid branch with drag failure reason', () => {
     const validateSpy = spyOn(ChessRulesService, 'validateMove').and.returnValue({ isValid: false } as any);
     const reasonSpy = spyOn<any>(component, 'getDragFailureReason').and.returnValue('blocked');
@@ -2191,6 +2215,9 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     expect((component as any).getDisplayedOpeningName(opening, ['e2-e4', 'e7-e5', 'd2-d4'])).toBe('Main');
   });
 
+});
+
+describe('ChessBoardComponent branch coverage helpers (locale and asset loading edges)', () => {
   it('covers suggested-line mismatch break loops in recognition and formatting', () => {
     const opening = {
       name: 'Main',
@@ -2221,6 +2248,93 @@ describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths
     const kingSpy = spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
     (component as any).previewHoverMateInOne(6, 4, 5, 4, true);
     expect(kingSpy).toHaveBeenCalled();
+  });
+});
+
+describe('ChessBoardComponent branch coverage helpers (locale switching and opening assets)', () => {
+  it('covers locale switching branches and resign title helper', async () => {
+    await component.switchLocale('en_US');
+    expect(component.isLanguageSwitching).toBeFalse();
+
+    const loader = {
+      setActiveLocale: jasmine.createSpy('setActiveLocale').and.resolveTo(),
+      getCurrentLocale: jasmine.createSpy('getCurrentLocale').and.returnValue('hu_HU')
+    };
+    const localComponent = new ChessBoardComponent(
+      chessBoardStateService,
+      { get: () => of([]) } as any,
+      undefined,
+      undefined,
+      loader as any
+    );
+    const loadOpeningsSpy = spyOn<any>(localComponent, 'loadOpeningsFromAssets').and.stub();
+    const requestClockRenderSpy = spyOn<any>(localComponent, 'requestClockRender').and.stub();
+
+    localComponent.selectedLocale = 'en_US';
+    await localComponent.switchLocale('hu_HU');
+    expect(loader.setActiveLocale).toHaveBeenCalledWith('hu_HU');
+    expect(loader.getCurrentLocale).toHaveBeenCalled();
+    expect(localComponent.selectedLocale).toBe('hu_HU');
+    expect(loadOpeningsSpy).toHaveBeenCalledWith('hu_HU');
+    expect(requestClockRenderSpy).toHaveBeenCalled();
+    expect(localComponent.isLanguageSwitching).toBeFalse();
+
+    await localComponent.switchLocale('hu_HU');
+    expect(loader.setActiveLocale.calls.count()).toBe(1);
+
+    localComponent.uiText.status.white = 'White';
+    localComponent.uiText.status.black = 'Black';
+    localComponent.uiText.resignConfirm.titleTemplate = 'Resign as {color}?';
+    localComponent.resignConfirmColor = ChessColorsEnum.White;
+    expect(localComponent.getResignConfirmTitle()).toBe('Resign as White?');
+    localComponent.resignConfirmColor = ChessColorsEnum.Black;
+    expect(localComponent.getResignConfirmTitle()).toBe('Resign as Black?');
+  });
+
+  it('covers opening-load stale callbacks and opening-file fallback catches', () => {
+    const deferredSubscribers: Array<any> = [];
+    const httpMock = {
+      get: jasmine.createSpy('get').and.callFake(() => new Observable((subscriber) => {
+        deferredSubscribers.push(subscriber);
+      }))
+    };
+    const localComponent = new ChessBoardComponent(chessBoardStateService, httpMock as any);
+    (localComponent as any).loadOpeningsFromAssets('');
+
+    const firstPath = String(httpMock.get.calls.argsFor(0)[0]);
+    expect(firstPath).toContain('assets/openings/openings1.json');
+
+    (localComponent as any).openingsLoadId += 1;
+    deferredSubscribers[0].next([{ name: 'Late', long_algebraic_notation: '1. e2-e4' }]);
+    deferredSubscribers[0].complete();
+    deferredSubscribers[1].error(new Error('late'));
+    deferredSubscribers[2].next([]);
+    deferredSubscribers[2].complete();
+
+    expect((localComponent as any).openings.length).toBe(0);
+
+    const fallbackGet = jasmine.createSpy('get').and.callFake((path: string) => {
+      if (path.includes('/hu_HU/')) {
+        return throwError(() => new Error('missing localized'));
+      }
+      if (path.includes('/openings1.json')) {
+        return of([{ name: 'Fallback', long_algebraic_notation: '1. e2-e4' }] as any);
+      }
+      return throwError(() => new Error('missing fallback'));
+    });
+    const fallbackComponent = new ChessBoardComponent(chessBoardStateService, { get: fallbackGet } as any);
+
+    let successItems: any[] | null = null;
+    (fallbackComponent as any).getOpeningAsset$('openings1.json', 'hu_HU').subscribe((items: any[]) => {
+      successItems = items;
+    });
+    expect(successItems).toEqual([{ name: 'Fallback', long_algebraic_notation: '1. e2-e4' }]);
+
+    let emptyItems: any[] | null = null;
+    (fallbackComponent as any).getOpeningAsset$('openings2.json', 'hu_HU').subscribe((items: any[]) => {
+      emptyItems = items;
+    });
+    expect(emptyItems).toEqual([]);
   });
 });
 
