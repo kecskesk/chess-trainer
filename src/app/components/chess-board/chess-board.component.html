@@ -72,9 +72,21 @@
     <div class="clock-card panel-card panel-card--wide">
       <div class="clock-card-header">
         <h3 class="section-title">{{uiText.clock.sectionTitle}}</h3>
-        <div class="clock-brand" [attr.aria-label]="uiText.clock.brandAriaLabel">
-          <img class="clock-brand__logo" src="horse.svg" [attr.alt]="uiText.clock.logoAlt" />
-          <span class="clock-brand__title">{{uiText.app.brandTitle}}</span>
+        <div class="clock-header-tools">
+          <label class="language-picker" [attr.aria-label]="uiText.language.ariaLabel">
+            <span class="language-picker__label">{{uiText.language.label}}</span>
+            <select class="language-picker__select"
+                    [value]="selectedLocale"
+                    [disabled]="isLanguageSwitching"
+                    (change)="onLocaleSelect($event)">
+              <option [value]="supportedLocales[0]">{{uiText.language.english}}</option>
+              <option [value]="supportedLocales[1]">{{uiText.language.hungarian}}</option>
+            </select>
+          </label>
+          <div class="clock-brand" [attr.aria-label]="uiText.clock.brandAriaLabel">
+            <img class="clock-brand__logo" src="horse.svg" [attr.alt]="uiText.clock.logoAlt" />
+            <span class="clock-brand__title">{{uiText.app.brandTitle}}</span>
+          </div>
         </div>
       </div>
       <div class="clock-layout">

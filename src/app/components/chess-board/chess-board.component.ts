@@ -19,6 +19,7 @@ import { ChessMoveNotation } from '../../utils/chess-utils';
 import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
+import { UiTextLoaderService } from '../../services/ui-text-loader.service';
 
 @Component({
   selector: 'app-chess-board',
@@ -29,6 +30,7 @@ import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
 })
 export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   readonly uiText = UiText;
+  readonly supportedLocales = UiTextLoaderService.SUPPORTED_LOCALES;
   @ViewChild('chessField') chessField: ElementRef;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
@@ -58,6 +60,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   areMockControlsDisabled = true;
   isDebugPanelOpen = false;
   isInfoOverlayOpen = false;
+  selectedLocale = UiTextLoaderService.DEFAULT_LOCALE;
+  isLanguageSwitching = false;
   private isDestroyed = false;
 
   /**
@@ -91,11 +95,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     public chessBoardStateService: ChessBoardStateService,
     private readonly http: HttpClient,
     private readonly ngZone?: NgZone,
-    private readonly cdr?: ChangeDetectorRef
+    private readonly cdr?: ChangeDetectorRef,
+    private readonly uiTextLoaderService?: UiTextLoaderService
   ) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
     this.isDebugPanelOpen = this.readDebugPanelOpenState();
+    if (this.uiTextLoaderService) {
+      this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
+    }
     this.loadOpeningsFromAssets();
   }
 
@@ -686,6 +694,29 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   startNewGame(): void {
     this.windowRef.location.reload();
+  }
+
+  onLocaleSelect(event: Event): void {
+    const locale = event && event.target ? (event.target as HTMLSelectElement).value : '';
+    if (!locale) {
+      return;
+    }
+    void this.switchLocale(locale);
+  }
+
+  private async switchLocale(locale: string): Promise<void> {
+    if (!this.uiTextLoaderService || locale === this.selectedLocale) {
+      return;
+    }
+
+    this.isLanguageSwitching = true;
+    try {
+      await this.uiTextLoaderService.setActiveLocale(locale);
+      this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
+      this.requestClockRender();
+    } finally {
+      this.isLanguageSwitching = false;
+    }
   }
 
   offerDraw(): void {

@@ -432,6 +432,37 @@
   margin: 0;
 }
 
+.clock-header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.language-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #dce5ff;
+}
+
+.language-picker__label {
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.language-picker__select {
+  min-width: 96px;
+  border-radius: 6px;
+  border: 1px solid rgba(189, 206, 255, 0.55);
+  background: rgba(18, 26, 46, 0.92);
+  color: #f7f9ff;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
 .clock-brand {
   display: inline-flex;
   align-items: center;
@@ -528,6 +559,12 @@
   .clock-card-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .clock-header-tools {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .clock-brand {

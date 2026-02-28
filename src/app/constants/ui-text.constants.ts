@@ -1,8 +1,14 @@
 type JsonObject = Record<string, unknown>;
 
-export const UiText = {
+const UiTextDefaults = {
   app: {
     brandTitle: ''
+  },
+  language: {
+    label: '',
+    ariaLabel: '',
+    english: '',
+    hungarian: ''
   },
   infoOverlay: {
     ariaLabel: '',
@@ -200,8 +206,18 @@ export const UiText = {
   }
 };
 
+export const UiText = cloneUiTextDefaults();
+
 export function mergeUiText(source: JsonObject): void {
   deepAssign(UiText as unknown as JsonObject, source);
+}
+
+export function resetUiText(): void {
+  deepAssign(UiText as unknown as JsonObject, cloneUiTextDefaults() as unknown as JsonObject);
+}
+
+function cloneUiTextDefaults(): typeof UiTextDefaults {
+  return JSON.parse(JSON.stringify(UiTextDefaults)) as typeof UiTextDefaults;
 }
 
 function deepAssign(target: JsonObject, source: JsonObject): void {

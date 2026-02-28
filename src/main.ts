@@ -15,7 +15,7 @@ if (environment.production) {
 }
 
 function initializeUiText(uiTextLoaderService: UiTextLoaderService): () => Promise<void> {
-  return () => uiTextLoaderService.load('en_US');
+  return () => uiTextLoaderService.initialize();
 }
 
 bootstrapApplication(AppComponent, {
