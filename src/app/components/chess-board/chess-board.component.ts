@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem, DragDropModule } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
@@ -56,6 +56,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   areMockControlsDisabled = true;
   isDebugPanelOpen = false;
   isInfoOverlayOpen = false;
+  private isDestroyed = false;
 
   /**
    * Used by the UI to indicate which visualization toggle is currently active.
@@ -84,7 +85,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
-  constructor(public chessBoardStateService: ChessBoardStateService, private readonly http: HttpClient) {
+  constructor(
+    public chessBoardStateService: ChessBoardStateService,
+    private readonly http: HttpClient,
+    private readonly ngZone?: NgZone,
+    private readonly cdr?: ChangeDetectorRef
+  ) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
     this.isDebugPanelOpen = this.readDebugPanelOpenState();
@@ -92,6 +98,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.isDestroyed = true;
     this.stopClock();
   }
 
@@ -2230,7 +2237,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     this.lastClockTickAt = Date.now();
     this.clockRunning = true;
-    this.clockIntervalId = window.setInterval(() => this.tickClock(), this.clockTickIntervalMs);
+    const tick = () => this.tickClock();
+    if (this.ngZone) {
+      this.clockIntervalId = window.setInterval(() => this.ngZone.run(tick), this.clockTickIntervalMs);
+    } else {
+      this.clockIntervalId = window.setInterval(tick, this.clockTickIntervalMs);
+    }
+    this.requestClockRender();
   }
 
   private stopClock(): void {
@@ -2239,6 +2252,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.clockIntervalId = null;
     }
     this.clockRunning = false;
+    this.requestClockRender();
   }
 
   private tickClock(): void {
@@ -2260,6 +2274,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       if (this.whiteClockMs === 0) {
         this.handleTimeForfeit(ChessColorsEnum.White);
       }
+      this.requestClockRender();
       return;
     }
 
@@ -2267,6 +2282,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (this.blackClockMs === 0) {
       this.handleTimeForfeit(ChessColorsEnum.Black);
     }
+    this.requestClockRender();
+  }
+
+  private requestClockRender(): void {
+    if (!this.cdr || this.isDestroyed) {
+      return;
+    }
+    this.cdr.markForCheck();
   }
 
   private addIncrementToColor(color: ChessColorsEnum): void {

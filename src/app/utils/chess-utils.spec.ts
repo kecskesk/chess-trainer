@@ -70,6 +70,11 @@ describe('ChessBoardUtils', () => {
       { row: 6, col: 0 },
       { row: 5, col: 0 }
     ]);
+
+    expect(ChessBoardUtils.getSquaresBetween(4, 3, 7, 0)).toEqual([
+      { row: 5, col: 2 },
+      { row: 6, col: 1 }
+    ]);
   });
 });
 
@@ -91,6 +96,8 @@ describe('ChessMoveNotation', () => {
 
     expect(ChessMoveNotation.isValidShortNotation('Nb1-c3')).toBeFalse();
     expect(ChessMoveNotation.isValidShortNotation('Ne2-e4+')).toBeFalse();
+
+    expect(ChessMoveNotation.isValidLongNotation(null as any)).toBeFalse();
   });
 
   it('validates short notation and contrast-checks against long notation', () => {
@@ -102,6 +109,8 @@ describe('ChessMoveNotation', () => {
     expect(ChessMoveNotation.isValidShortNotation('e2e4')).toBeFalse();
     expect(ChessMoveNotation.isValidShortNotation('Nb1-c3')).toBeFalse();
     expect(ChessMoveNotation.isValidShortNotation('Nbd7xe8=Q#')).toBeFalse();
+
+    expect(ChessMoveNotation.isValidShortNotation(undefined as any)).toBeFalse();
   });
 
   it('supports umbrella algebraic validator', () => {
@@ -117,6 +126,11 @@ describe('ChessMoveNotation', () => {
     expect(ChessMoveNotation.getPromotionPiece('e7e8=Q')).toBe('queen');
     expect(ChessMoveNotation.getPromotionPiece('a2a1=N+')).toBe('knight');
     expect(ChessMoveNotation.getPromotionPiece('e2e4')).toBeNull();
+
+    const fakeNotation = {
+      match: () => ['=X', 'X']
+    } as any;
+    expect(ChessMoveNotation.getPromotionPiece(fakeNotation)).toBeNull();
   });
 
   it('detects check and checkmate suffixes', () => {
