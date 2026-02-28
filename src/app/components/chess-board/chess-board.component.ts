@@ -57,6 +57,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   isInfoOverlayOpen = false;
   cctCategory = CctCategoryEnum;
   private readonly debugPanelStorageKey = 'chess-trainer.debug-panel-open';
+  private readonly windowRef: Pick<Window, 'location'> = window;
   private cctRecommendationsCacheKey = '';
   private cctRecommendationsCache: Record<CctCategoryEnum, ICctRecommendation[]> = {
     [CctCategoryEnum.Captures]: [],
@@ -573,7 +574,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   startNewGame(): void {
-    window.location.reload();
+    this.windowRef.location.reload();
   }
 
   offerDraw(): void {

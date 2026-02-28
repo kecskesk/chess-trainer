@@ -1,12 +1,13 @@
 import { ChessBoardComponent } from './chess-board.component';
 import { GlobalVariablesService } from '../../services/global-variables.service';
+import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
@@ -1091,6 +1092,199 @@ describe('ChessBoardComponent move sequence integration', () => {
     (component as any).openingsLoaded = false;
     expect(component.getMockOpeningRecognition()).toBe('Waiting for opening line...');
     expect(component.getMockEndgameRecognition()).toBe('Not endgame yet (mock)');
+  });
+
+  it('evaluates board via showPossibleMoves and clears overlays', () => {
+    globals.boardHelper.possibles['44'] = { row: 4, col: 4 } as any;
+    globals.boardHelper.hits['44'] = { row: 4, col: 4 } as any;
+    globals.boardHelper.checks['44'] = { row: 4, col: 4 } as any;
+    globals.boardHelper.arrows['a'] = { left: '1px' } as any;
+
+    const canStepSpy = spyOn(ChessRulesService, 'canStepThere').and.returnValue(false);
+    component.showPossibleMoves(ChessColorsEnum.White);
+
+    expect(canStepSpy).toHaveBeenCalled();
+    expect(globals.boardHelper.possibles).toEqual({});
+    expect(globals.boardHelper.hits).toEqual({});
+    expect(globals.boardHelper.checks).toEqual({});
+    expect(globals.boardHelper.arrows).toEqual({});
+  });
+
+  it('parses suggested moves through preview and creates then clears arrows', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.previewSuggestedMoveArrows('Nf3');
+    expect(Object.keys(globals.boardHelper.arrows).length).toBeGreaterThan(0);
+
+    component.clearSuggestedMoveArrows();
+    expect((component as any).suggestedMoveArrowSnapshot).toBeNull();
+  });
+
+  it('returns threats on a square and visualizes protected/hanging pieces', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[4][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    const threatsOn = component.getThreatsOn(
+      globals.field[4][4],
+      4,
+      4,
+      ChessColorsEnum.White,
+      ChessColorsEnum.Black
+    );
+    expect(Array.isArray(threatsOn)).toBeTrue();
+
+    component.showProtected(false);
+    expect(globals.boardHelper.arrows).toBeDefined();
+
+    component.showHangingPieces(false);
+    expect(globals.boardHelper.arrows).toBeDefined();
+  });
+
+  it('resets transient and board state through internal helpers', () => {
+    component.pendingDrawOfferBy = ChessColorsEnum.Black;
+    component.resignConfirmColor = ChessColorsEnum.White;
+    component.mockHistoryCursor = 3;
+    component.mockExportMessage = 'x';
+    component.mateInOneTargets = { '11': true };
+    component.mateInOneBlunderTargets = { '22': true };
+    (component as any).lastMatePreviewKey = 'x';
+
+    (component as any).resetTransientUiState();
+    expect(component.pendingDrawOfferBy).toBeNull();
+    expect(component.resignConfirmColor).toBeNull();
+    expect(component.mockHistoryCursor).toBeNull();
+    expect(component.mockExportMessage).toBe('');
+    expect(component.mateInOneTargets).toEqual({});
+    expect(component.mateInOneBlunderTargets).toEqual({});
+
+    globals.boardHelper.history = { '1': 'e2-e4' } as any;
+    globals.boardHelper.gameOver = true;
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    (component as any).resetBoardState();
+    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(globals.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
+    expect(globals.history.length).toBe(0);
+    expect(globals.field[7][4][0].piece).toBe(ChessPiecesEnum.King);
+  });
+
+  it('handles time forfeit and records result suffix', () => {
+    globals.boardHelper.gameOver = false;
+    globals.boardHelper.history = { '1': 'e2-e4' } as any;
+    component.clockRunning = true;
+
+    (component as any).handleTimeForfeit(ChessColorsEnum.Black);
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.debugText).toContain('Black forfeits on time');
+    expect(globals.history[globals.history.length - 1]).toContain('1-0 {Black forfeits on time}');
+  });
+
+  it('handles black-side en passant branch', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[4][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    globals.field[4][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    globals.boardHelper.history = { '1': 'c2-c4' } as any;
+
+    expect(canDropLike(4, 3, 5, 2)).toBeTrue();
+    component.onDrop(createDropLike(4, 3, 5, 2));
+
+    expect(globals.field[4][2].length).toBe(0);
+    expect(globals.field[5][2][0].color).toBe(ChessColorsEnum.Black);
+  });
+
+  it('records white checkmate winner text branch', () => {
+    clearBoard();
+    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    expect(canDropLike(2, 1, 1, 1)).toBeTrue();
+    component.onDrop(createDropLike(2, 1, 1, 1));
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.checkmateColor).toBe(ChessColorsEnum.Black);
+    expect(globals.boardHelper.debugText).toContain('Checkmate! White wins.');
+  });
+
+  it('runs startNewGame and startClock callback branches', () => {
+    const reloadSpy = jasmine.createSpy('reload');
+    (component as any).windowRef = { location: { reload: reloadSpy } };
+    component.startNewGame();
+    expect(reloadSpy).toHaveBeenCalled();
+
+    const tickSpy = spyOn<any>(component, 'tickClock').and.callFake(() => undefined);
+    const setIntervalSpy = spyOn(window, 'setInterval').and.callFake((callback: TimerHandler) => {
+      (callback as Function)();
+      return 1 as any;
+    });
+    const clearIntervalSpy = spyOn(window, 'clearInterval').and.callFake(() => undefined);
+
+    component.clockRunning = false;
+    (component as any).clockIntervalId = null;
+    (component as any).startClock();
+    expect(setIntervalSpy).toHaveBeenCalled();
+    expect(tickSpy).toHaveBeenCalled();
+
+    (component as any).stopClock();
+    expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it('covers openings payload mapping and loadOpenings error callback', () => {
+    const openingAwareComponent = new ChessBoardComponent(globals, {
+      get: () => of([
+        { name: 'Valid Opening', long_algebraic_notation: '1. e2-e4 e7-e5' },
+        { name: 'Invalid Opening', long_algebraic_notation: '' } as any
+      ])
+    } as any);
+
+    expect((openingAwareComponent as any).openingsLoaded).toBeTrue();
+    expect((openingAwareComponent as any).openings.length).toBeGreaterThan(0);
+
+    const errorComponent = new ChessBoardComponent(globals, {
+      get: () => throwError(() => new Error('failed to load'))
+    } as any);
+
+    expect((errorComponent as any).openingsLoaded).toBeTrue();
+  });
+
+  it('shows hanging-piece arrows when an unprotected piece is threatened', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.showHangingPieces(false);
+    expect(Object.keys(globals.boardHelper.arrows).length).toBeGreaterThan(0);
+  });
+
+  it('declares insufficient-material draw for black two knights vs king branch', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[0][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+
+    expect(canDropLike(0, 1, 2, 2)).toBeTrue();
+    component.onDrop(createDropLike(0, 1, 2, 2));
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.debugText).toBe('Draw by insufficient material.');
   });
 });
 
