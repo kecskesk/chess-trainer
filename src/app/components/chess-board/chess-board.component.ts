@@ -1,5 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
-import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
+import { CommonModule } from '@angular/common';
+import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem, DragDropModule } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
 import { ChessArrowDto } from 'src/app/model/chess-arrow.dto';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
@@ -16,11 +17,14 @@ import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.int
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
 import { ChessMoveNotation } from '../../utils/chess-utils';
 import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
+import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
 
 @Component({
   selector: 'app-chess-board',
   templateUrl: './chess-board.component.html',
-  styleUrls: ['./chess-board.component.less']
+  styleUrls: ['./chess-board.component.less'],
+  standalone: true,
+  imports: [CommonModule, DragDropModule, ChessPieceComponent]
 })
 export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   @ViewChild('chessField') chessField: ElementRef;

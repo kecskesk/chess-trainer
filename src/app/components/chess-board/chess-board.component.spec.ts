@@ -1356,8 +1356,7 @@ describe('ChessBoardComponent template drag-enter integration', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ChessBoardComponent],
-      imports: [DragDropModule],
+      imports: [ChessBoardComponent, DragDropModule],
       providers: [ChessBoardStateService, provideHttpClient(), provideHttpClientTesting()],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();

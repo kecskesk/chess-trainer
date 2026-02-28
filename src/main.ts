@@ -1,12 +1,23 @@
 import { enableProdMode } from '@angular/core';
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { bootstrapApplication } from '@angular/platform-browser';
 
-import { AppModule } from './app/app.module';
+import { AppComponent } from './app/app.component';
 import { environment } from './environments/environment';
+import { provideHttpClient } from '@angular/common/http';
+import { ChessRulesService } from './app/services/chess-rules.service';
+import { ChessBoardStateService } from './app/services/chess-board-state.service';
+import { provideRouter } from '@angular/router';
+import { routes } from './app/app-routing.module';
 
 if (environment.production) {
   enableProdMode();
 }
 
-platformBrowserDynamic().bootstrapModule(AppModule)
-  .catch(err => console.error(err));
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideRouter(routes),
+    provideHttpClient(),
+    ChessRulesService,
+    ChessBoardStateService
+  ]
+}).catch(err => console.error(err));
