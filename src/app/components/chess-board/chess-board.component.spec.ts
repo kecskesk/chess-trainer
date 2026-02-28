@@ -1219,6 +1219,29 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     expect(component.resignConfirmColor).toBeNull();
   });
 
+  it('supports undo and redo after resign', () => {
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 4, 3, 4)).toBeTrue();
+    component.onDrop(createDropLike(1, 4, 3, 4));
+
+    const historyBeforeResign = [...chessBoardStateService.history];
+
+    component.resign(ChessColorsEnum.White);
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(component.clockRunning).toBeFalse();
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('0-1 {White resigns}');
+
+    component.undoMoveMock();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
+    expect(component.clockRunning).toBeTrue();
+    expect(chessBoardStateService.history).toEqual(historyBeforeResign);
+
+    component.redoMoveMock();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('0-1 {White resigns}');
+  });
+
   it('supports undo and redo mock navigation over visible history', () => {
     chessBoardStateService.boardHelper.history = {
       '1': 'e2-e4',
@@ -1237,6 +1260,74 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     component.redoMoveMock();
     expect(component.mockHistoryCursor).toBeNull();
     expect(component.getVisibleHistory()).toEqual(['e2-e4', 'e7-e5', 'Ng1-f3']);
+  });
+
+  it('restores castling rights through undo and redo over a king move', () => {
+    expect(component.getDebugCastlingRights()).toBe('KQkq');
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 0, 2, 0)).toBeTrue();
+    component.onDrop(createDropLike(1, 0, 2, 0));
+    expect(canDropLike(7, 4, 6, 4)).toBeTrue();
+    component.onDrop(createDropLike(7, 4, 6, 4));
+    expect(canDropLike(2, 0, 3, 0)).toBeTrue();
+    component.onDrop(createDropLike(2, 0, 3, 0));
+
+    expect(component.getDebugCastlingRights()).toBe('kq');
+
+    component.undoMoveMock();
+    expect(component.getDebugCastlingRights()).toBe('kq');
+
+    component.undoMoveMock();
+    expect(component.getDebugCastlingRights()).toBe('KQkq');
+
+    component.redoMoveMock();
+    expect(component.getDebugCastlingRights()).toBe('kq');
+  });
+
+  it('restores en passant rights through undo and redo', () => {
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(canDropLike(1, 0, 2, 0)).toBeTrue();
+    component.onDrop(createDropLike(1, 0, 2, 0));
+    expect(canDropLike(4, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(4, 3, 3, 3));
+    expect(canDropLike(1, 2, 3, 2)).toBeTrue();
+    component.onDrop(createDropLike(1, 2, 3, 2));
+
+    expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
+
+    component.undoMoveMock();
+    expect(component.getDebugPositionKey().split('|')[2]).toBe('-');
+
+    component.redoMoveMock();
+    expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
+  });
+
+  it('restores promotion state through undo and redo', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    (component as any).initializeSnapshotTimeline();
+
+    expect(canDropLike(1, 0, 0, 0)).toBeTrue();
+    component.onDrop(createDropLike(1, 0, 0, 0));
+    component.promotePiece(ChessPiecesEnum.Queen);
+
+    expect(chessBoardStateService.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
+
+    component.undoMoveMock();
+    expect(chessBoardStateService.field[1][0][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(chessBoardStateService.field[0][0].length).toBe(0);
+    expect(component.getVisibleHistory()).toEqual([]);
+
+    component.redoMoveMock();
+    expect(chessBoardStateService.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
   });
 
   it('toggles board orientation', () => {
@@ -2034,6 +2125,42 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     expect((component as any).getDisplayedOpeningName(opening, ['e2-e4'])).toBe('X');
   });
 
+  it('covers snapshot helper guard and fallback branches', () => {
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+    component.mockHistoryCursor = -1;
+    expect(component.getVisibleHistory()).toEqual([]);
+    component.undoMoveMock();
+    expect(component.mockHistoryCursor).toBe(-1);
+
+    const anyComponent = component as any;
+    const baseSnapshot = anyComponent.captureCurrentSnapshot();
+    anyComponent.moveSnapshots = [baseSnapshot, anyComponent.captureCurrentSnapshot(), anyComponent.captureCurrentSnapshot()];
+    component.mockHistoryCursor = 0;
+    anyComponent.pushSnapshotForCurrentState();
+    expect(anyComponent.moveSnapshots.length).toBe(3);
+    expect(anyComponent.getActiveSnapshotIndex()).toBeGreaterThanOrEqual(0);
+
+    anyComponent.moveSnapshots = [];
+    expect(anyComponent.getActiveSnapshotIndex()).toBe(-1);
+    anyComponent.replaceActiveSnapshot();
+    expect(anyComponent.moveSnapshots.length).toBe(1);
+
+    const savedBoardHelper = chessBoardStateService.boardHelper;
+    chessBoardStateService.boardHelper = null as any;
+    const fallbackSnapshot = anyComponent.captureCurrentSnapshot();
+    expect(fallbackSnapshot.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
+    chessBoardStateService.boardHelper = savedBoardHelper;
+
+    anyComponent.restoreSnapshot(null);
+    const savedService = anyComponent.chessBoardStateService;
+    anyComponent.chessBoardStateService = null;
+    anyComponent.restoreSnapshot(baseSnapshot);
+    anyComponent.chessBoardStateService = savedService;
+
+    expect(anyComponent.cloneField(null)).toEqual([]);
+    expect(anyComponent.clonePosition({ row: 2, col: 3 })).toEqual({ row: 2, col: 3 });
+  });
+
 });
 
 describe('ChessBoardComponent branch coverage helpers (opening recognition edge paths)', () => {
@@ -2340,7 +2467,7 @@ describe('ChessBoardComponent branch coverage helpers (drop validation and openi
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     component.mockHistoryCursor = 0;
     component.undoMoveMock();
-    expect(component.mockHistoryCursor).toBe(0);
+    expect(component.mockHistoryCursor).toBe(-1);
 
     const opening = {
       name: 'Main',

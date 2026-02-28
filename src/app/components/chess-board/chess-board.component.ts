@@ -23,6 +23,29 @@ import { UiText } from '../../constants/ui-text.constants';
 import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
 import { UiTextLoaderService } from '../../services/ui-text-loader.service';
 
+interface IBoardHelperSnapshot {
+  debugText: string;
+  history: {[name: string]: string};
+  colorTurn: ChessColorsEnum;
+  canPromote: number | null;
+  justDidEnPassant: ChessPositionDto | null;
+  justDidCastle: ChessPositionDto | null;
+  gameOver: boolean;
+  checkmateColor: ChessColorsEnum | null;
+}
+
+interface IGameplaySnapshot {
+  field: ChessPieceDto[][][];
+  boardHelper: IBoardHelperSnapshot;
+  repetitionCounts: {[positionKey: string]: number};
+  trackedHistoryLength: number;
+  pendingDrawOfferBy: ChessColorsEnum | null;
+  clockStarted: boolean;
+  clockRunning: boolean;
+  whiteClockMs: number;
+  blackClockMs: number;
+}
+
 @Component({
   selector: 'app-chess-board',
   templateUrl: './chess-board.component.html',
@@ -44,6 +67,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private lastMatePreviewKey = '';
   private repetitionCounts: {[positionKey: string]: number} = {};
   private trackedHistoryLength = -1;
+  private moveSnapshots: IGameplaySnapshot[] = [];
+  private isFinalizingDropState = false;
   chessColors = ChessColorsEnum;
   clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = ChessBoardUiConstants.CLOCK_PRESETS;
   selectedClockPresetLabel = ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL;
@@ -108,6 +133,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (this.uiTextLoaderService) {
       this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
     }
+    this.initializeSnapshotTimeline();
     void this.loadOpeningsFromAssets(this.selectedLocale);
   }
 
@@ -467,6 +493,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     },
     moveFlags: { isHit: boolean; isEP: boolean; castleData: string | null }
   ): void {
+    this.isFinalizingDropState = true;
     const enemyColor = moveContext.srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     const isCheck = this.isKingInCheck(this.chessBoardStateService.field, enemyColor);
     const hasLegalMoves = this.hasAnyLegalMove(this.chessBoardStateService.field, enemyColor);
@@ -497,6 +524,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!isMatch) {
       this.applyDrawRules(hasLegalMoves, isCheck);
     }
+    this.isFinalizingDropState = false;
+    this.pushSnapshotForCurrentState();
   }
 
   private setSubtleDebugReason(reason: string): void {
@@ -724,6 +753,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
             historyEntries[`${historyLength}`] + '=' + ChessBoardStateService.translatePieceNotation(toPiece);
         }
         this.chessBoardStateService.boardHelper.canPromote = null;
+        this.replaceActiveSnapshot();
       }
     }
   }
@@ -953,12 +983,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return [];
     }
     const maxIndex = history.length - 1;
-    const clampedIndex = Math.max(0, Math.min(this.mockHistoryCursor, maxIndex));
+    const clampedIndex = Math.max(-1, Math.min(this.mockHistoryCursor, maxIndex));
+    if (clampedIndex < 0) {
+      return [];
+    }
     return history.slice(0, clampedIndex + 1);
   }
 
   canUndoMoveMock(): boolean {
-    return this.getCurrentVisibleMoveIndex() > 0;
+    return this.getCurrentVisibleMoveIndex() >= 0;
   }
 
   canRedoMoveMock(): boolean {
@@ -975,10 +1008,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
     const currentIndex = this.getCurrentVisibleMoveIndex();
-    if (currentIndex <= 0) {
+    if (currentIndex < 0) {
       return;
     }
     this.mockHistoryCursor = currentIndex - 1;
+    this.restoreSnapshotForVisibleHistory();
   }
 
   redoMoveMock(): void {
@@ -988,12 +1022,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     if (this.mockHistoryCursor >= maxIndex) {
       this.mockHistoryCursor = null;
+      this.restoreSnapshotForVisibleHistory();
       return;
     }
     this.mockHistoryCursor += 1;
     if (this.mockHistoryCursor >= maxIndex) {
       this.mockHistoryCursor = null;
     }
+    this.restoreSnapshotForVisibleHistory();
   }
 
   getMockEvaluationForMove(halfMoveIndex: number): string {
@@ -2378,6 +2414,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.chessBoardStateService.boardHelper.gameOver = false;
     this.chessBoardStateService.boardHelper.checkmateColor = null;
     ChessBoardStateService.BOARD_HELPER = this.chessBoardStateService.boardHelper;
+    this.initializeSnapshotTimeline();
   }
 
   private resetTransientUiState(): void {
@@ -2478,23 +2515,28 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const historyEntries = this.chessBoardStateService.boardHelper.history;
     const historyLength = Object.keys(historyEntries).length;
     const resultSuffix = `${result} {${reason}}`;
+    let changed = false;
 
     if (historyLength < 1) {
       ChessBoardStateService.addHistory(resultSuffix);
-      return;
+      changed = true;
+    } else {
+      const lastMove = historyEntries[`${historyLength}`];
+      if (!lastMove) {
+        historyEntries[`${historyLength}`] = resultSuffix;
+        changed = true;
+      } else if (!/(?:1-0|0-1|1\/2-1\/2)\s*\{/.test(lastMove)) {
+        historyEntries[`${historyLength}`] = `${lastMove} ${resultSuffix}`;
+        changed = true;
+      }
     }
 
-    const lastMove = historyEntries[`${historyLength}`];
-    if (!lastMove) {
-      historyEntries[`${historyLength}`] = resultSuffix;
-      return;
+    if (changed) {
+      if (this.isFinalizingDropState) {
+        return;
+      }
+      this.pushSnapshotForCurrentState();
     }
-
-    if (/(?:1-0|0-1|1\/2-1\/2)\s*\{/.test(lastMove)) {
-      return;
-    }
-
-    historyEntries[`${historyLength}`] = `${lastMove} ${resultSuffix}`;
   }
 
   private startClock(): void {
@@ -2591,7 +2633,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getMaxMoveIndex(): number {
-    return (this.chessBoardStateService.history || []).length - 1;
+    const historyMaxIndex = (this.chessBoardStateService.history || []).length - 1;
+    const snapshotMaxIndex = this.moveSnapshots.length - 2;
+    return Math.max(historyMaxIndex, snapshotMaxIndex);
   }
 
   private getCurrentVisibleMoveIndex(): number {
@@ -2602,7 +2646,131 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (this.mockHistoryCursor === null) {
       return maxIndex;
     }
-    return Math.max(0, Math.min(this.mockHistoryCursor, maxIndex));
+    return Math.max(-1, Math.min(this.mockHistoryCursor, maxIndex));
+  }
+
+  private initializeSnapshotTimeline(): void {
+    this.moveSnapshots = [];
+    this.moveSnapshots.push(this.captureCurrentSnapshot());
+    this.mockHistoryCursor = null;
+  }
+
+  private pushSnapshotForCurrentState(): void {
+    const activeSnapshotIndex = this.getActiveSnapshotIndex();
+    if (activeSnapshotIndex >= 0 && activeSnapshotIndex < this.moveSnapshots.length - 1) {
+      this.moveSnapshots = this.moveSnapshots.slice(0, activeSnapshotIndex + 1);
+    }
+    this.moveSnapshots.push(this.captureCurrentSnapshot());
+    this.mockHistoryCursor = null;
+  }
+
+  private replaceActiveSnapshot(): void {
+    const activeSnapshotIndex = this.getActiveSnapshotIndex();
+    if (activeSnapshotIndex < 0 || activeSnapshotIndex >= this.moveSnapshots.length) {
+      this.initializeSnapshotTimeline();
+      return;
+    }
+    this.moveSnapshots[activeSnapshotIndex] = this.captureCurrentSnapshot();
+  }
+
+  private restoreSnapshotForVisibleHistory(): void {
+    const targetSnapshotIndex = this.getCurrentVisibleMoveIndex() + 1;
+    if (targetSnapshotIndex < 0 || targetSnapshotIndex >= this.moveSnapshots.length) {
+      return;
+    }
+    this.restoreSnapshot(this.moveSnapshots[targetSnapshotIndex]);
+  }
+
+  private getActiveSnapshotIndex(): number {
+    if (this.moveSnapshots.length < 1) {
+      return -1;
+    }
+    if (this.mockHistoryCursor === null) {
+      return this.moveSnapshots.length - 1;
+    }
+    const maxHistoryIndex = this.getMaxMoveIndex();
+    const clampedHistoryIndex = Math.max(-1, Math.min(this.mockHistoryCursor, maxHistoryIndex));
+    return Math.max(0, Math.min(clampedHistoryIndex + 1, this.moveSnapshots.length - 1));
+  }
+
+  private captureCurrentSnapshot(): IGameplaySnapshot {
+    const boardHelper = this.chessBoardStateService.boardHelper;
+    return {
+      field: this.cloneField(this.chessBoardStateService.field),
+      boardHelper: {
+        debugText: boardHelper ? boardHelper.debugText : '',
+        history: boardHelper && boardHelper.history ? { ...boardHelper.history } : {},
+        colorTurn: boardHelper ? boardHelper.colorTurn : ChessColorsEnum.White,
+        canPromote: boardHelper && boardHelper.canPromote !== undefined ? boardHelper.canPromote : null,
+        justDidEnPassant: this.clonePosition(boardHelper ? boardHelper.justDidEnPassant : null),
+        justDidCastle: this.clonePosition(boardHelper ? boardHelper.justDidCastle : null),
+        gameOver: !!(boardHelper && boardHelper.gameOver),
+        checkmateColor: boardHelper ? boardHelper.checkmateColor : null
+      },
+      repetitionCounts: { ...this.repetitionCounts },
+      trackedHistoryLength: this.trackedHistoryLength,
+      pendingDrawOfferBy: this.pendingDrawOfferBy,
+      clockStarted: this.clockStarted,
+      clockRunning: this.clockRunning,
+      whiteClockMs: this.whiteClockMs,
+      blackClockMs: this.blackClockMs
+    };
+  }
+
+  private restoreSnapshot(snapshot: IGameplaySnapshot): void {
+    if (!snapshot || !this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+      return;
+    }
+
+    this.chessBoardStateService.field = this.cloneField(snapshot.field);
+    ChessBoardStateService.CHESS_FIELD = this.chessBoardStateService.field;
+
+    const boardHelper = this.chessBoardStateService.boardHelper;
+    boardHelper.debugText = snapshot.boardHelper.debugText;
+    boardHelper.possibles = {};
+    boardHelper.hits = {};
+    boardHelper.checks = {};
+    boardHelper.arrows = {};
+    boardHelper.history = { ...snapshot.boardHelper.history };
+    boardHelper.colorTurn = snapshot.boardHelper.colorTurn;
+    boardHelper.canPromote = snapshot.boardHelper.canPromote;
+    boardHelper.justDidEnPassant = this.clonePosition(snapshot.boardHelper.justDidEnPassant);
+    boardHelper.justDidCastle = this.clonePosition(snapshot.boardHelper.justDidCastle);
+    boardHelper.gameOver = snapshot.boardHelper.gameOver;
+    boardHelper.checkmateColor = snapshot.boardHelper.checkmateColor;
+    ChessBoardStateService.BOARD_HELPER = boardHelper;
+
+    this.pendingDrawOfferBy = snapshot.pendingDrawOfferBy;
+    this.resignConfirmColor = null;
+    this.repetitionCounts = { ...snapshot.repetitionCounts };
+    this.trackedHistoryLength = snapshot.trackedHistoryLength;
+    this.clockStarted = snapshot.clockStarted;
+    this.whiteClockMs = snapshot.whiteClockMs;
+    this.blackClockMs = snapshot.blackClockMs;
+    if (snapshot.clockRunning) {
+      this.startClock();
+    } else {
+      this.stopClock();
+    }
+  }
+
+  private cloneField(field: ChessPieceDto[][][]): ChessPieceDto[][][] {
+    if (!field) {
+      return [];
+    }
+    return field.map(row => row.map(cell => {
+      if (!(cell && cell[0])) {
+        return [];
+      }
+      return [new ChessPieceDto(cell[0].color, cell[0].piece)];
+    }));
+  }
+
+  private clonePosition(position: ChessPositionDto | null): ChessPositionDto | null {
+    if (!position) {
+      return null;
+    }
+    return { row: position.row, col: position.col };
   }
 
   private getCurrentPieceCount(): number {

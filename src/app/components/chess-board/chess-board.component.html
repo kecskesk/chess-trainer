@@ -355,11 +355,11 @@
     <div class="history-card panel-card">
       <h3 class="section-title">{{uiText.history.sectionTitle}}</h3>
       <div class="icon-actions-row icon-actions-row--compact history-controls">
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canUndoMoveMock()" (click)="undoMoveMock()" [attr.title]="uiText.history.undoTitle" [attr.aria-label]="uiText.history.undoAriaLabel">
+        <button class="icon-action-btn" [disabled]="!canUndoMoveMock()" (click)="undoMoveMock()" [attr.title]="uiText.history.undoTitle" [attr.aria-label]="uiText.history.undoAriaLabel">
           <span class="icon-action-btn__icon">↶</span>
           <span class="icon-action-btn__text">{{uiText.history.undo}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canRedoMoveMock()" (click)="redoMoveMock()" [attr.title]="uiText.history.redoTitle" [attr.aria-label]="uiText.history.redoAriaLabel">
+        <button class="icon-action-btn" [disabled]="!canRedoMoveMock()" (click)="redoMoveMock()" [attr.title]="uiText.history.redoTitle" [attr.aria-label]="uiText.history.redoAriaLabel">
           <span class="icon-action-btn__icon">↷</span>
           <span class="icon-action-btn__text">{{uiText.history.redo}}</span>
         </button>
