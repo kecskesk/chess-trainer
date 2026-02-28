@@ -118,6 +118,29 @@ describe('ChessRulesService castling', () => {
     expect(canCastle).toBeFalse();
   });
 
+});
+
+describe('ChessRulesService castling (black side)', () => {
+  let chessBoardStateService: ChessBoardStateService;
+
+  const clearBoard = (): void => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+  };
+
+  beforeEach(() => {
+    chessBoardStateService = new ChessBoardStateService();
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.history = {};
+    chessBoardStateService.boardHelper.justDidCastle = null;
+    clearBoard();
+    chessBoardStateService.field[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    chessBoardStateService.field[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+  });
+
   it('allows black kingside castling when king and rook are unmoved and path is clear/safe', () => {
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     chessBoardStateService.field[0][7] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
@@ -296,6 +319,15 @@ describe('ChessRulesService branch coverage helpers', () => {
 
     expect(result.isValid).toBeTrue();
     expect(result.errorMessage).toBeNull();
+  });
+
+});
+
+describe('ChessRulesService branch coverage helpers (notation and context)', () => {
+  let chessBoardStateService: ChessBoardStateService;
+
+  beforeEach(() => {
+    chessBoardStateService = new ChessBoardStateService();
   });
 
   it('returns dash castling rights when board is missing', () => {

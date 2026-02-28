@@ -263,6 +263,9 @@ describe('ChessBoardComponent opening recognition - variation scenarios', () => 
     expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): e4-e5');
   });
 
+});
+
+describe('ChessBoardComponent opening recognition - variation scenarios (continued)', () => {
   it('does not repeat Scandinavian main line recommendation after the projected line is fully played', () => {
     (component as any).openingsLoaded = true;
     (component as any).openings = [
@@ -480,6 +483,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
   it('triggers and applies black promotion on back rank', () => {
     chessBoardStateService.field[6][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
     chessBoardStateService.field[7][7] = [];
@@ -569,6 +575,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw by fivefold repetition}');
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (draw rules)', () => {
   it('declares draw by 50-move rule after 100 non-pawn non-capture half-moves', () => {
     clearBoard();
     chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
@@ -620,6 +629,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw by seventy-five-move rule}');
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (draw interactions)', () => {
   [
     {
       name: 'K+N vs K',
@@ -709,6 +721,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(component.pendingDrawOfferBy).toBeNull();
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (result and turn state)', () => {
   it('records white resignation as 0-1 with long result notation', () => {
     component.resign(ChessColorsEnum.White);
 
@@ -811,6 +826,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(hasProtectionArrow).toBeTrue();
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (threat overlays)', () => {
   it('shows cyan threat arrows for unprotected targets in threat view', () => {
     clearBoard();
     chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
@@ -873,6 +891,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
 
 
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (drag preview)', () => {
   it('drag-enter preview marks dangerous move that allows mate in one', () => {
     clearBoard();
     chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
@@ -961,6 +982,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.boardHelper.checks).toEqual({});
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (drag preview and clock state)', () => {
   it('startOrPauseClock handles game-over, pause, and start branches', () => {
     const startClockSpy = spyOn<any>(component, 'startClock').and.callFake(() => undefined);
     const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
@@ -1049,6 +1073,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(component.isCheck(2, 2)).toBeFalse();
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (clock and controls)', () => {
   it('handles resign confirmation workflow wrappers', () => {
     const resignSpy = spyOn(component, 'resign').and.callFake(() => undefined);
 
@@ -1122,6 +1149,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.boardHelper.arrows).toEqual({});
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () => {
   it('returns move class based on suggested move notation', () => {
     expect(component.getSuggestedMoveClass('Qh5+')).toBe('suggested-move--check');
     expect(component.getSuggestedMoveClass('Nxe5')).toBe('suggested-move--capture');
@@ -1218,6 +1248,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(knightCaptureNotation).toContain('x');
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (position and analysis)', () => {
   it('covers position-key history fallback when boardHelper is unavailable', () => {
     const savedHelper = chessBoardStateService.boardHelper;
     (chessBoardStateService as any).boardHelper = null;
@@ -1322,6 +1355,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.field[7][4][0].piece).toBe(ChessPiecesEnum.King);
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () => {
   it('handles time forfeit and records result suffix', () => {
     chessBoardStateService.boardHelper.gameOver = false;
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
@@ -1402,6 +1438,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(component.activeTool).toBe('hanging-enemy');
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', () => {
   it('covers history fallback and increment guard branches', () => {
     spyOnProperty(chessBoardStateService, 'history', 'get').and.returnValue(undefined as any);
     component.mockHistoryCursor = null;
@@ -1476,6 +1515,9 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(clearIntervalSpy).toHaveBeenCalled();
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (startup and loading)', () => {
   it('covers openings payload mapping and loadOpenings error callback', () => {
     const openingAwareComponent = new ChessBoardComponent(chessBoardStateService, {
       get: () => of([

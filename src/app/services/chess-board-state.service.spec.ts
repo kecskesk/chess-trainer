@@ -1,6 +1,5 @@
 import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessArrowDto } from '../model/chess-arrow.dto';
-import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 
