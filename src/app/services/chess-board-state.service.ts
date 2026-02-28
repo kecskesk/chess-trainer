@@ -2,14 +2,15 @@ import { Injectable } from '@angular/core';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
 import { ChessArrowDto } from '../model/chess-arrow.dto';
-import { ChessColorsEnum } from '../model/chess.colors';
-import { ChessPiecesEnum } from '../model/chess.pieces';
+import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { ChessPositionDto } from '../model/chess-position.dto';
-import { IBoardHighlight } from '../model/board-highlight.interface';
-import { IVisualizationArrow } from '../model/visualization-arrow.interface';
+import { IBoardHighlight } from '../model/interfaces/board-highlight.interface';
+import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
+import { ChessConstants, VisualizationConstants } from '../constants/chess.constants';
 
 @Injectable()
-export class GlobalVariablesService {
+export class ChessBoardStateService {
   public static BOARD_HELPER: ChessBoardHelperDto = null;
   public static CHESS_FIELD: ChessPieceDto[][][] = [];
   boardHelper = new ChessBoardHelperDto(
@@ -73,8 +74,8 @@ export class GlobalVariablesService {
   ];
 
   constructor() {
-    GlobalVariablesService.CHESS_FIELD = this.field;
-    GlobalVariablesService.BOARD_HELPER = this.boardHelper;
+    ChessBoardStateService.CHESS_FIELD = this.field;
+    ChessBoardStateService.BOARD_HELPER = this.boardHelper;
   }
 
   get possibles(): ChessPositionDto[] {
@@ -109,11 +110,7 @@ export class GlobalVariablesService {
       console.warn('Attempted to add null/undefined possible move');
       return;
     }
-    if (!this.BOARD_HELPER) {
-      console.error('BOARD_HELPER is not initialized');
-      return;
-    }
-    this.BOARD_HELPER.possibles[`${newPossible.row}${newPossible.col}`] = newPossible;
+    this.addPositionToCollection('possibles', newPossible);
   }
 
   static addHit(newHit: ChessPositionDto): void {
@@ -121,11 +118,7 @@ export class GlobalVariablesService {
       console.warn('Attempted to add null/undefined hit position');
       return;
     }
-    if (!this.BOARD_HELPER) {
-      console.error('BOARD_HELPER is not initialized');
-      return;
-    }
-    this.BOARD_HELPER.hits[`${newHit.row}${newHit.col}`] = newHit;
+    this.addPositionToCollection('hits', newHit);
   }
 
   static addCheck(newCheck: ChessPositionDto): void {
@@ -133,11 +126,7 @@ export class GlobalVariablesService {
       console.warn('Attempted to add null/undefined check position');
       return;
     }
-    if (!this.BOARD_HELPER) {
-      console.error('BOARD_HELPER is not initialized');
-      return;
-    }
-    this.BOARD_HELPER.checks[`${newCheck.row}${newCheck.col}`] = newCheck;
+    this.addPositionToCollection('checks', newCheck);
   }
 
   static addHighlight(highlight: IBoardHighlight): void {
@@ -146,13 +135,13 @@ export class GlobalVariablesService {
     }
     switch (highlight.type) {
       case 'possible':
-        GlobalVariablesService.addPossible({ row: highlight.row, col: highlight.col });
+        ChessBoardStateService.addPossible({ row: highlight.row, col: highlight.col });
         break;
       case 'capture':
-        GlobalVariablesService.addHit({ row: highlight.row, col: highlight.col });
+        ChessBoardStateService.addHit({ row: highlight.row, col: highlight.col });
         break;
       case 'check':
-        GlobalVariablesService.addCheck({ row: highlight.row, col: highlight.col });
+        ChessBoardStateService.addCheck({ row: highlight.row, col: highlight.col });
         break;
       default:
         break;
@@ -164,8 +153,7 @@ export class GlobalVariablesService {
       console.warn('Attempted to add null/undefined arrow');
       return;
     }
-    if (!this.BOARD_HELPER) {
-      console.error('BOARD_HELPER is not initialized');
+    if (!this.ensureBoardHelperInitialized()) {
       return;
     }
     const arrowKey = `${arrowParam.left}${arrowParam.top}${arrowParam.rotate}` +
@@ -173,48 +161,64 @@ export class GlobalVariablesService {
     this.BOARD_HELPER.arrows[arrowKey] = arrowParam;
   }
 
+  private static ensureBoardHelperInitialized(): boolean {
+    if (this.BOARD_HELPER) {
+      return true;
+    }
+    console.error('BOARD_HELPER is not initialized');
+    return false;
+  }
+
+  private static addPositionToCollection(
+    collectionName: 'possibles' | 'hits' | 'checks',
+    position: ChessPositionDto
+  ): void {
+    if (!this.ensureBoardHelperInitialized()) {
+      return;
+    }
+    this.BOARD_HELPER[collectionName][`${position.row}${position.col}`] = position;
+  }
+
   static createArrowFromVisualization(visualizationArrow: IVisualizationArrow): void {
-    const boxSize = 76;
-    const midX = (((visualizationArrow.fromCol + visualizationArrow.toCol) / 2) - 0.5) * boxSize;
-    const midY = (8.5 - ((visualizationArrow.fromRow + visualizationArrow.toRow) / 2)) * boxSize;
+    const halfSquareOffset = 0.5;
+    const boardCenterOffset = 8.5;
+    const midX = (((visualizationArrow.fromCol + visualizationArrow.toCol) / 2) - halfSquareOffset) * VisualizationConstants.BOX_SIZE_PX;
+    const midY = (boardCenterOffset - ((visualizationArrow.fromRow + visualizationArrow.toRow) / 2)) * VisualizationConstants.BOX_SIZE_PX;
 
     const stepRow = visualizationArrow.fromRow - visualizationArrow.toRow;
     const stepCol = visualizationArrow.toCol - visualizationArrow.fromCol;
     const deg = Math.atan2(stepRow, stepCol) * (180 / Math.PI);
-    const distancePx = Math.sqrt((stepCol * boxSize) * (stepCol * boxSize) + (stepRow * boxSize) * (stepRow * boxSize));
-    const thicknessPx = Math.max(2, Math.min(8, 2 + (visualizationArrow.intensity * 8)));
+    const distancePx = Math.sqrt(
+      (stepCol * VisualizationConstants.BOX_SIZE_PX) * (stepCol * VisualizationConstants.BOX_SIZE_PX) +
+      (stepRow * VisualizationConstants.BOX_SIZE_PX) * (stepRow * VisualizationConstants.BOX_SIZE_PX)
+    );
+    const thicknessPx = Math.max(
+      VisualizationConstants.ARROW_MIN_THICKNESS,
+      Math.min(
+        VisualizationConstants.ARROW_MAX_THICKNESS,
+        VisualizationConstants.ARROW_MIN_THICKNESS + (visualizationArrow.intensity * VisualizationConstants.ARROW_MAX_THICKNESS)
+      )
+    );
 
     const arTop = `${midY}px`;
     const arLeft = `${midX}px`;
     const arRot = `${deg}deg`;
-    const arLength = `${Math.max(20, distancePx)}px`;
+    const arLength = `${Math.max(VisualizationConstants.ARROW_MIN_LENGTH, distancePx)}px`;
     const arThickness = `${thicknessPx}px`;
     const newArrow = new ChessArrowDto(
       arTop,
       arLeft,
       arRot,
-      GlobalVariablesService.normalizeVisualizationArrowColor(visualizationArrow.color),
+      ChessBoardStateService.normalizeVisualizationArrowColor(visualizationArrow.color),
       arLength,
       arThickness
     );
-    GlobalVariablesService.addArrow(newArrow);
+    ChessBoardStateService.addArrow(newArrow);
   }
 
   private static normalizeVisualizationArrowColor(color: string): IVisualizationArrow['color'] {
-    if (color === 'red') {
-      return 'red';
-    }
-    if (color === 'green') {
-      return 'green';
-    }
-    if (color === 'yellow') {
-      return 'yellow';
-    }
-    if (color === 'gold') {
-      return 'gold';
-    }
-    if (color === 'cyan') {
-      return 'cyan';
+    if (VisualizationConstants.SUPPORTED_ARROW_COLORS.indexOf(color as IVisualizationArrow['color']) >= 0) {
+      return color as IVisualizationArrow['color'];
     }
     return 'blue';
   }
@@ -227,11 +231,9 @@ export class GlobalVariablesService {
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,
                     piece: ChessPiecesEnum, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
-    const pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
-    // A = 0 - H = 7
-    const letterChar = String.fromCharCode('a'.charCodeAt(0) + targetCol);
-    const letterCharSrc = String.fromCharCode('a'.charCodeAt(0) + srcCol);
-    // Flip table count bottom-up
+    const pieceNotation = ChessBoardStateService.translatePieceNotation(piece);
+    const letterChar = ChessBoardStateService.toFileChar(targetCol);
+    const letterCharSrc = ChessBoardStateService.toFileChar(srcCol);
     const numberChar = (8 - targetRow);
     const numberCharSrc = (8 - srcRow);
     if (castleData) {
@@ -254,8 +256,7 @@ export class GlobalVariablesService {
   }
 
   static pieceIsInWay(targetRow: number, targetCol: number, srcRow: number, srcCol: number): boolean {
-    // Validate board is initialized
-    if (!GlobalVariablesService.CHESS_FIELD || GlobalVariablesService.CHESS_FIELD.length === 0) {
+    if (!ChessBoardStateService.CHESS_FIELD || ChessBoardStateService.CHESS_FIELD.length === 0) {
       console.error('CHESS_FIELD is not initialized');
       return false;
     }
@@ -263,7 +264,6 @@ export class GlobalVariablesService {
     const stepRow = targetRow - srcRow;
     const stepCol = targetCol - srcCol;
 
-    // If no movement, no piece can be in the way
     if (stepRow === 0 && stepCol === 0) {
       return false;
     }
@@ -278,14 +278,16 @@ export class GlobalVariablesService {
       nextStepCol += stepCol > 0 ? 1 : -1;
     }
 
-    let cntr = 0;
+    let iterationCount = 0;
     while (nextStepRow !== targetRow || nextStepCol !== targetCol) {
-      // Validate indices are within bounds
-      if (nextStepRow < 0 || nextStepRow > 7 || nextStepCol < 0 || nextStepCol > 7) {
+      if (
+        nextStepRow < ChessConstants.MIN_INDEX || nextStepRow > ChessConstants.MAX_INDEX ||
+        nextStepCol < ChessConstants.MIN_INDEX || nextStepCol > ChessConstants.MAX_INDEX
+      ) {
         return false;
       }
 
-      const cell = GlobalVariablesService.CHESS_FIELD[nextStepRow] && GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol];
+      const cell = ChessBoardStateService.CHESS_FIELD[nextStepRow] && ChessBoardStateService.CHESS_FIELD[nextStepRow][nextStepCol];
       if (!cell) {
         return false;
       }
@@ -301,13 +303,16 @@ export class GlobalVariablesService {
         nextStepCol += stepCol > 0 ? 1 : -1;
       }
 
-      cntr++;
-      // Safety check to prevent infinite loops
-      if (cntr > 8) {
+      iterationCount++;
+      if (iterationCount > VisualizationConstants.MAX_PATH_ITERATIONS) {
         console.warn('Infinite loop detected in pieceIsInWay');
         return false;
       }
     }
     return false;
+  }
+
+  private static toFileChar(col: number): string {
+    return String.fromCharCode('a'.charCodeAt(0) + col);
   }
 }

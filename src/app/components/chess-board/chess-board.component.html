@@ -23,7 +23,7 @@
     <div class="board-stack">
       <div class="outer-container board-shell" [class.board-shell--flipped]="isBoardFlipped">
         <div class="container" #chessField>
-          <div #row class="field-row" *ngFor="let rowX of globalVariablesService.field; index as idxX">
+          <div #row class="field-row" *ngFor="let rowX of chessBoardStateService.field; index as idxX">
             <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
               <div class="piece-box">
                 <div class="square"
@@ -44,7 +44,7 @@
                                      cdkDrag
                                      [cdkDragData]="cellY[0]"
                                      [cdkDragPreviewClass]="isBoardFlipped ? 'drag-preview-flipped' : ''"
-                                     [cdkDragDisabled]="globalVariablesService.boardHelper.gameOver || !cellY || !cellY[0] || cellY[0].color !== globalVariablesService.boardHelper.colorTurn"
+                                     [cdkDragDisabled]="chessBoardStateService.boardHelper.gameOver || !cellY || !cellY[0] || cellY[0].color !== chessBoardStateService.boardHelper.colorTurn"
                                      (cdkDragStarted)="onDragStarted()"
                                      (cdkDragEnded)="onDragEnded()"></app-chess-piece>
                   </div>
@@ -54,7 +54,7 @@
             </div>
           </div>
         </div>
-        <div class="arrowPointer" *ngFor="let arrow of globalVariablesService.arrows; index as arrowIdx"
+        <div class="arrowPointer" *ngFor="let arrow of chessBoardStateService.arrows; index as arrowIdx"
              [style.top]="arrow.top" [style.left]="arrow.left" [style.color]="arrow.color"
              [style.width]="arrow.length"
              [style.--arrow-thickness]="arrow.thickness"
@@ -65,13 +65,12 @@
       </div>
 
       <details class="position-key-panel"
-               *ngIf="globalVariablesService.boardHelper"
+               *ngIf="chessBoardStateService.boardHelper"
                [open]="isDebugPanelOpen"
                (toggle)="onDebugPanelToggle($event)">
         <summary>Debug & Position key</summary>
-        <div class="position-key-value" *ngIf="globalVariablesService.boardHelper.debugText">
-          {{globalVariablesService.boardHelper.debugText}}
-        </div>
+        <div class="position-key-value" *ngIf="chessBoardStateService.boardHelper.debugText"
+             [textContent]="chessBoardStateService.boardHelper.debugText"></div>
         <div class="position-key-value">{{getDebugPositionKey()}}</div>
       </details>
     </div>
@@ -133,7 +132,7 @@
       </h3>
       <div class="icon-actions-row icon-actions-row--compact icon-actions-row--status">
         <button class="icon-action-btn"
-          (click)="showPossibleMoves(globalVariablesService.boardHelper.colorTurn)"
+          (click)="showPossibleMoves(chessBoardStateService.boardHelper.colorTurn)"
           title="Show possible moves"
           aria-label="Show possible moves">
           <span class="icon-action-btn__icon">👁</span>
@@ -221,7 +220,7 @@
       </div>
     </div>
 
-    <div class="tool-card panel-card panel-card--wide" *ngIf="globalVariablesService.boardHelper.canPromote !== null">
+    <div class="tool-card panel-card panel-card--wide" *ngIf="chessBoardStateService.boardHelper.canPromote !== null">
       <h3 class="section-title">Promote</h3>
       <div class="icon-actions-row promote-row">
         <button class="icon-action-btn" (click)="promotePiece('rook')" title="Promote to rook" aria-label="Promote to rook">
@@ -354,7 +353,7 @@
       <h3 class="section-title">CCT</h3>
       <div class="cct-row cct-row--capture" title="Captures: forcing moves that win or trade material.">
         <span class="cct-row__icon" title="Captures">✕</span>
-        <ng-container *ngIf="getCctRecommendations('captures') as captureRecs">
+        <ng-container *ngIf="getCctRecommendations(cctCategory.Captures) as captureRecs">
               <span class="cct-step"
                 *ngFor="let rec of captureRecs"
                 [title]="rec.tooltip"
@@ -365,7 +364,7 @@
       </div>
       <div class="cct-row cct-row--check" title="Checks: direct king pressure that forces responses.">
         <span class="cct-row__icon" title="Checks">♔</span>
-        <ng-container *ngIf="getCctRecommendations('checks') as checkRecs">
+        <ng-container *ngIf="getCctRecommendations(cctCategory.Checks) as checkRecs">
               <span class="cct-step"
                 *ngFor="let rec of checkRecs"
                 [title]="rec.tooltip"
@@ -376,7 +375,7 @@
       </div>
       <div class="cct-row cct-row--threat" title="Threats: moves that create tactical pressure next move.">
         <span class="cct-row__icon" title="Threats">⚠</span>
-        <ng-container *ngIf="getCctRecommendations('threats') as threatRecs">
+        <ng-container *ngIf="getCctRecommendations(cctCategory.Threats) as threatRecs">
               <span class="cct-step"
                 *ngFor="let rec of threatRecs"
                 [title]="rec.tooltip"
@@ -389,3 +388,4 @@
 
   </section>
 </div>
+

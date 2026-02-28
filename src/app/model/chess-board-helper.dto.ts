@@ -1,5 +1,5 @@
 import { ChessArrowDto } from './chess-arrow.dto';
-import { ChessColorsEnum } from './chess.colors';
+import { ChessColorsEnum } from './enums/chess-colors.enum';
 import { ChessPositionDto } from './chess-position.dto';
 
 export class ChessBoardHelperDto {

@@ -4,11 +4,12 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "lint": "ng lint",
     "build": "ng build",
     "build:prod": "ng build --configuration production",
     "firebase:deploy": "npm run build:prod && npx firebase-tools deploy --only hosting",
     "firebase:preview": "npm run build:prod && npx firebase-tools hosting:channel:deploy preview",
-    "test": "ng test"
+    "test": "npm run lint && ng test"
   },
   "private": true,
   "dependencies": {
@@ -27,11 +28,18 @@
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "~18.2.21",
+    "@angular-eslint/builder": "^18.4.3",
+    "@angular-eslint/eslint-plugin": "^18.4.3",
+    "@angular-eslint/eslint-plugin-template": "^18.4.3",
+    "@angular-eslint/template-parser": "^18.4.3",
     "@angular/cli": "~18.2.21",
     "@angular/compiler-cli": "~18.2.14",
     "@angular/language-service": "~18.2.14",
     "@types/jasmine": "~5.1.7",
     "@types/node": "^18.19.76",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
     "jasmine-core": "~5.2.0",
     "karma": "~6.4.4",
     "karma-chrome-launcher": "~3.2.0",

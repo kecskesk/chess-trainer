@@ -1,14 +1,18 @@
 import { ChessBoardComponent } from './chess-board.component';
-import { GlobalVariablesService } from '../../services/global-variables.service';
-import { ChessColorsEnum } from '../../model/chess.colors';
-import { ChessPiecesEnum } from '../../model/chess.pieces';
+import { ChessBoardStateService } from '../../services/chess-board-state.service';
+import { ChessRulesService } from '../../services/chess-rules.service';
+import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { of, throwError } from 'rxjs';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('ChessBoardComponent move sequence integration', () => {
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
   let component: ChessBoardComponent;
 
   const createDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
@@ -63,9 +67,313 @@ describe('ChessBoardComponent move sequence integration', () => {
   };
 
   beforeEach(() => {
-    globals = new GlobalVariablesService();
-    component = new ChessBoardComponent(globals);
+    globals = new ChessBoardStateService();
+    component = new ChessBoardComponent(globals, {
+      get: () => of([])
+    } as any);
     globals.boardHelper.colorTurn = ChessColorsEnum.White;
+  });
+
+  it('updates opening recognition on first half-move when opening line has one step', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Pawn Opening',
+        steps: ['d2-d4'],
+        raw: {
+          name: 'Queen\'s Pawn Opening',
+          long_algebraic_notation: '1. d2-d4'
+        }
+      }
+    ];
+
+    expect(component.getMockOpeningRecognition()).toBe('Waiting for opening line...');
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Pawn Opening');
+  });
+
+  it('prefers a complete one-step opening over a longer partial prefix match', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Gambit',
+        steps: ['d2-d4', 'd7-d5', 'c2-c4'],
+        raw: {
+          name: 'Queen\'s Gambit',
+          long_algebraic_notation: '1. d2-d4 d7-d5 2. c2-c4'
+        }
+      },
+      {
+        name: 'Queen\'s Pawn Opening',
+        steps: ['d2-d4'],
+        raw: {
+          name: 'Queen\'s Pawn Opening',
+          long_algebraic_notation: '1. d2-d4'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Pawn Opening');
+    expect(globals.boardHelper.debugText).toContain('Opening: Queen\'s Pawn Opening');
+  });
+
+  it('shows matched sequence and next expected move for partial opening match', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Gambit',
+        steps: ['d2-d4', 'd7-d5', 'c2-c4'],
+        raw: {
+          name: 'Queen\'s Gambit',
+          long_algebraic_notation: '1. d2-d4 d7-d5 2. c2-c4',
+          suggested_best_response_name: 'Queen\'s Gambit Declined',
+          suggested_best_response_notation_step: '2... e7-e6',
+          short_description: 'A fundamental d4 opening where White offers a pawn.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 2/3');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): c2-c4');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (Black after): Queen\'s Gambit Declined (2... e7-e6)');
+  });
+
+  it('does not repeat suggested response after it has been played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Gambit',
+        steps: ['d2-d4', 'd7-d5', 'c2-c4'],
+        raw: {
+          name: 'Queen\'s Gambit',
+          long_algebraic_notation: '1. d2-d4 d7-d5 2. c2-c4',
+          suggested_best_response_name: 'Queen\'s Gambit Declined',
+          suggested_best_response_notation_step: '2... e7-e6',
+          short_description: 'A fundamental d4 opening where White offers a pawn.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
+    component.onDrop(createDropLike(6, 2, 4, 2));
+    expect(canDropLike(1, 4, 2, 4)).toBeTrue();
+    component.onDrop(createDropLike(1, 4, 2, 4));
+
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit Declined');
+    expect(globals.boardHelper.debugText).toContain('Opening: Queen\'s Gambit Declined');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): —');
+    expect(globals.boardHelper.debugText).not.toContain('Book recommendation (Black now): Queen\'s Gambit Declined (2... e7-e6)');
+  });
+
+  it('extends Dutch line with first variation move and labels the opening as Dutch Defense: Classical Variation', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Dutch Defense',
+        steps: ['d2-d4', 'f7-f5'],
+        raw: {
+          name: 'Dutch Defense',
+          long_algebraic_notation: '1. d2-d4 f7-f5',
+          suggested_best_response_name: 'Classical Variation',
+          suggested_best_response_notation_step: '2. c2-c4 Ng8-f6 3. g2-g3',
+          short_description: 'An aggressive defense aiming for kingside chances.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(canDropLike(1, 5, 3, 5)).toBeTrue();
+    component.onDrop(createDropLike(1, 5, 3, 5));
+    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
+    component.onDrop(createDropLike(6, 2, 4, 2));
+
+    expect(component.getMockOpeningRecognition()).toBe('Dutch Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Opening: Dutch Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. d2-d4 f7-f5 2. c2-c4 Ng8-f6 3. g2-g3');
+  });
+
+  it('labels Alekhine line as Alekhine\'s Defense: Four Pawns Attack when the suggested move is played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Alekhine\'s Defense',
+        steps: ['e2-e4', 'Ng8-f6'],
+        raw: {
+          name: 'Alekhine\'s Defense',
+          long_algebraic_notation: '1. e2-e4 Ng8-f6',
+          suggested_best_response_name: 'Four Pawns Attack',
+          suggested_best_response_notation_step: '2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4',
+          short_description: 'A provocative defense inviting White to overextend the center.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(0, 6, 2, 5)).toBeTrue();
+    component.onDrop(createDropLike(0, 6, 2, 5));
+    expect(canDropLike(4, 4, 3, 4)).toBeTrue();
+    component.onDrop(createDropLike(4, 4, 3, 4));
+
+    expect(component.getMockOpeningRecognition()).toBe('Alekhine\'s Defense: Four Pawns Attack');
+    expect(globals.boardHelper.debugText).toContain('Opening: Alekhine\'s Defense: Four Pawns Attack');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/7');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 Ng8-f6 2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4');
+  });
+
+  it('shows prefixed response name in recommendation text for Alekhine\'s Defense', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Alekhine\'s Defense',
+        steps: ['e2-e4', 'Ng8-f6'],
+        raw: {
+          name: 'Alekhine\'s Defense',
+          long_algebraic_notation: '1. e2-e4 Ng8-f6',
+          suggested_best_response_name: 'Four Pawns Attack',
+          suggested_best_response_notation_step: '2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4',
+          short_description: 'A provocative defense inviting White to overextend the center.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(0, 6, 2, 5)).toBeTrue();
+    component.onDrop(createDropLike(0, 6, 2, 5));
+
+    component.getMockOpeningRecognition();
+
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): e4-e5');
+  });
+
+  it('does not repeat Scandinavian main line recommendation after the projected line is fully played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Scandinavian Defense',
+        steps: ['e2-e4', 'd7-d5'],
+        raw: {
+          name: 'Scandinavian Defense',
+          long_algebraic_notation: '1. e2-e4 d7-d5',
+          suggested_best_response_name: 'Main Line',
+          suggested_best_response_notation_step: '2. e4xd5 Qd8xd5',
+          short_description: 'An immediate central challenge where Black activates the queen.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+    expect(canDropLike(4, 4, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(4, 4, 3, 3));
+    expect(canDropLike(0, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(0, 3, 3, 3));
+
+    component.getMockOpeningRecognition();
+
+    expect(globals.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 4/4');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 d7-d5 2. e4xd5 Qd8xd5');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): —');
+  });
+
+  it('does not show redundant white-after recommendation while projecting Scandinavian main line', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Scandinavian Defense',
+        steps: ['e2-e4', 'd7-d5'],
+        raw: {
+          name: 'Scandinavian Defense',
+          long_algebraic_notation: '1. e2-e4 d7-d5',
+          suggested_best_response_name: 'Main Line',
+          suggested_best_response_notation_step: '2. e4xd5 Qd8xd5',
+          short_description: 'An immediate central challenge where Black activates the queen.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+    expect(canDropLike(4, 4, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(4, 4, 3, 3));
+
+    component.getMockOpeningRecognition();
+
+    expect(globals.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/4');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (Black now): Qd8xd5');
+    expect(globals.boardHelper.debugText).not.toContain('Book recommendation (White after):');
+  });
+
+  it('keeps Caro-Kann as Classical Variation before e5 is played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Caro-Kann Defense',
+        steps: ['e2-e4', 'c7-c6'],
+        raw: {
+          name: 'Caro-Kann Defense',
+          long_algebraic_notation: '1. e2-e4 c7-c6',
+          suggested_best_response_name: 'Classical Variation',
+          suggested_best_response_notation_step: '2. d2-d4 d7-d5 3. Nb1-c3',
+          short_description: 'A solid defense known for its strong pawn structure.'
+        }
+      },
+      {
+        name: 'Caro-Kann Defense: Advance Variation',
+        steps: ['e2-e4', 'c7-c6', 'd2-d4', 'd7-d5', 'e4-e5'],
+        raw: {
+          name: 'Caro-Kann Defense: Advance Variation',
+          long_algebraic_notation: '1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. e4-e5',
+          suggested_best_response_name: 'Main Line',
+          suggested_best_response_notation_step: '3... Bc8-f5',
+          short_description: 'White gains space while Black targets the d4 chain base.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 2, 2, 2)).toBeTrue();
+    component.onDrop(createDropLike(1, 2, 2, 2));
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
+
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 4/5');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
   });
 
   it('supports d2d4, e7e5, and d4xe5 with capture highlight', () => {
@@ -583,12 +891,407 @@ describe('ChessBoardComponent move sequence integration', () => {
     delete globals.boardHelper.hits['44'];
     expect(component.getSquareHighlightClass(4, 4)).toBe('shaded');
   });
+
+  it('writes pointer-down debug reasons for game over, empty square, and wrong turn', () => {
+    globals.boardHelper.gameOver = true;
+    component.onSquarePointerDown([] as any);
+    expect(globals.boardHelper.debugText).toBe('· Game is over. Start a new game to move pieces.');
+
+    globals.boardHelper.gameOver = false;
+    component.onSquarePointerDown([] as any);
+    expect(globals.boardHelper.debugText).toBe('· No piece on this square.');
+
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    component.onSquarePointerDown([{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any]);
+    expect(globals.boardHelper.debugText).toBe('· It is white\'s move.');
+  });
+
+  it('resets drag preview state when drag ends', () => {
+    component.isDragPreviewActive = true;
+    component.mateInOneTargets = { '11': true };
+    component.mateInOneBlunderTargets = { '22': true };
+    (component as any).lastMatePreviewKey = '12-34';
+
+    component.onDragEnded();
+
+    expect(component.isDragPreviewActive).toBeFalse();
+    expect(component.mateInOneTargets).toEqual({});
+    expect(component.mateInOneBlunderTargets).toEqual({});
+    expect((component as any).lastMatePreviewKey).toBe('');
+  });
+
+  it('startOrPauseClock handles game-over, pause, and start branches', () => {
+    const startClockSpy = spyOn<any>(component, 'startClock').and.callFake(() => undefined);
+    const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+
+    globals.boardHelper.gameOver = true;
+    component.clockRunning = false;
+    component.startOrPauseClock();
+    expect(startClockSpy).not.toHaveBeenCalled();
+    expect(stopClockSpy).not.toHaveBeenCalled();
+
+    globals.boardHelper.gameOver = false;
+    component.clockRunning = true;
+    component.startOrPauseClock();
+    expect(stopClockSpy).toHaveBeenCalled();
+
+    component.clockRunning = false;
+    component.clockStarted = false;
+    component.startOrPauseClock();
+    expect(startClockSpy).toHaveBeenCalled();
+    expect(component.clockStarted).toBeTrue();
+  });
+
+  it('resetClock applies selected preset and ignores unknown label', () => {
+    const applyTimeControlSpy = spyOn(component, 'applyTimeControl').and.callThrough();
+
+    component.selectedClockPresetLabel = '3+2';
+    component.resetClock();
+    expect(applyTimeControlSpy).toHaveBeenCalledWith(3, 2, '3+2');
+
+    applyTimeControlSpy.calls.reset();
+    component.selectedClockPresetLabel = 'does-not-exist';
+    component.resetClock();
+    expect(applyTimeControlSpy).not.toHaveBeenCalled();
+  });
+
+  it('tickClock decrements active side and triggers time forfeit at zero', () => {
+    const dateNowSpy = spyOn(Date, 'now').and.returnValue(1200);
+    const forfeitSpy = spyOn<any>(component, 'handleTimeForfeit').and.callFake(() => undefined);
+    spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+
+    globals.boardHelper.gameOver = false;
+    component.clockRunning = true;
+    component.clockStarted = true;
+    (component as any).lastClockTickAt = 1000;
+
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    component.whiteClockMs = 100;
+    (component as any).tickClock();
+    expect(component.whiteClockMs).toBe(0);
+    expect(forfeitSpy).toHaveBeenCalledWith(ChessColorsEnum.White);
+
+    forfeitSpy.calls.reset();
+    dateNowSpy.and.returnValue(1300);
+    (component as any).lastClockTickAt = 1200;
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    component.blackClockMs = 500;
+    (component as any).tickClock();
+    expect(component.blackClockMs).toBe(400);
+    expect(forfeitSpy).not.toHaveBeenCalled();
+  });
+
+  it('tickClock stops immediately when clock is not active', () => {
+    const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+
+    component.clockRunning = false;
+    component.clockStarted = true;
+    globals.boardHelper.gameOver = false;
+
+    (component as any).tickClock();
+    expect(stopClockSpy).toHaveBeenCalled();
+  });
+
+  it('toggles debug panel and info overlay state', () => {
+    component.onDebugPanelToggle({ target: { open: true } } as any);
+    expect(component.isDebugPanelOpen).toBeTrue();
+
+    component.onDebugPanelToggle({ target: { open: false } } as any);
+    expect(component.isDebugPanelOpen).toBeFalse();
+
+    expect(component.isInfoOverlayOpen).toBeFalse();
+    component.toggleInfoOverlay();
+    expect(component.isInfoOverlayOpen).toBeTrue();
+    component.toggleInfoOverlay();
+    expect(component.isInfoOverlayOpen).toBeFalse();
+  });
+
+  it('reads check highlight through isCheck helper', () => {
+    globals.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
+    expect(component.isCheck(3, 3)).toBeTrue();
+    expect(component.isCheck(2, 2)).toBeFalse();
+  });
+
+  it('handles resign confirmation workflow wrappers', () => {
+    const resignSpy = spyOn(component, 'resign').and.callFake(() => undefined);
+
+    component.openResignConfirm(ChessColorsEnum.White);
+    expect(component.resignConfirmColor).toBe(ChessColorsEnum.White);
+
+    component.cancelResignConfirm();
+    expect(component.resignConfirmColor).toBeNull();
+
+    component.confirmResign();
+    expect(resignSpy).not.toHaveBeenCalled();
+
+    component.openResignConfirm(ChessColorsEnum.Black);
+    component.confirmResign();
+    expect(resignSpy).toHaveBeenCalledWith(ChessColorsEnum.Black);
+    expect(component.resignConfirmColor).toBeNull();
+  });
+
+  it('supports undo and redo mock navigation over visible history', () => {
+    globals.boardHelper.history = {
+      '1': 'e2-e4',
+      '2': 'e7-e5',
+      '3': 'Ng1-f3'
+    } as any;
+
+    expect(component.canUndoMoveMock()).toBeTrue();
+    expect(component.canRedoMoveMock()).toBeFalse();
+
+    component.undoMoveMock();
+    expect(component.mockHistoryCursor).toBe(1);
+    expect(component.canRedoMoveMock()).toBeTrue();
+    expect(component.getVisibleHistory()).toEqual(['e2-e4', 'e7-e5']);
+
+    component.redoMoveMock();
+    expect(component.mockHistoryCursor).toBeNull();
+    expect(component.getVisibleHistory()).toEqual(['e2-e4', 'e7-e5', 'Ng1-f3']);
+  });
+
+  it('toggles board orientation', () => {
+    expect(component.isBoardFlipped).toBeFalse();
+    component.toggleBoardFlip();
+    expect(component.isBoardFlipped).toBeTrue();
+    component.toggleBoardFlip();
+    expect(component.isBoardFlipped).toBeFalse();
+  });
+
+  it('returns debug castling rights notation', () => {
+    const castlingRights = component.getDebugCastlingRights();
+    expect(typeof castlingRights).toBe('string');
+    expect(castlingRights.length).toBeGreaterThan(0);
+  });
+
+  it('produces mock export and annotation helper outputs', () => {
+    component.exportPgnMock();
+    expect(component.mockExportMessage).toContain('Mock export: PGN ready');
+
+    component.exportBoardImageMock();
+    expect(component.mockExportMessage).toContain('Mock export: Board image ready');
+
+    component.exportFenMock();
+    expect(component.mockExportMessage).toContain('Mock export: FEN copied');
+
+    component.showForkIdeasMock();
+    expect(globals.boardHelper.debugText).toContain('Mock: Fork ideas highlighted');
+
+    component.showPinIdeasMock();
+    expect(globals.boardHelper.debugText).toContain('Mock: Pin opportunities highlighted');
+  });
+
+  it('returns move class based on suggested move notation', () => {
+    expect(component.getSuggestedMoveClass('Qh5+')).toBe('suggested-move--check');
+    expect(component.getSuggestedMoveClass('Nxe5')).toBe('suggested-move--capture');
+    expect(component.getSuggestedMoveClass('d4')).toBe('suggested-move--threat');
+    expect(component.getSuggestedMoveClass('')).toBe('suggested-move--threat');
+  });
+
+  it('returns mock opening and endgame defaults', () => {
+    (component as any).openingsLoaded = false;
+    expect(component.getMockOpeningRecognition()).toBe('Waiting for opening line...');
+    expect(component.getMockEndgameRecognition()).toBe('Not endgame yet (mock)');
+  });
+
+  it('evaluates board via showPossibleMoves and clears overlays', () => {
+    globals.boardHelper.possibles['44'] = { row: 4, col: 4 } as any;
+    globals.boardHelper.hits['44'] = { row: 4, col: 4 } as any;
+    globals.boardHelper.checks['44'] = { row: 4, col: 4 } as any;
+    globals.boardHelper.arrows['a'] = { left: '1px' } as any;
+
+    const canStepSpy = spyOn(ChessRulesService, 'canStepThere').and.returnValue(false);
+    component.showPossibleMoves(ChessColorsEnum.White);
+
+    expect(canStepSpy).toHaveBeenCalled();
+    expect(globals.boardHelper.possibles).toEqual({});
+    expect(globals.boardHelper.hits).toEqual({});
+    expect(globals.boardHelper.checks).toEqual({});
+    expect(globals.boardHelper.arrows).toEqual({});
+  });
+
+  it('parses suggested moves through preview and creates then clears arrows', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.previewSuggestedMoveArrows('Nf3');
+    expect(Object.keys(globals.boardHelper.arrows).length).toBeGreaterThan(0);
+
+    component.clearSuggestedMoveArrows();
+    expect((component as any).suggestedMoveArrowSnapshot).toBeNull();
+  });
+
+  it('returns threats on a square and visualizes protected/hanging pieces', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[4][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    const threatsOn = component.getThreatsOn(
+      globals.field[4][4],
+      4,
+      4,
+      ChessColorsEnum.White,
+      ChessColorsEnum.Black
+    );
+    expect(Array.isArray(threatsOn)).toBeTrue();
+
+    component.showProtected(false);
+    expect(globals.boardHelper.arrows).toBeDefined();
+
+    component.showHangingPieces(false);
+    expect(globals.boardHelper.arrows).toBeDefined();
+  });
+
+  it('resets transient and board state through internal helpers', () => {
+    component.pendingDrawOfferBy = ChessColorsEnum.Black;
+    component.resignConfirmColor = ChessColorsEnum.White;
+    component.mockHistoryCursor = 3;
+    component.mockExportMessage = 'x';
+    component.mateInOneTargets = { '11': true };
+    component.mateInOneBlunderTargets = { '22': true };
+    (component as any).lastMatePreviewKey = 'x';
+
+    (component as any).resetTransientUiState();
+    expect(component.pendingDrawOfferBy).toBeNull();
+    expect(component.resignConfirmColor).toBeNull();
+    expect(component.mockHistoryCursor).toBeNull();
+    expect(component.mockExportMessage).toBe('');
+    expect(component.mateInOneTargets).toEqual({});
+    expect(component.mateInOneBlunderTargets).toEqual({});
+
+    globals.boardHelper.history = { '1': 'e2-e4' } as any;
+    globals.boardHelper.gameOver = true;
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    (component as any).resetBoardState();
+    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(globals.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
+    expect(globals.history.length).toBe(0);
+    expect(globals.field[7][4][0].piece).toBe(ChessPiecesEnum.King);
+  });
+
+  it('handles time forfeit and records result suffix', () => {
+    globals.boardHelper.gameOver = false;
+    globals.boardHelper.history = { '1': 'e2-e4' } as any;
+    component.clockRunning = true;
+
+    (component as any).handleTimeForfeit(ChessColorsEnum.Black);
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.debugText).toContain('Black forfeits on time');
+    expect(globals.history[globals.history.length - 1]).toContain('1-0 {Black forfeits on time}');
+  });
+
+  it('handles black-side en passant branch', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[4][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    globals.field[4][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    globals.boardHelper.history = { '1': 'c2-c4' } as any;
+
+    expect(canDropLike(4, 3, 5, 2)).toBeTrue();
+    component.onDrop(createDropLike(4, 3, 5, 2));
+
+    expect(globals.field[4][2].length).toBe(0);
+    expect(globals.field[5][2][0].color).toBe(ChessColorsEnum.Black);
+  });
+
+  it('records white checkmate winner text branch', () => {
+    clearBoard();
+    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    expect(canDropLike(2, 1, 1, 1)).toBeTrue();
+    component.onDrop(createDropLike(2, 1, 1, 1));
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.checkmateColor).toBe(ChessColorsEnum.Black);
+    expect(globals.boardHelper.debugText).toContain('Checkmate! White wins.');
+  });
+
+  it('runs startNewGame and startClock callback branches', () => {
+    const reloadSpy = jasmine.createSpy('reload');
+    (component as any).windowRef = { location: { reload: reloadSpy } };
+    component.startNewGame();
+    expect(reloadSpy).toHaveBeenCalled();
+
+    const tickSpy = spyOn<any>(component, 'tickClock').and.callFake(() => undefined);
+    const setIntervalSpy = spyOn(window, 'setInterval').and.callFake((callback: TimerHandler) => {
+      (callback as Function)();
+      return 1 as any;
+    });
+    const clearIntervalSpy = spyOn(window, 'clearInterval').and.callFake(() => undefined);
+
+    component.clockRunning = false;
+    (component as any).clockIntervalId = null;
+    (component as any).startClock();
+    expect(setIntervalSpy).toHaveBeenCalled();
+    expect(tickSpy).toHaveBeenCalled();
+
+    (component as any).stopClock();
+    expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it('covers openings payload mapping and loadOpenings error callback', () => {
+    const openingAwareComponent = new ChessBoardComponent(globals, {
+      get: () => of([
+        { name: 'Valid Opening', long_algebraic_notation: '1. e2-e4 e7-e5' },
+        { name: 'Invalid Opening', long_algebraic_notation: '' } as any
+      ])
+    } as any);
+
+    expect((openingAwareComponent as any).openingsLoaded).toBeTrue();
+    expect((openingAwareComponent as any).openings.length).toBeGreaterThan(0);
+
+    const errorComponent = new ChessBoardComponent(globals, {
+      get: () => throwError(() => new Error('failed to load'))
+    } as any);
+
+    expect((errorComponent as any).openingsLoaded).toBeTrue();
+  });
+
+  it('shows hanging-piece arrows when an unprotected piece is threatened', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    globals.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.showHangingPieces(false);
+    expect(Object.keys(globals.boardHelper.arrows).length).toBeGreaterThan(0);
+  });
+
+  it('declares insufficient-material draw for black two knights vs king branch', () => {
+    clearBoard();
+    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    globals.field[0][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+
+    expect(canDropLike(0, 1, 2, 2)).toBeTrue();
+    component.onDrop(createDropLike(0, 1, 2, 2));
+
+    expect(globals.boardHelper.gameOver).toBeTrue();
+    expect(globals.boardHelper.debugText).toBe('Draw by insufficient material.');
+  });
 });
 
 describe('ChessBoardComponent template drag-enter integration', () => {
   let fixture: ComponentFixture<ChessBoardComponent>;
   let component: ChessBoardComponent;
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
 
   const clearBoard = (): void => {
     for (let row = 0; row <= 7; row++) {
@@ -602,13 +1305,13 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     await TestBed.configureTestingModule({
       declarations: [ChessBoardComponent],
       imports: [DragDropModule],
-      providers: [GlobalVariablesService],
+      providers: [ChessBoardStateService, provideHttpClient(), provideHttpClientTesting()],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChessBoardComponent);
     component = fixture.componentInstance;
-    globals = TestBed.inject(GlobalVariablesService);
+    globals = TestBed.inject(ChessBoardStateService);
     globals.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 

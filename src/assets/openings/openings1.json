@@ -1,0 +1,149 @@
+[
+  {
+    "name": "Ruy Lopez (Spanish Opening)",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-b5",
+    "suggested_best_response_name": "Berlin Defense",
+    "suggested_best_response_notation_step": "3... Ng8-f6",
+    "short_description": "A classical and highly strategic opening where White pressures the e5 pawn and aims for long-term central control and kingside initiative."
+  },
+  {
+    "name": "Italian Game",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-c4",
+    "suggested_best_response_name": "Giuoco Piano",
+    "suggested_best_response_notation_step": "3... Bf8-c5",
+    "short_description": "A classical opening focused on rapid development and early kingside pressure, often leading to tactical and open positions."
+  },
+  {
+    "name": "Sicilian Defense",
+    "long_algebraic_notation": "1. e2-e4 c7-c5",
+    "suggested_best_response_name": "Open Sicilian",
+    "suggested_best_response_notation_step": "2. Ng1-f3",
+    "short_description": "The most popular counter to 1.e4, leading to asymmetrical pawn structures and rich tactical complexity."
+  },
+  {
+    "name": "French Defense",
+    "long_algebraic_notation": "1. e2-e4 e7-e6",
+    "suggested_best_response_name": "Advance Variation",
+    "suggested_best_response_notation_step": "2. d2-d4 d7-d5 3. e4-e5",
+    "short_description": "A solid and resilient defense where Black challenges White’s center and aims for counterplay against the d4 pawn."
+  },
+  {
+    "name": "Caro-Kann Defense",
+    "long_algebraic_notation": "1. e2-e4 c7-c6",
+    "suggested_best_response_name": "Classical Variation",
+    "suggested_best_response_notation_step": "2. d2-d4 d7-d5 3. Nb1-c3",
+    "short_description": "A solid defense known for its strong pawn structure and reliable endgame prospects."
+  },
+  {
+    "name": "Queen's Gambit",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4",
+    "suggested_best_response_name": "Queen's Gambit Declined",
+    "suggested_best_response_notation_step": "2... e7-e6",
+    "short_description": "A fundamental d4 opening where White offers a pawn to gain central control and long-term positional pressure."
+  },
+  {
+    "name": "King's Indian Defense",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 g7-g6 3. Nb1-c3 Bf8-g7",
+    "suggested_best_response_name": "Classical Variation",
+    "suggested_best_response_notation_step": "4. e2-e4",
+    "short_description": "A dynamic hypermodern defense where Black allows White to build a center before counterattacking."
+  },
+  {
+    "name": "Nimzo-Indian Defense",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. Nb1-c3 Bf8-b4",
+    "suggested_best_response_name": "Classical Variation",
+    "suggested_best_response_notation_step": "4. Qd1-c2",
+    "short_description": "A highly respected positional defense focusing on piece activity and structural imbalances."
+  },
+  {
+    "name": "English Opening",
+    "long_algebraic_notation": "1. c2-c4",
+    "suggested_best_response_name": "Symmetrical English",
+    "suggested_best_response_notation_step": "1... c7-c5",
+    "short_description": "A flexible flank opening emphasizing long-term control of the d5 square and gradual buildup."
+  },
+  {
+    "name": "Scandinavian Defense",
+    "long_algebraic_notation": "1. e2-e4 d7-d5",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "2. e4xd5 Qd8xd5",
+    "short_description": "An immediate central challenge where Black quickly activates the queen in exchange for development tempo."
+  },
+  {
+    "name": "Pirc Defense",
+    "long_algebraic_notation": "1. e2-e4 d7-d6 2. d2-d4 Ng8-f6 3. Nb1-c3 g7-g6",
+    "suggested_best_response_name": "Austrian Attack",
+    "suggested_best_response_notation_step": "4. f2-f4",
+    "short_description": "A flexible hypermodern defense where Black delays central occupation and prepares counterattacks."
+  },
+  {
+    "name": "Modern Defense",
+    "long_algebraic_notation": "1. e2-e4 g7-g6",
+    "suggested_best_response_name": "Classical System",
+    "suggested_best_response_notation_step": "2. d2-d4 Bf8-g7 3. Nb1-c3",
+    "short_description": "A flexible system allowing Black to choose various setups while provoking White to overextend."
+  },
+  {
+    "name": "Alekhine's Defense",
+    "long_algebraic_notation": "1. e2-e4 Ng8-f6",
+    "suggested_best_response_name": "Four Pawns Attack",
+    "suggested_best_response_notation_step": "2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4",
+    "short_description": "A provocative defense inviting White to overextend the center before launching counterplay."
+  },
+  {
+    "name": "Dutch Defense",
+    "long_algebraic_notation": "1. d2-d4 f7-f5",
+    "suggested_best_response_name": "Classical Variation",
+    "suggested_best_response_notation_step": "2. c2-c4 Ng8-f6 3. g2-g3",
+    "short_description": "An aggressive defense aiming for kingside attacking chances at the cost of some structural weaknesses."
+  },
+  {
+    "name": "Grünfeld Defense",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 g7-g6 3. Nb1-c3 d7-d5",
+    "suggested_best_response_name": "Exchange Variation",
+    "suggested_best_response_notation_step": "4. c4xd5 Nf6xd5",
+    "short_description": "A dynamic defense where Black challenges White’s center immediately and relies on piece activity."
+  },
+  {
+    "name": "Sicilian Defense: Najdorf Variation",
+    "long_algebraic_notation": "1. e2-e4 c7-c5 2. Ng1-f3 d7-d6 3. d2-d4 c5xd4 4. Nf3xd4 Ng8-f6 5. Nb1-c3 a7-a6",
+    "suggested_best_response_name": "English Attack Setup",
+    "suggested_best_response_notation_step": "6. Bc1-e3",
+    "short_description": "A premier Sicilian system where Black gains queenside expansion and flexible piece play in highly theoretical positions."
+  },
+  {
+    "name": "Sicilian Defense: Dragon Variation",
+    "long_algebraic_notation": "1. e2-e4 c7-c5 2. Ng1-f3 d7-d6 3. d2-d4 c5xd4 4. Nf3xd4 Ng8-f6 5. Nb1-c3 g7-g6",
+    "suggested_best_response_name": "Yugoslav Attack",
+    "suggested_best_response_notation_step": "6. Bc1-e3",
+    "short_description": "A sharp fianchetto Sicilian where opposite-side attacks and tactical races are common."
+  },
+  {
+    "name": "French Defense: Winawer Variation",
+    "long_algebraic_notation": "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. Nb1-c3 Bf8-b4",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4. e4-e5",
+    "short_description": "A combative French line defined by bishop pin pressure and long-term structural complexity."
+  },
+  {
+    "name": "Caro-Kann Defense: Advance Variation",
+    "long_algebraic_notation": "1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. e4-e5",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "3... Bc8-f5",
+    "short_description": "White gains space while Black targets the d4 chain base and seeks queenside counterplay."
+  },
+  {
+    "name": "Queen's Gambit Accepted",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 d5xc4",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "3. Ng1-f3",
+    "short_description": "Black accepts the pawn and challenges White to prove compensation through rapid development."
+  },
+  {
+    "name": "Ruy Lopez: Morphy Defense",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-b5 a7-a6",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4. Bb5-a4",
+    "short_description": "The main gateway to closed Spanish structures and one of the most deeply studied openings in chess."
+  }
+]

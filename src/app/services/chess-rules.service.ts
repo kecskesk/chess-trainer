@@ -1,13 +1,15 @@
 import { Injectable } from '@angular/core';
-import { GlobalVariablesService } from './global-variables.service';
+import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessMoveResultDto } from '../model/chess-move-result.dto';
 import { ChessMoveParamsDto } from '../model/chess-move-params.dto';
 import { ChessPieceDto } from '../model/chess-piece.dto';
-import { ChessColorsEnum } from '../model/chess.colors';
-import { ChessPiecesEnum } from '../model/chess.pieces';
-import { IMoveValidationResult } from '../model/move-validation-result.interface';
-import { IBoardHighlight } from '../model/board-highlight.interface';
-import { IVisualizationArrow } from '../model/visualization-arrow.interface';
+import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
+import { IMoveValidationResult } from '../model/interfaces/move-validation-result.interface';
+import { IBoardHighlight } from '../model/interfaces/board-highlight.interface';
+import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
+import { ChessMoveNotation } from '../utils/chess-utils';
+import { ChessConstants } from '../constants/chess.constants';
 
 @Injectable()
 export class ChessRulesService {
@@ -17,46 +19,37 @@ export class ChessRulesService {
   public static canStepThere(
     targetRow: number,
     targetCol: number,
-    targetData: ChessPieceDto[],
+    targetCell: ChessPieceDto[],
     srcRow: number,
     srcCol: number,
-    justLookingWithPiece: ChessPieceDto = null
+    virtualSourcePiece: ChessPieceDto = null
   ): boolean {
-      let targetObj = null;
-      let targetPiece = null;
-      let targetColor = null;
-      if (targetData && targetData[0]) {
-        targetObj = targetData[0];
-        targetColor = targetObj.color;
-        targetPiece = targetObj.piece;
-      }
-      let sourceData = null;
-      let sourcePiece = null;
-      let sourceColor: ChessColorsEnum = null;
-      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
+      let sourceCell = null;
+      if (!ChessBoardStateService.CHESS_FIELD || !ChessBoardStateService.BOARD_HELPER) {
         return false;
       }
-      const moveHistory = GlobalVariablesService.BOARD_HELPER.history;
-      sourceData = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
-      if (justLookingWithPiece) {
-        sourceData = [justLookingWithPiece];
+      const moveHistory = ChessBoardStateService.BOARD_HELPER.history;
+      sourceCell = ChessBoardStateService.CHESS_FIELD[srcRow][srcCol];
+      if (virtualSourcePiece) {
+        sourceCell = [virtualSourcePiece];
       }
-      if (!(sourceData && sourceData[0])) {
+      if (!(sourceCell && sourceCell[0])) {
         return false;
       }
-      sourceColor = sourceData[0].color;
-      const enemyColor: ChessColorsEnum = sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-      sourcePiece = sourceData[0].piece;
+      const sourcePiece = sourceCell[0];
+      const sourceColor = sourcePiece.color;
+      const sourcePieceType = sourcePiece.piece;
+      const enemyColor = ChessRulesService.getEnemyColor(sourceColor);
       const moveValidationResult: IMoveValidationResult = {
-        isValid: targetData.length < 1,
-        isEmptyTarget: targetData.length < 1,
+        isValid: targetCell.length < 1,
+        isEmptyTarget: targetCell.length < 1,
         isEnemyPiece: false
       };
-      if (targetData.length === 1 && targetData[0].color !== sourceColor) {
+      if (targetCell.length === 1 && targetCell[0].color !== sourceColor) {
         moveValidationResult.isValid = true;
         moveValidationResult.isEnemyPiece = true;
       }
-      if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn && !justLookingWithPiece) {
+      if (sourceColor !== ChessBoardStateService.BOARD_HELPER.colorTurn && !virtualSourcePiece) {
         moveValidationResult.isValid = false;
         moveValidationResult.errorMessage = 'Not this color\'s turn';
         return false;
@@ -64,37 +57,10 @@ export class ChessRulesService {
       const cmResult = new ChessMoveResultDto(
         moveValidationResult.isValid, moveValidationResult.isEnemyPiece, false, moveValidationResult.isEmptyTarget);
       const cmParams = new ChessMoveParamsDto(
-        targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory, !!justLookingWithPiece);
-      switch (sourcePiece) {
-        case ChessPiecesEnum.Pawn: {
-          ChessRulesService.pawnRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Knight: {
-          ChessRulesService.knightRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.King: {
-          ChessRulesService.kingRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Queen: {
-          ChessRulesService.queenRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Rook: {
-          ChessRulesService.rookRules(cmResult, cmParams);
-          break;
-        }
-        case ChessPiecesEnum.Bishop: {
-          ChessRulesService.bishopRules(cmResult, cmParams);
-          break;
-        }
-        default:
-          break;
-      }
+        targetRow, targetCol, srcRow, srcCol, sourceColor, moveHistory, !!virtualSourcePiece);
+      ChessRulesService.applyPieceRules(sourcePieceType, cmResult, cmParams);
 
-      if (cmResult.canDrop && !justLookingWithPiece && ChessRulesService.isMoveLeavingOwnKingInCheck(
+      if (cmResult.canDrop && !virtualSourcePiece && ChessRulesService.isMoveLeavingOwnKingInCheck(
         srcRow,
         srcCol,
         targetRow,
@@ -104,50 +70,104 @@ export class ChessRulesService {
         cmResult.canDrop = false;
       }
 
-      const enemyKingPos = { row: null, col: null };
-      GlobalVariablesService.CHESS_FIELD.forEach((row, rowIdx) => {
-        const kingIndex = row.findIndex(
-          cell => cell && cell[0] && cell[0].piece === ChessPiecesEnum.King && cell[0].color === enemyColor);
-        if (kingIndex >= 0) {
-          enemyKingPos.row = rowIdx;
-          enemyKingPos.col = kingIndex;
+      const enemyKingPos = ChessRulesService.findKingPosition(ChessBoardStateService.CHESS_FIELD, enemyColor);
+      if (!virtualSourcePiece) {
+        if (!enemyKingPos) {
+          return cmResult.canDrop;
         }
-      });
-      if (!justLookingWithPiece) {
         const isCheck = ChessRulesService.canStepThere(
           enemyKingPos.row, enemyKingPos.col, [new ChessPieceDto(enemyColor, ChessPiecesEnum.King)],
-          targetRow, targetCol, { color: sourceColor, piece: sourcePiece });
-        if (GlobalVariablesService.BOARD_HELPER && cmResult.canDrop) {
-          if (!GlobalVariablesService.BOARD_HELPER.possibles) {
-            GlobalVariablesService.BOARD_HELPER.possibles = {};
-          }
-          GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'possible' });
-          if (cmResult.canHit) {
-            if (!GlobalVariablesService.BOARD_HELPER.hits) {
-              GlobalVariablesService.BOARD_HELPER.hits = {};
-            }
-            GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'capture' });
-          }
-          if (isCheck) {
-            if (!GlobalVariablesService.BOARD_HELPER.checks) {
-              GlobalVariablesService.BOARD_HELPER.checks = {};
-            }
-            const checkHighlight: IBoardHighlight = { row: targetRow, col: targetCol, type: 'check' };
-            GlobalVariablesService.addHighlight(checkHighlight);
-            const checkArrow: IVisualizationArrow = {
-              fromRow: 8 - srcRow,
-              fromCol: srcCol + 1,
-              toRow: 8 - targetRow,
-              toCol: targetCol + 1,
-              color: 'red',
-              intensity: 0.25
-            };
-            GlobalVariablesService.createArrowFromVisualization(checkArrow);
-          }
-        }
+          targetRow, targetCol, { color: sourceColor, piece: sourcePieceType });
+        ChessRulesService.addMoveHighlights(srcRow, srcCol, targetRow, targetCol, cmResult.canDrop, cmResult.canHit, isCheck);
       }
 
       return cmResult.canDrop;
+  }
+
+  private static getEnemyColor(sourceColor: ChessColorsEnum): ChessColorsEnum {
+    return sourceColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+  }
+
+  private static applyPieceRules(
+    sourcePieceType: ChessPiecesEnum,
+    cmResult: ChessMoveResultDto,
+    cmParams: ChessMoveParamsDto
+  ): void {
+    switch (sourcePieceType) {
+      case ChessPiecesEnum.Pawn:
+        ChessRulesService.pawnRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Knight:
+        ChessRulesService.knightRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.King:
+        ChessRulesService.kingRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Queen:
+        ChessRulesService.queenRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Rook:
+        ChessRulesService.rookRules(cmResult, cmParams);
+        return;
+      case ChessPiecesEnum.Bishop:
+        ChessRulesService.bishopRules(cmResult, cmParams);
+        return;
+      default:
+        return;
+    }
+  }
+
+  private static ensureHighlightCollectionsInitialized(): void {
+    if (!ChessBoardStateService.BOARD_HELPER) {
+      return;
+    }
+    if (!ChessBoardStateService.BOARD_HELPER.possibles) {
+      ChessBoardStateService.BOARD_HELPER.possibles = {};
+    }
+    if (!ChessBoardStateService.BOARD_HELPER.hits) {
+      ChessBoardStateService.BOARD_HELPER.hits = {};
+    }
+    if (!ChessBoardStateService.BOARD_HELPER.checks) {
+      ChessBoardStateService.BOARD_HELPER.checks = {};
+    }
+  }
+
+  private static addMoveHighlights(
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    canDrop: boolean,
+    canHit: boolean,
+    isCheck: boolean
+  ): void {
+    if (!ChessBoardStateService.BOARD_HELPER || !canDrop) {
+      return;
+    }
+
+    ChessRulesService.ensureHighlightCollectionsInitialized();
+    ChessBoardStateService.addHighlight({ row: targetRow, col: targetCol, type: 'possible' });
+
+    if (canHit) {
+      ChessBoardStateService.addHighlight({ row: targetRow, col: targetCol, type: 'capture' });
+    }
+
+    if (!isCheck) {
+      return;
+    }
+
+    const checkHighlight: IBoardHighlight = { row: targetRow, col: targetCol, type: 'check' };
+    ChessBoardStateService.addHighlight(checkHighlight);
+
+    const checkArrow: IVisualizationArrow = {
+      fromRow: 8 - srcRow,
+      fromCol: srcCol + 1,
+      toRow: 8 - targetRow,
+      toCol: targetCol + 1,
+      color: 'red',
+      intensity: 0.25
+    };
+    ChessBoardStateService.createArrowFromVisualization(checkArrow);
   }
 
   public static validateMove(
@@ -159,8 +179,8 @@ export class ChessRulesService {
     justLookingWithPiece: ChessPieceDto = null
   ): IMoveValidationResult {
     const sourceData = justLookingWithPiece ||
-      (GlobalVariablesService.CHESS_FIELD && GlobalVariablesService.CHESS_FIELD[srcRow] && GlobalVariablesService.CHESS_FIELD[srcRow][srcCol]
-        ? GlobalVariablesService.CHESS_FIELD[srcRow][srcCol][0]
+      (ChessBoardStateService.CHESS_FIELD && ChessBoardStateService.CHESS_FIELD[srcRow] && ChessBoardStateService.CHESS_FIELD[srcRow][srcCol]
+        ? ChessBoardStateService.CHESS_FIELD[srcRow][srcCol][0]
         : null);
     const isEmptyTarget = !targetData || targetData.length < 1;
     const isEnemyPiece = !!(sourceData && targetData && targetData[0] && targetData[0].color !== sourceData.color);
@@ -183,8 +203,8 @@ export class ChessRulesService {
   }
 
   static pawnRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
-    const stepY = cmParams.targetRow - cmParams.srcRow;
-    const stepX = Math.abs(cmParams.targetCol - cmParams.srcCol);
+    const rowDelta = cmParams.targetRow - cmParams.srcRow;
+    const colDelta = Math.abs(cmParams.targetCol - cmParams.srcCol);
     // Can step 1 in direction
     const targetDirectionStep = cmParams.sourceColor === ChessColorsEnum.White ? -1 : 1;
     // Pawn on home row
@@ -193,28 +213,29 @@ export class ChessRulesService {
     // Can step 2 from home row
     const homeRowStep = cmParams.sourceColor === ChessColorsEnum.White ? -2 : 2;
     // Cannot step left/right
-    const validStepForward = ((stepY === targetDirectionStep) || (cmParams.srcRow === homeRow && stepY === homeRowStep)) && stepX === 0;
-    if (!validStepForward) {
+    const isForwardAdvanceLegal = ((rowDelta === targetDirectionStep) || (cmParams.srcRow === homeRow && rowDelta === homeRowStep)) && colDelta === 0;
+    if (!isForwardAdvanceLegal) {
       cmResult.canDrop = false;
     }
     // Pawn magic 1 (cannot hit straight)
-    if (validStepForward && cmResult.canHit) {
+    if (isForwardAdvanceLegal && cmResult.canHit) {
       cmResult.canDrop = false;
       cmResult.canHit = false;
     }
     // Pawn magic 2 (can hit 1 across)
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
-    if (cmResult.canHit && stepX === 1 && stepY === targetDirectionStep && !piecesInWay) {
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    if (cmResult.canHit && colDelta === 1 && rowDelta === targetDirectionStep && !piecesInWay) {
       cmResult.canDrop = true;
     }
     // Pawn magic 3 (en passant)
-    const historyLength = Object.keys(cmParams.moveHistory).length;
-    const lastHistory = cmParams.moveHistory[historyLength];
+    const historyEntryCount = Object.keys(cmParams.moveHistory).length;
+    const lastMoveNotation = cmParams.moveHistory[historyEntryCount];
     const epTargetRow = cmParams.sourceColor === ChessColorsEnum.White ? 3 : 4;
     const epSourceRow = cmParams.sourceColor === ChessColorsEnum.White ? 1 : 6;
-    const possibleEP = GlobalVariablesService.translateNotation(
+    const expectedEnPassantTriggerNotation = ChessBoardStateService.translateNotation(
       epTargetRow, cmParams.targetCol, epSourceRow, cmParams.targetCol, ChessPiecesEnum.Pawn, false, false, false, false, null);
-    if (stepX === 1 && stepY === targetDirectionStep && cmParams.targetRow === enemyFirstStep && lastHistory === possibleEP) {
+    if (colDelta === 1 && rowDelta === targetDirectionStep &&
+      cmParams.targetRow === enemyFirstStep && lastMoveNotation === expectedEnPassantTriggerNotation) {
       cmResult.canDrop = true;
       cmResult.canHit = true;
     }
@@ -250,7 +271,7 @@ export class ChessRulesService {
     }
 
     const rookSourceCol = isKingSideCastle ? 7 : 0;
-    const rookCell = GlobalVariablesService.CHESS_FIELD[castleSourceRow][rookSourceCol];
+    const rookCell = ChessBoardStateService.CHESS_FIELD[castleSourceRow][rookSourceCol];
     const rookInPlace = rookCell.length === 1 &&
       rookCell[0] && rookCell[0].color === cmParams.sourceColor && rookCell[0].piece === ChessPiecesEnum.Rook;
     if (!rookInPlace) {
@@ -279,7 +300,7 @@ export class ChessRulesService {
 
     const kingPathCols = isKingSideCastle ? [5, 6] : [3, 2];
     const rookPathCols = isKingSideCastle ? [5, 6] : [1, 2, 3];
-    const hasPieceInWay = rookPathCols.some(col => GlobalVariablesService.CHESS_FIELD[castleSourceRow][col].length > 0);
+    const hasPieceInWay = rookPathCols.some(col => ChessBoardStateService.CHESS_FIELD[castleSourceRow][col].length > 0);
     if (hasPieceInWay) {
       return;
     }
@@ -294,7 +315,7 @@ export class ChessRulesService {
     }
 
     cmResult.canDrop = true;
-    GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+    ChessBoardStateService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
   }
 
   static getCastlingRightsNotation(
@@ -353,7 +374,7 @@ export class ChessRulesService {
     }
 
     const movingColor = lastMove.index % 2 === 1 ? ChessColorsEnum.White : ChessColorsEnum.Black;
-    const capturingColor = movingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    const capturingColor = ChessRulesService.getEnemyColor(movingColor);
     if (turn !== capturingColor) {
       return '-';
     }
@@ -362,7 +383,9 @@ export class ChessRulesService {
       return '-';
     }
 
-    const adjacentCols = [targetPos.col - 1, targetPos.col + 1].filter(col => col >= 0 && col <= 7);
+    const adjacentCols = [targetPos.col - 1, targetPos.col + 1].filter(
+      col => col >= ChessConstants.MIN_INDEX && col <= ChessConstants.MAX_INDEX
+    );
     const hasCapturingPawn = adjacentCols.some(col =>
       ChessRulesService.hasPieceAtOnBoard(board, targetPos.row, col, capturingColor, ChessPiecesEnum.Pawn)
     );
@@ -449,46 +472,48 @@ export class ChessRulesService {
   private static parseMoveNotation(
     notation: string
   ): { piece: ChessPiecesEnum, sourceSquare: string, targetSquare: string } | null {
-    if (!notation || notation === 'O-O' || notation === 'O-O-O') {
+    if (!notation) {
       return null;
     }
-    const match = notation.match(/^([KQRBN]?)([a-h][1-8])(?:-|x)?([a-h][1-8])/);
+
+    const firstToken = notation.trim().split(/\s+/)[0];
+    if (!firstToken || firstToken === 'O-O' || firstToken === 'O-O-O') {
+      return null;
+    }
+
+    if (!ChessMoveNotation.isValidLongNotation(firstToken)) {
+      return null;
+    }
+
+    const match = firstToken.match(/^([KQRBN]?)([a-h][1-8])(?:-|x)?([a-h][1-8])/);
     if (!match) {
       return null;
     }
     const pieceChar = match[1];
     let piece = ChessPiecesEnum.Pawn;
-    switch (pieceChar) {
-      case 'K': {
-        piece = ChessPiecesEnum.King;
-        break;
-      }
-      case 'Q': {
-        piece = ChessPiecesEnum.Queen;
-        break;
-      }
-      case 'R': {
-        piece = ChessPiecesEnum.Rook;
-        break;
-      }
-      case 'B': {
-        piece = ChessPiecesEnum.Bishop;
-        break;
-      }
-      case 'N': {
-        piece = ChessPiecesEnum.Knight;
-        break;
-      }
-      default: {
-        piece = ChessPiecesEnum.Pawn;
-        break;
-      }
-    }
+    piece = ChessRulesService.fromNotationPiece(pieceChar);
     return {
       piece,
       sourceSquare: match[2],
       targetSquare: match[3]
     };
+  }
+
+  private static fromNotationPiece(pieceChar: string): ChessPiecesEnum {
+    switch (pieceChar) {
+      case 'K':
+        return ChessPiecesEnum.King;
+      case 'Q':
+        return ChessPiecesEnum.Queen;
+      case 'R':
+        return ChessPiecesEnum.Rook;
+      case 'B':
+        return ChessPiecesEnum.Bishop;
+      case 'N':
+        return ChessPiecesEnum.Knight;
+      default:
+        return ChessPiecesEnum.Pawn;
+    }
   }
 
   private static fromSquareNotation(square: string): { row: number, col: number } | null {
@@ -498,7 +523,8 @@ export class ChessRulesService {
 
     const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
     const rank = Number(square.charAt(1));
-    if (file < 0 || file > 7 || rank < 1 || rank > 8) {
+    if (file < ChessConstants.MIN_INDEX ||
+      file > ChessConstants.MAX_INDEX || rank < 1 || rank > ChessConstants.BOARD_SIZE) {
       return null;
     }
 
@@ -522,10 +548,10 @@ export class ChessRulesService {
   }
 
   private static isSquareUnderAttack(row: number, col: number, attackerColor: ChessColorsEnum): boolean {
-    const targetColor = attackerColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    for (let srcRow = 0; srcRow <= 7; srcRow++) {
-      for (let srcCol = 0; srcCol <= 7; srcCol++) {
-        const attackerCell = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
+    const targetColor = ChessRulesService.getEnemyColor(attackerColor);
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
+        const attackerCell = ChessBoardStateService.CHESS_FIELD[srcRow][srcCol];
         if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
           continue;
         }
@@ -554,7 +580,7 @@ export class ChessRulesService {
     sourceColor: ChessColorsEnum
   ): boolean {
     const simulatedBoard = ChessRulesService.simulateMoveOnBoard(
-      GlobalVariablesService.CHESS_FIELD,
+      ChessBoardStateService.CHESS_FIELD,
       srcRow,
       srcCol,
       targetRow,
@@ -610,8 +636,8 @@ export class ChessRulesService {
     board: ChessPieceDto[][][],
     kingColor: ChessColorsEnum
   ): { row: number, col: number } | null {
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const cell = board[row][col];
         if (cell && cell[0] && cell[0].piece === ChessPiecesEnum.King && cell[0].color === kingColor) {
           return { row, col };
@@ -627,9 +653,9 @@ export class ChessRulesService {
       return false;
     }
 
-    const attackerColor = kingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
+    const attackerColor = ChessRulesService.getEnemyColor(kingColor);
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
         const attackerCell = board[row][col];
         if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
           continue;
@@ -654,38 +680,38 @@ export class ChessRulesService {
   }
 
   private static withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
-    const previousField = GlobalVariablesService.CHESS_FIELD;
-    const previousTurn = GlobalVariablesService.BOARD_HELPER ? GlobalVariablesService.BOARD_HELPER.colorTurn : null;
-    const previousCastle = GlobalVariablesService.BOARD_HELPER ? GlobalVariablesService.BOARD_HELPER.justDidCastle : null;
+    const previousField = ChessBoardStateService.CHESS_FIELD;
+    const previousTurn = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.colorTurn : null;
+    const previousCastle = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.justDidCastle : null;
     try {
-      GlobalVariablesService.CHESS_FIELD = board;
-      if (GlobalVariablesService.BOARD_HELPER) {
-        GlobalVariablesService.BOARD_HELPER.colorTurn = turn;
-        GlobalVariablesService.BOARD_HELPER.justDidCastle = null;
+      ChessBoardStateService.CHESS_FIELD = board;
+      if (ChessBoardStateService.BOARD_HELPER) {
+        ChessBoardStateService.BOARD_HELPER.colorTurn = turn;
+        ChessBoardStateService.BOARD_HELPER.justDidCastle = null;
       }
       return callback();
     } finally {
-      GlobalVariablesService.CHESS_FIELD = previousField;
-      if (GlobalVariablesService.BOARD_HELPER) {
-        GlobalVariablesService.BOARD_HELPER.colorTurn = previousTurn;
-        GlobalVariablesService.BOARD_HELPER.justDidCastle = previousCastle;
+      ChessBoardStateService.CHESS_FIELD = previousField;
+      if (ChessBoardStateService.BOARD_HELPER) {
+        ChessBoardStateService.BOARD_HELPER.colorTurn = previousTurn;
+        ChessBoardStateService.BOARD_HELPER.justDidCastle = previousCastle;
       }
     }
   }
 
   static queenRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF NOR: Bishop + rook rules
-    const bishopRules = Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow);
-    const rookRules = cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow;
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
-    if ((bishopRules && rookRules) || piecesInWay) {
+    const violatesBishopPattern = Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow);
+    const violatesRookPattern = cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow;
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    if ((violatesBishopPattern && violatesRookPattern) || piecesInWay) {
       cmResult.canDrop = false;
     }
   }
 
   static rookRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF: not Same row AND not same col
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if ((cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow) || piecesInWay) {
       cmResult.canDrop = false;
     }
@@ -693,7 +719,7 @@ export class ChessRulesService {
 
   static bishopRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF: not same side as up-down
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if ((Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow)) || piecesInWay) {
       cmResult.canDrop = false;
     }

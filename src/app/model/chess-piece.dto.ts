@@ -1,5 +1,5 @@
-import { ChessColorsEnum } from './chess.colors';
-import { ChessPiecesEnum } from './chess.pieces';
+import { ChessColorsEnum } from './enums/chess-colors.enum';
+import { ChessPiecesEnum } from './enums/chess-pieces.enum';
 
 export class ChessPieceDto {
   color: ChessColorsEnum;
