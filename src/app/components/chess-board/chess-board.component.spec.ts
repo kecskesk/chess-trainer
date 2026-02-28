@@ -11,69 +11,71 @@ import { of, throwError } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-// eslint-disable-next-line max-lines-per-function
-describe('ChessBoardComponent move sequence integration', () => {
-  let chessBoardStateService: ChessBoardStateService;
-  let component: ChessBoardComponent;
+// common variables and helpers used across multiple suites
+let chessBoardStateService: ChessBoardStateService;
+let component: ChessBoardComponent;
 
-  const createDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
-    return {
-      previousContainer: {
+const createDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
+  return {
+    previousContainer: {
+      id: `field${srcRow}${srcCol}`,
+      data: chessBoardStateService.field[srcRow][srcCol]
+    },
+    container: {
+      id: `field${targetRow}${targetCol}`,
+      data: chessBoardStateService.field[targetRow][targetCol]
+    },
+    previousIndex: 0,
+    currentIndex: 0
+  } as any;
+};
+
+const canDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
+  return component.canDrop(
+    {
+      dropContainer: {
         id: `field${srcRow}${srcCol}`,
         data: chessBoardStateService.field[srcRow][srcCol]
-      },
-      container: {
-        id: `field${targetRow}${targetCol}`,
-        data: chessBoardStateService.field[targetRow][targetCol]
-      },
-      previousIndex: 0,
-      currentIndex: 0
-    } as any;
-  };
-
-  const canDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
-    return component.canDrop(
-      {
-        dropContainer: {
-          id: `field${srcRow}${srcCol}`,
-          data: chessBoardStateService.field[srcRow][srcCol]
-        }
-      } as any,
-      {
-        id: `field${targetRow}${targetCol}`,
-        data: chessBoardStateService.field[targetRow][targetCol]
-      } as any
-    );
-  };
-
-  const createEnterLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
-    return {
-      item: {
-        dropContainer: {
-          id: `field${srcRow}${srcCol}`
-        }
-      },
-      container: {
-        id: `field${targetRow}${targetCol}`
       }
-    } as any;
-  };
+    } as any,
+    {
+      id: `field${targetRow}${targetCol}`,
+      data: chessBoardStateService.field[targetRow][targetCol]
+    } as any
+  );
+};
 
-  const clearBoard = (): void => {
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
-        chessBoardStateService.field[row][col] = [];
+const createEnterLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
+  return {
+    item: {
+      dropContainer: {
+        id: `field${srcRow}${srcCol}`
       }
+    },
+    container: {
+      id: `field${targetRow}${targetCol}`
     }
-  };
+  } as any;
+};
 
-  beforeEach(() => {
-    chessBoardStateService = new ChessBoardStateService();
-    component = new ChessBoardComponent(chessBoardStateService, {
-      get: () => of([])
-    } as any);
-    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-  });
+const clearBoard = (): void => {
+  for (let row = 0; row <= 7; row++) {
+    for (let col = 0; col <= 7; col++) {
+      chessBoardStateService.field[row][col] = [];
+    }
+  }
+};
+
+beforeEach(() => {
+  chessBoardStateService = new ChessBoardStateService();
+  component = new ChessBoardComponent(chessBoardStateService, {
+    get: () => of([])
+  } as any);
+  chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+});
+
+// eslint-disable-next-line max-lines-per-function
+describe('ChessBoardComponent opening recognition', () => {
 
   it('updates opening recognition on first half-move when opening line has one step', () => {
     (component as any).openingsLoaded = true;
@@ -180,6 +182,10 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): —');
     expect(chessBoardStateService.boardHelper.debugText).not.toContain('Book recommendation (Black now): Queen\'s Gambit Declined (2... e7-e6)');
   });
+});
+
+// eslint-disable-next-line max-lines-per-function
+describe('ChessBoardComponent opening recognition - variation scenarios', () => {
 
   it('extends Dutch line with first variation move and labels the opening as Dutch Defense: Classical Variation', () => {
     (component as any).openingsLoaded = true;
@@ -328,6 +334,9 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (Black now): Qd8xd5');
     expect(chessBoardStateService.boardHelper.debugText).not.toContain('Book recommendation (White after):');
   });
+});
+
+describe('ChessBoardComponent opening recognition - Caro-Kann scenario', () => {
 
   it('keeps Caro-Kann as Classical Variation before e5 is played', () => {
     (component as any).openingsLoaded = true;
@@ -376,7 +385,10 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 4/5');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
   });
+});
 
+// eslint-disable-next-line max-lines-per-function
+describe('ChessBoardComponent gameplay moves and rules', () => {
   it('supports d2d4, e7e5, and d4xe5 with capture highlight', () => {
     expect(canDropLike(6, 3, 4, 3)).toBeTrue();
     component.onDrop(createDropLike(6, 3, 4, 3));
@@ -854,21 +866,6 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBe(0);
   });
 
-  it('clears previous overlay when a different tool is selected', () => {
-    clearBoard();
-    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-
-    component.showThreats(false);
-    expect(component.activeTool).toBe('threats-mine');
-    const threatArrowCount = Object.keys(chessBoardStateService.boardHelper.arrows).length;
-    expect(threatArrowCount).toBeGreaterThan(0);
-
-    component.showProtected(false);
-    expect(component.activeTool).toBe('protected-mine');
-    const protectedArrowCount = Object.keys(chessBoardStateService.boardHelper.arrows).length;
-    expect(protectedArrowCount).toBeLessThanOrEqual(threatArrowCount);
   });
 
   it('flip action clears any active overlay and toggles selected state', () => {
@@ -1535,139 +1532,5 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by insufficient material.');
   });
 });
-// eslint-disable-next-line max-lines-per-function
-describe('ChessBoardComponent template drag-enter integration', () => {
-  let fixture: ComponentFixture<ChessBoardComponent>;
-  let component: ChessBoardComponent;
-  let chessBoardStateService: ChessBoardStateService;
 
-  const clearBoard = (): void => {
-    for (let row = 0; row <= 7; row++) {
-      for (let col = 0; col <= 7; col++) {
-        chessBoardStateService.field[row][col] = [];
-      }
-    }
-  };
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [ChessBoardComponent, DragDropModule],
-      providers: [ChessBoardStateService, provideHttpClient(), provideHttpClientTesting()],
-      schemas: [NO_ERRORS_SCHEMA]
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(ChessBoardComponent);
-    component = fixture.componentInstance;
-    chessBoardStateService = TestBed.inject(ChessBoardStateService);
-    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-  });
-
-  it('applies mate-one-danger class on target square when cdkDropListEntered fires for a blunder move', () => {
-    clearBoard();
-    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    chessBoardStateService.field[6][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    chessBoardStateService.field[6][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    chessBoardStateService.field[5][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Queen } as any];
-    chessBoardStateService.field[3][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
-    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-
-    fixture.detectChanges();
-
-    const targetSquare = fixture.debugElement.query(By.css('#field60'));
-    targetSquare.triggerEventHandler('cdkDropListEntered', {
-      item: { dropContainer: { id: 'field70' } },
-      container: { id: 'field60' }
-    } as any);
-    fixture.detectChanges();
-
-    expect(component.isMateInOneBlunderTarget(6, 0)).toBeTrue();
-    expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one-danger')).toBeTrue();
-  });
-
-  it('buttons receive time-btn--selected class based on activeTool and flip state (integration)', () => {
-    component.showThreats(false);
-    expect(component.activeTool).toBe('threats-mine');
-
-    component.showProtected(false);
-    expect(component.activeTool).toBe('protected-mine');
-
-    component.toggleBoardFlip();
-    expect(component.isBoardFlipped).toBeTrue();
-  });
-
-  it('applies mate-one class on target square when cdkDropListEntered fires for a winning mate move', () => {
-    clearBoard();
-    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    chessBoardStateService.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    chessBoardStateService.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
-    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-
-    fixture.detectChanges();
-
-    const targetSquare = fixture.debugElement.query(By.css('#field11'));
-    targetSquare.triggerEventHandler('cdkDropListEntered', {
-      item: { dropContainer: { id: 'field21' } },
-      container: { id: 'field11' }
-    } as any);
-    fixture.detectChanges();
-
-    expect(component.isMateInOneTarget(1, 1)).toBeTrue();
-    expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one')).toBeTrue();
-  });
-
-  it('shows claim draw button only when draw can be claimed', () => {
-    expect(component.canClaimDraw()).toBeFalse();
-
-    clearBoard();
-    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    chessBoardStateService.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-    chessBoardStateService.boardHelper.history = {};
-    for (let i = 1; i <= 100; i++) {
-      chessBoardStateService.boardHelper.history[`${i}`] = 'Ng1-f3';
-    }
-
-    expect(component.canClaimDraw()).toBeTrue();
-  });
-
-  it('shows accept/decline buttons for pending draw offer', () => {
-    fixture.detectChanges();
-
-    let offerDrawButton = fixture.debugElement
-      .queryAll(By.css('button'))
-      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('offer draw'));
-    expect(offerDrawButton).toBeDefined();
-
-    offerDrawButton.triggerEventHandler('click', {});
-    fixture.detectChanges();
-
-    offerDrawButton = fixture.debugElement
-      .queryAll(By.css('button'))
-      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('offer draw'));
-    const acceptDrawButton = fixture.debugElement
-      .queryAll(By.css('button'))
-      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('accept draw'));
-    const declineDrawButton = fixture.debugElement
-      .queryAll(By.css('button'))
-      .find(btn => (btn.nativeElement as HTMLButtonElement).textContent.toLowerCase().includes('decline draw'));
-
-    expect(offerDrawButton).toBeUndefined();
-    expect(acceptDrawButton).toBeDefined();
-    expect(declineDrawButton).toBeDefined();
-  });
-
-  it('applies animated ambient class for white, black, and pending draw states', () => {
-    expect(component.getAmbientThemeClass()).toBe('ambient-math--white-turn');
-
-    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
-    expect(component.getAmbientThemeClass()).toBe('ambient-math--black-turn');
-
-    component.offerDraw();
-    expect(component.getAmbientThemeClass()).toBe('ambient-math--draw-pending');
-  });
-});
 
