@@ -17,6 +17,7 @@ import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.int
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
 import { ChessMoveNotation } from '../../utils/chess-utils';
 import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
+import { UiText } from '../../constants/ui-text.constants';
 import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
 
 @Component({
@@ -27,6 +28,7 @@ import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
   imports: [CommonModule, DragDropModule, ChessPieceComponent]
 })
 export class ChessBoardComponent implements AfterViewInit, OnDestroy {
+  readonly uiText = UiText;
   @ViewChild('chessField') chessField: ElementRef;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
@@ -448,7 +450,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.chessBoardStateService.boardHelper.gameOver = true;
       this.chessBoardStateService.boardHelper.checkmateColor = enemyColor;
       this.chessBoardStateService.boardHelper.debugText =
-        `Checkmate! ${moveContext.srcColor === ChessColorsEnum.White ? 'White' : 'Black'} wins.`;
+        `${this.uiText.message.checkmateCallout} ${moveContext.srcColor === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black} ${this.uiText.message.checkmateWinner}`;
     }
 
     const lastNotation = ChessBoardStateService.translateNotation(
@@ -476,7 +478,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !reason) {
       return;
     }
-    const subtleReason = `· ${reason}`;
+    const subtleReason = `${this.uiText.message.subtlePrefix}${reason}`;
     if (this.chessBoardStateService.boardHelper.debugText === subtleReason) {
       return;
     }
@@ -605,12 +607,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return '';
     }
     if (!boardHelper.gameOver) {
-      return `${boardHelper.colorTurn} To Move`;
+      return `${boardHelper.colorTurn} ${this.uiText.status.toMoveSuffix}`;
     }
     if (boardHelper.checkmateColor !== null) {
-      return `Checkmate - ${boardHelper.checkmateColor === ChessColorsEnum.White ? 'Black' : 'White'} wins`;
+      return `${this.uiText.status.checkmatePrefix} - ${boardHelper.checkmateColor === ChessColorsEnum.White ? this.uiText.status.black : this.uiText.status.white} ${this.uiText.message.checkmateWinner}`;
     }
-    return boardHelper.debugText || 'Draw';
+    return boardHelper.debugText || this.uiText.status.drawFallback;
   }
 
   getAmbientThemeClass(): string {
@@ -766,7 +768,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getClockButtonLabel(): string {
-    return this.clockRunning ? 'Pause Clock' : 'Start Clock';
+    return this.clockRunning ? this.uiText.clock.pause : this.uiText.clock.start;
+  }
+
+  getResignConfirmTitle(): string {
+    const colorName = this.resignConfirmColor === ChessColorsEnum.White
+      ? this.uiText.status.white
+      : this.uiText.status.black;
+    return this.uiText.resignConfirm.titleTemplate.replace('{color}', colorName);
   }
 
   formatClock(clockMs: number): string {
@@ -919,15 +928,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       .filter(step => step.length > 0);
     const moveCount = historySteps.length;
     if (moveCount < 1) {
-      return 'Waiting for opening line...';
+      return this.uiText.recognition.waitingForOpening;
     }
     if (!this.openingsLoaded) {
-      return 'Loading openings...';
+      return this.uiText.recognition.loadingOpenings;
     }
     if (this.activeOpening) {
       return this.getDisplayedOpeningName(this.activeOpening, historySteps);
     }
-    return 'No opening match';
+    return this.uiText.recognition.noOpeningMatch;
   }
 
   private getDisplayedOpeningName(opening: IParsedOpening, historySteps: string[]): string {
@@ -1136,17 +1145,17 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return '';
     }
 
-    const openingLine = opening.raw.long_algebraic_notation || 'n/a';
-    const suggestedName = opening.raw.suggested_best_response_name || 'n/a';
+    const openingLine = opening.raw.long_algebraic_notation || this.uiText.message.na;
+    const suggestedName = opening.raw.suggested_best_response_name || this.uiText.message.na;
     const suggestedDisplayName =
-      suggestedName !== 'n/a' && this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
+      suggestedName !== this.uiText.message.na && this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
         ? `${opening.name}: ${suggestedName}`
         : suggestedName;
-    const suggestedStep = opening.raw.suggested_best_response_notation_step || 'n/a';
-    const description = opening.raw.short_description || 'n/a';
+    const suggestedStep = opening.raw.suggested_best_response_notation_step || this.uiText.message.na;
+    const description = opening.raw.short_description || this.uiText.message.na;
     const displayedOpeningName = this.getDisplayedOpeningName(opening, historySteps);
     const suggestedSequence = this.extractNotationSteps(suggestedStep);
-    const suggestedResponseMove = suggestedSequence[0] || 'n/a';
+    const suggestedResponseMove = suggestedSequence[0] || this.uiText.message.na;
     const hasStartedSuggestedLine =
       suggestedSequence.length > 0 &&
       historySteps.length > opening.steps.length &&
@@ -1173,34 +1182,34 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     const effectiveLineDepth = fullProjectedLineSteps.length;
     const openingLineWithExtension =
-      shouldProjectSuggestedLine && suggestedStep !== 'n/a'
+      shouldProjectSuggestedLine && suggestedStep !== this.uiText.message.na
         ? `${openingLine} ${suggestedStep}`
         : openingLine;
 
     const lineContinuation = effectiveMatchedDepth < effectiveLineDepth
       ? fullProjectedLineSteps[effectiveMatchedDepth]
       : '—';
-    const nextSide = historyDepth % 2 === 0 ? 'White' : 'Black';
-    const responseSide = nextSide === 'White' ? 'Black' : 'White';
+    const nextSide = historyDepth % 2 === 0 ? this.uiText.status.white : this.uiText.status.black;
+    const responseSide = nextSide === this.uiText.status.white ? this.uiText.status.black : this.uiText.status.white;
     let bookRecommendationNow = '—';
     if (lineContinuation !== '—') {
       bookRecommendationNow = lineContinuation;
-    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== 'n/a') {
+    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== this.uiText.message.na) {
       bookRecommendationNow = suggestedResponseMove;
     }
 
     const debugLines = [
-      `Opening: ${displayedOpeningName}`,
-      `Matched steps: ${effectiveMatchedDepth}/${Math.max(effectiveLineDepth, historyDepth)}`,
-      `Line: ${openingLineWithExtension}`,
-      `Book recommendation (${nextSide} now): ${bookRecommendationNow}`
+      `${this.uiText.message.openingPrefix}: ${displayedOpeningName}`,
+      `${this.uiText.message.matchedStepsPrefix}: ${effectiveMatchedDepth}/${Math.max(effectiveLineDepth, historyDepth)}`,
+      `${this.uiText.message.linePrefix}: ${openingLineWithExtension}`,
+      `${this.uiText.message.bookRecommendationPrefix} (${nextSide} now): ${bookRecommendationNow}`
     ];
 
     if (lineContinuation !== '—' && suggestedStep !== 'n/a' && !shouldProjectSuggestedLine) {
-      debugLines.push(`Book recommendation (${responseSide} after): ${suggestedDisplayName} (${suggestedStep})`);
+      debugLines.push(`${this.uiText.message.bookRecommendationPrefix} (${responseSide} after): ${suggestedDisplayName} (${suggestedStep})`);
     }
 
-    debugLines.push(`Notes: ${description}`);
+    debugLines.push(`${this.uiText.message.notesPrefix}: ${description}`);
 
     return debugLines.join('\n');
   }
@@ -1208,12 +1217,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   getMockEndgameRecognition(): string {
     const totalPieces = this.getCurrentPieceCount();
     if (totalPieces <= 12) {
-      return 'Likely endgame (mock)';
+      return this.uiText.recognition.likelyEndgame;
     }
     if (totalPieces <= 20) {
-      return 'Transition phase (mock)';
+      return this.uiText.recognition.transitionPhase;
     }
-    return 'Not endgame yet (mock)';
+    return this.uiText.recognition.notEndgameYet;
   }
 
   getMockSuggestedMoves(): string[] {
@@ -1301,25 +1310,25 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   exportPgnMock(): void {
-    this.mockExportMessage = `Mock export: PGN ready (${new Date().toLocaleTimeString()})`;
+    this.mockExportMessage = `${this.uiText.message.mockExportPgnReady} (${new Date().toLocaleTimeString()})`;
   }
 
   exportBoardImageMock(): void {
-    this.mockExportMessage = `Mock export: Board image ready (${new Date().toLocaleTimeString()})`;
+    this.mockExportMessage = `${this.uiText.message.mockExportImageReady} (${new Date().toLocaleTimeString()})`;
   }
 
   showForkIdeasMock(): void {
     this.clearOverlay();
-    this.chessBoardStateService.boardHelper.debugText = 'Mock: Fork ideas highlighted (coming soon).';
+    this.chessBoardStateService.boardHelper.debugText = this.uiText.message.mockForkIdeas;
   }
 
   showPinIdeasMock(): void {
     this.clearOverlay();
-    this.chessBoardStateService.boardHelper.debugText = 'Mock: Pin opportunities highlighted (coming soon).';
+    this.chessBoardStateService.boardHelper.debugText = this.uiText.message.mockPinIdeas;
   }
 
   exportFenMock(): void {
-    this.mockExportMessage = `Mock export: FEN copied (${new Date().toLocaleTimeString()})`;
+    this.mockExportMessage = `${this.uiText.message.mockExportFenCopied} (${new Date().toLocaleTimeString()})`;
   }
 
   private ensureCctRecommendations(): void {
@@ -1606,10 +1615,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.chessBoardStateService.boardHelper.gameOver = true;
     this.chessBoardStateService.boardHelper.checkmateColor = null;
 
-    const loserName = color === ChessColorsEnum.White ? 'White' : 'Black';
+    const loserName = color === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black;
     const winnerResult = color === ChessColorsEnum.White ? '0-1' : '1-0';
-    this.chessBoardStateService.boardHelper.debugText = `${loserName} resigns.`;
-    this.appendGameResultToLastMove(winnerResult, `${loserName} resigns`);
+    this.chessBoardStateService.boardHelper.debugText = `${loserName} ${this.uiText.message.resigns}`;
+    this.appendGameResultToLastMove(winnerResult, `${loserName} ${this.uiText.message.resignsNoPeriod}`);
   }
 
   private collectMateInOneTargets(
@@ -2400,9 +2409,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     const winnerColor = loserColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     const winnerResult = winnerColor === ChessColorsEnum.White ? '1-0' : '0-1';
-    const loserName = loserColor === ChessColorsEnum.White ? 'White' : 'Black';
-    this.chessBoardStateService.boardHelper.debugText = `${loserName} forfeits on time.`;
-    this.appendGameResultToLastMove(winnerResult, `${loserName} forfeits on time`);
+    const loserName = loserColor === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black;
+    this.chessBoardStateService.boardHelper.debugText = `${loserName} ${this.uiText.message.forfeitsOnTime}`;
+    this.appendGameResultToLastMove(winnerResult, `${loserName} ${this.uiText.message.forfeitsOnTimeNoPeriod}`);
   }
 
   private padToTwo(value: number): string {

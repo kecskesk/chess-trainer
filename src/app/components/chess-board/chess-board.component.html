@@ -1,19 +1,13 @@
 <div class="trainer-layout">
-  <div class="info-hover" aria-label="Roadmap TODOs" [class.info-hover--open]="isInfoOverlayOpen">
+  <div class="info-hover" [attr.aria-label]="uiText.infoOverlay.ariaLabel" [class.info-hover--open]="isInfoOverlayOpen">
     <button class="info-hover__trigger"
             type="button"
-            aria-label="Show roadmap TODOs"
+            [attr.aria-label]="uiText.infoOverlay.triggerAriaLabel"
             [attr.aria-expanded]="isInfoOverlayOpen">ⓘ</button>
     <div class="info-hover__panel" role="note">
-      <div class="info-hover__title">TODO Roadmap</div>
+      <div class="info-hover__title">{{uiText.infoOverlay.title}}</div>
       <ul>
-        <li>Engine evaluation next to move history (e.g. +0.3).</li>
-        <li>Undo/redo workflow polish.</li>
-        <li>Optional board flip for Black perspective.</li>
-        <li>Opening/endgame recognition improvements.</li>
-        <li>Export options: image, PGN, FEN.</li>
-        <li>Tactical helpers: pin, fork, and related motifs.</li>
-        <li>Calculation model upgrades: CCT + TRC, candidate moves, prophylaxis, quiet moves, blunder check.</li>
+        <li *ngFor="let item of uiText.infoOverlay.items">{{item}}</li>
       </ul>
     </div>
   </div>
@@ -66,7 +60,7 @@
                *ngIf="chessBoardStateService.boardHelper"
                [open]="isDebugPanelOpen"
                (toggle)="onDebugPanelToggle($event)">
-        <summary>Debug & Position key</summary>
+        <summary>{{uiText.debugPanel.summary}}</summary>
         <div class="position-key-value" *ngIf="chessBoardStateService.boardHelper.debugText"
              [textContent]="chessBoardStateService.boardHelper.debugText"></div>
         <div class="position-key-value">{{getDebugPositionKey()}}</div>
@@ -77,10 +71,10 @@
   <section class="sidebar-panel">
     <div class="clock-card panel-card panel-card--wide">
       <div class="clock-card-header">
-        <h3 class="section-title">Clock</h3>
-        <div class="clock-brand" aria-label="Ne Chess Fel branding">
-          <img class="clock-brand__logo" src="horse.svg" alt="Chess horse logo" />
-          <span class="clock-brand__title">Ne Chess Fel! - Chess Trainer</span>
+        <h3 class="section-title">{{uiText.clock.sectionTitle}}</h3>
+        <div class="clock-brand" [attr.aria-label]="uiText.clock.brandAriaLabel">
+          <img class="clock-brand__logo" src="horse.svg" [attr.alt]="uiText.clock.logoAlt" />
+          <span class="clock-brand__title">{{uiText.app.brandTitle}}</span>
         </div>
       </div>
       <div class="clock-layout">
@@ -89,7 +83,7 @@
                [class.clock-display--active]="isClockActive(chessColors.Black)"
                [class.clock-display--low]="isClockLow(chessColors.Black)">
             <div class="clock-meta">
-              <span class="clock-player">Black</span>
+              <span class="clock-player">{{uiText.clock.black}}</span>
               <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.Black)"></span>
             </div>
             <span class="clock-time">{{formatClock(blackClockMs)}}</span>
@@ -98,7 +92,7 @@
                [class.clock-display--active]="isClockActive(chessColors.White)"
                [class.clock-display--low]="isClockLow(chessColors.White)">
             <div class="clock-meta">
-              <span class="clock-player">White</span>
+              <span class="clock-player">{{uiText.clock.white}}</span>
               <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.White)"></span>
             </div>
             <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
@@ -124,7 +118,7 @@
               [disabled]="clockStarted"
               [class.time-btn--selected]="selectedClockPresetLabel === '10+0'"
               (click)="applyTimeControl(10, 0, '10+0')">10+0</button>
-            <button class="action-btn action-btn--secondary action-btn--large" (click)="resetClock()">Reset</button>
+            <button class="action-btn action-btn--secondary action-btn--large" (click)="resetClock()">{{uiText.clock.reset}}</button>
           </div>
         </div>
       </div>
@@ -137,202 +131,202 @@
       <div class="icon-actions-row icon-actions-row--compact icon-actions-row--status">
         <button class="icon-action-btn"
           (click)="showPossibleMoves(chessBoardStateService.boardHelper.colorTurn)"
-          title="Show possible moves"
-          aria-label="Show possible moves">
+          [attr.title]="uiText.status.showPossibleMovesTitle"
+          [attr.aria-label]="uiText.status.showPossibleMovesAriaLabel">
           <span class="icon-action-btn__icon">👁</span>
-          <span class="icon-action-btn__text">Show moves</span>
+          <span class="icon-action-btn__text">{{uiText.status.showMoves}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary"
           (click)="showPossibleMoves(null)"
-          title="Clear highlights"
-          aria-label="Clear highlights">
+          [attr.title]="uiText.status.clearHighlightsTitle"
+          [attr.aria-label]="uiText.status.clearHighlightsAriaLabel">
           <span class="icon-action-btn__icon">⌫</span>
-          <span class="icon-action-btn__text">Clear highlights</span>
+          <span class="icon-action-btn__text">{{uiText.status.clearHighlights}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary status-action-new-game"
           *ngIf="pendingDrawOfferBy === null"
           (click)="startNewGame()"
-          title="Start new game"
-          aria-label="Start new game">
+          [attr.title]="uiText.status.startNewGameTitle"
+          [attr.aria-label]="uiText.status.startNewGameAriaLabel">
           <span class="icon-action-btn__icon">↻</span>
-          <span class="icon-action-btn__text">New game</span>
+          <span class="icon-action-btn__text">{{uiText.status.newGame}}</span>
         </button>
         <button class="icon-action-btn"
           *ngIf="canOfferDraw()"
           (click)="offerDraw()"
-          title="Offer draw"
-          aria-label="Offer draw">
+          [attr.title]="uiText.status.offerDrawTitle"
+          [attr.aria-label]="uiText.status.offerDrawAriaLabel">
           <span class="icon-action-btn__icon">🤝</span>
-          <span class="icon-action-btn__text">Offer draw</span>
+          <span class="icon-action-btn__text">{{uiText.status.offerDraw}}</span>
         </button>
         <button class="icon-action-btn"
           *ngIf="canRespondToDrawOffer()"
           (click)="acceptDrawOffer()"
-          title="Accept draw"
-          aria-label="Accept draw">
+          [attr.title]="uiText.status.acceptDrawTitle"
+          [attr.aria-label]="uiText.status.acceptDrawAriaLabel">
           <span class="icon-action-btn__icon">✔</span>
-          <span class="icon-action-btn__text">Accept draw</span>
+          <span class="icon-action-btn__text">{{uiText.status.acceptDraw}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary"
           *ngIf="canRespondToDrawOffer()"
           (click)="declineDrawOffer()"
-          title="Decline draw"
-          aria-label="Decline draw">
+          [attr.title]="uiText.status.declineDrawTitle"
+          [attr.aria-label]="uiText.status.declineDrawAriaLabel">
           <span class="icon-action-btn__icon">✖</span>
-          <span class="icon-action-btn__text">Decline draw</span>
+          <span class="icon-action-btn__text">{{uiText.status.declineDraw}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary"
           *ngIf="canClaimDraw()"
           (click)="claimDraw()"
-          title="Claim draw"
-          aria-label="Claim draw">
+          [attr.title]="uiText.status.claimDrawTitle"
+          [attr.aria-label]="uiText.status.claimDrawAriaLabel">
           <span class="icon-action-btn__icon">⚖</span>
-          <span class="icon-action-btn__text">Claim draw</span>
+          <span class="icon-action-btn__text">{{uiText.status.claimDraw}}</span>
         </button>
       </div>
       <div class="icon-actions-row icon-actions-row--resign" *ngIf="clockRunning">
         <button class="icon-action-btn icon-action-btn--danger"
                 [disabled]="!canResign(chessColors.White)"
                 (click)="openResignConfirm(chessColors.White)"
-                title="White resign"
-                aria-label="White resign">
+                [attr.title]="uiText.status.whiteResignTitle"
+                [attr.aria-label]="uiText.status.whiteResignAriaLabel">
           <span class="icon-action-btn__icon">♔</span>
-          <span class="icon-action-btn__text">White</span>
+          <span class="icon-action-btn__text">{{uiText.status.white}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--danger"
                 [disabled]="!canResign(chessColors.Black)"
                 (click)="openResignConfirm(chessColors.Black)"
-                title="Black resign"
-                aria-label="Black resign">
+                [attr.title]="uiText.status.blackResignTitle"
+                [attr.aria-label]="uiText.status.blackResignAriaLabel">
           <span class="icon-action-btn__icon">♚</span>
-          <span class="icon-action-btn__text">Black</span>
+          <span class="icon-action-btn__text">{{uiText.status.black}}</span>
         </button>
       </div>
     </div>
 
-    <div class="status-card panel-card panel-card--wide" *ngIf="resignConfirmColor !== null" role="dialog" aria-modal="false" aria-label="Confirm resignation">
-      <h3 class="section-title">Are You Sure {{resignConfirmColor === chessColors.White ? 'White' : 'Black'}} Resigns?</h3>
+    <div class="status-card panel-card panel-card--wide" *ngIf="resignConfirmColor !== null" role="dialog" aria-modal="false" [attr.aria-label]="uiText.resignConfirm.dialogAriaLabel">
+      <h3 class="section-title">{{getResignConfirmTitle()}}</h3>
       <div class="icon-actions-row icon-actions-row--compact">
-        <button class="icon-action-btn icon-action-btn--secondary" (click)="cancelResignConfirm()" title="Cancel resignation" aria-label="Cancel resignation">
+        <button class="icon-action-btn icon-action-btn--secondary" (click)="cancelResignConfirm()" [attr.title]="uiText.resignConfirm.cancelTitle" [attr.aria-label]="uiText.resignConfirm.cancelAriaLabel">
           <span class="icon-action-btn__icon">✖</span>
-          <span class="icon-action-btn__text">Cancel</span>
+          <span class="icon-action-btn__text">{{uiText.resignConfirm.cancel}}</span>
         </button>
-        <button class="icon-action-btn icon-action-btn--danger" (click)="confirmResign()" title="Confirm resignation" aria-label="Confirm resignation">
+        <button class="icon-action-btn icon-action-btn--danger" (click)="confirmResign()" [attr.title]="uiText.resignConfirm.confirmTitle" [attr.aria-label]="uiText.resignConfirm.confirmAriaLabel">
           <span class="icon-action-btn__icon">⚑</span>
-          <span class="icon-action-btn__text">Resign</span>
+          <span class="icon-action-btn__text">{{uiText.resignConfirm.confirm}}</span>
         </button>
       </div>
     </div>
 
     <div class="tool-card panel-card panel-card--wide" *ngIf="chessBoardStateService.boardHelper.canPromote !== null">
-      <h3 class="section-title">Promote</h3>
+      <h3 class="section-title">{{uiText.promotion.sectionTitle}}</h3>
       <div class="icon-actions-row promote-row">
-        <button class="icon-action-btn" (click)="promotePiece('rook')" title="Promote to rook" aria-label="Promote to rook">
+        <button class="icon-action-btn" (click)="promotePiece('rook')" [attr.title]="uiText.promotion.promoteToRookTitle" [attr.aria-label]="uiText.promotion.promoteToRookAriaLabel">
           <span class="icon-action-btn__icon">♖</span>
-          <span class="icon-action-btn__text">Rook</span>
+          <span class="icon-action-btn__text">{{uiText.promotion.rook}}</span>
         </button>
-        <button class="icon-action-btn" (click)="promotePiece('bishop')" title="Promote to bishop" aria-label="Promote to bishop">
+        <button class="icon-action-btn" (click)="promotePiece('bishop')" [attr.title]="uiText.promotion.promoteToBishopTitle" [attr.aria-label]="uiText.promotion.promoteToBishopAriaLabel">
           <span class="icon-action-btn__icon">♗</span>
-          <span class="icon-action-btn__text">Bishop</span>
+          <span class="icon-action-btn__text">{{uiText.promotion.bishop}}</span>
         </button>
-        <button class="icon-action-btn" (click)="promotePiece('knight')" title="Promote to knight" aria-label="Promote to knight">
+        <button class="icon-action-btn" (click)="promotePiece('knight')" [attr.title]="uiText.promotion.promoteToKnightTitle" [attr.aria-label]="uiText.promotion.promoteToKnightAriaLabel">
           <span class="icon-action-btn__icon">♘</span>
-          <span class="icon-action-btn__text">Knight</span>
+          <span class="icon-action-btn__text">{{uiText.promotion.knight}}</span>
         </button>
-        <button class="icon-action-btn" (click)="promotePiece('queen')" title="Promote to queen" aria-label="Promote to queen">
+        <button class="icon-action-btn" (click)="promotePiece('queen')" [attr.title]="uiText.promotion.promoteToQueenTitle" [attr.aria-label]="uiText.promotion.promoteToQueenAriaLabel">
           <span class="icon-action-btn__icon">♕</span>
-          <span class="icon-action-btn__text">Queen</span>
+          <span class="icon-action-btn__text">{{uiText.promotion.queen}}</span>
         </button>
       </div>
     </div>
 
     <div class="tool-card panel-card">
-      <h3 class="section-title">Magic Toolkit</h3>
+      <h3 class="section-title">{{uiText.magicToolkit.sectionTitle}}</h3>
       <div class="icon-actions-row">
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='threats-mine'"
-                (click)="showThreats()" title="My threats" aria-label="My threats">
+                (click)="showThreats()" [attr.title]="uiText.magicToolkit.myThreatsTitle" [attr.aria-label]="uiText.magicToolkit.myThreatsAriaLabel">
           <span class="icon-action-btn__icon">⚔</span>
-          <span class="icon-action-btn__text">Mine</span>
+          <span class="icon-action-btn__text">{{uiText.magicToolkit.mine}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='protected-mine'"
-                (click)="showProtected()" title="My protected" aria-label="My protected">
+                (click)="showProtected()" [attr.title]="uiText.magicToolkit.myProtectedTitle" [attr.aria-label]="uiText.magicToolkit.myProtectedAriaLabel">
           <span class="icon-action-btn__icon">🛡</span>
-          <span class="icon-action-btn__text">Safe</span>
+          <span class="icon-action-btn__text">{{uiText.magicToolkit.safe}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='threats-enemy'"
-                (click)="showThreats(true)" title="Enemy threats" aria-label="Enemy threats">
+                (click)="showThreats(true)" [attr.title]="uiText.magicToolkit.enemyThreatsTitle" [attr.aria-label]="uiText.magicToolkit.enemyThreatsAriaLabel">
           <span class="icon-action-btn__icon">☠</span>
-          <span class="icon-action-btn__text">Enemy</span>
+          <span class="icon-action-btn__text">{{uiText.magicToolkit.enemy}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='protected-enemy'"
-                (click)="showProtected(true)" title="Enemy protected" aria-label="Enemy protected">
+                (click)="showProtected(true)" [attr.title]="uiText.magicToolkit.enemyProtectedTitle" [attr.aria-label]="uiText.magicToolkit.enemyProtectedAriaLabel">
           <span class="icon-action-btn__icon">⛨</span>
-          <span class="icon-action-btn__text">Guarded</span>
+          <span class="icon-action-btn__text">{{uiText.magicToolkit.guarded}}</span>
         </button>
       </div>
     </div>
 
     <div class="tool-card panel-card">
-      <h3 class="section-title">Magicer Toolkit</h3>
+      <h3 class="section-title">{{uiText.magicerToolkit.sectionTitle}}</h3>
       <div class="icon-actions-row icon-actions-row--compact">
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='hanging-mine'"
-                (click)="showHangingPieces()" title="My hanging pieces (blundered)" aria-label="My hanging pieces">
+                (click)="showHangingPieces()" [attr.title]="uiText.magicerToolkit.myHangingTitle" [attr.aria-label]="uiText.magicerToolkit.myHangingAriaLabel">
           <span class="icon-action-btn__icon">⚠</span>
-          <span class="icon-action-btn__text">Blunder</span>
+          <span class="icon-action-btn__text">{{uiText.magicerToolkit.blunder}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='hanging-enemy'"
-                (click)="showHangingPieces(true)" title="Hanging enemy pieces (hittable)" aria-label="Hanging enemy pieces">
+                (click)="showHangingPieces(true)" [attr.title]="uiText.magicerToolkit.enemyHangingTitle" [attr.aria-label]="uiText.magicerToolkit.enemyHangingAriaLabel">
           <span class="icon-action-btn__icon">🎯</span>
-          <span class="icon-action-btn__text">Target</span>
+          <span class="icon-action-btn__text">{{uiText.magicerToolkit.target}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showForkIdeasMock()" title="Fork ideas (mock)" aria-label="Fork ideas">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showForkIdeasMock()" [attr.title]="uiText.magicerToolkit.forkIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.forkIdeasAriaLabel">
           <span class="icon-action-btn__icon">⑂</span>
-          <span class="icon-action-btn__text">Fork</span>
+          <span class="icon-action-btn__text">{{uiText.magicerToolkit.fork}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showPinIdeasMock()" title="Pin opportunities (mock)" aria-label="Pin opportunities">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showPinIdeasMock()" [attr.title]="uiText.magicerToolkit.pinIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.pinIdeasAriaLabel">
           <span class="icon-action-btn__icon">📌</span>
-          <span class="icon-action-btn__text">Pin</span>
+          <span class="icon-action-btn__text">{{uiText.magicerToolkit.pin}}</span>
         </button>
       </div>
     </div>
 
     <div class="tool-card panel-card">
-      <h3 class="section-title">Game Tools</h3>
+      <h3 class="section-title">{{uiText.gameTools.sectionTitle}}</h3>
       <div class="icon-actions-row icon-actions-row--compact">
         <button class="icon-action-btn" (click)="toggleBoardFlip()"
                 [class.time-btn--selected]="isBoardFlipped"
-                title="Flip board" aria-label="Flip board">
+                [attr.title]="uiText.gameTools.flipBoardTitle" [attr.aria-label]="uiText.gameTools.flipBoardAriaLabel">
           <span class="icon-action-btn__icon">⇅</span>
-          <span class="icon-action-btn__text">Flip</span>
+          <span class="icon-action-btn__text">{{uiText.gameTools.flip}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportPgnMock()" title="Export PGN (mock)" aria-label="Export PGN">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportPgnMock()" [attr.title]="uiText.gameTools.exportPgnTitle" [attr.aria-label]="uiText.gameTools.exportPgnAriaLabel">
           <span class="icon-action-btn__icon">⭳</span>
-          <span class="icon-action-btn__text">PGN</span>
+          <span class="icon-action-btn__text">{{uiText.gameTools.pgn}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportBoardImageMock()" title="Export image (mock)" aria-label="Export board image">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportBoardImageMock()" [attr.title]="uiText.gameTools.exportImageTitle" [attr.aria-label]="uiText.gameTools.exportImageAriaLabel">
           <span class="icon-action-btn__icon">🖼</span>
-          <span class="icon-action-btn__text">Image</span>
+          <span class="icon-action-btn__text">{{uiText.gameTools.image}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportFenMock()" title="Export FEN (mock)" aria-label="Export FEN">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportFenMock()" [attr.title]="uiText.gameTools.exportFenTitle" [attr.aria-label]="uiText.gameTools.exportFenAriaLabel">
           <span class="icon-action-btn__icon">⌘</span>
-          <span class="icon-action-btn__text">FEN</span>
+          <span class="icon-action-btn__text">{{uiText.gameTools.fen}}</span>
         </button>
       </div>
       <div class="mock-export-text" *ngIf="mockExportMessage">{{mockExportMessage}}</div>
     </div>
 
     <div class="tool-card panel-card">
-      <h3 class="section-title">Recognition</h3>
-      <div class="recognition-line"><strong>Opening:</strong> {{getMockOpeningRecognition()}}</div>
-      <div class="recognition-line"><strong>Endgame:</strong> {{getMockEndgameRecognition()}}</div>
+      <h3 class="section-title">{{uiText.recognition.sectionTitle}}</h3>
+      <div class="recognition-line"><strong>{{uiText.recognition.openingLabel}}:</strong> {{getMockOpeningRecognition()}}</div>
+      <div class="recognition-line"><strong>{{uiText.recognition.endgameLabel}}:</strong> {{getMockEndgameRecognition()}}</div>
       <div class="recognition-line recognition-line--suggestions">
-        <strong>Suggested:</strong>
+        <strong>{{uiText.recognition.suggestedLabel}}:</strong>
         <span class="suggested-move"
               [ngClass]="getSuggestedMoveClass(move)"
             (mouseenter)="previewSuggestedMoveArrows(move)"
@@ -342,15 +336,15 @@
     </div>
 
     <div class="history-card panel-card">
-      <h3 class="section-title">History</h3>
+      <h3 class="section-title">{{uiText.history.sectionTitle}}</h3>
       <div class="icon-actions-row icon-actions-row--compact history-controls">
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canUndoMoveMock()" (click)="undoMoveMock()" title="Undo move (mock)" aria-label="Undo move">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canUndoMoveMock()" (click)="undoMoveMock()" [attr.title]="uiText.history.undoTitle" [attr.aria-label]="uiText.history.undoAriaLabel">
           <span class="icon-action-btn__icon">↶</span>
-          <span class="icon-action-btn__text">Undo</span>
+          <span class="icon-action-btn__text">{{uiText.history.undo}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canRedoMoveMock()" (click)="redoMoveMock()" title="Redo move (mock)" aria-label="Redo move">
+        <button class="icon-action-btn" [disabled]="areMockControlsDisabled || !canRedoMoveMock()" (click)="redoMoveMock()" [attr.title]="uiText.history.redoTitle" [attr.aria-label]="uiText.history.redoAriaLabel">
           <span class="icon-action-btn__icon">↷</span>
-          <span class="icon-action-btn__text">Redo</span>
+          <span class="icon-action-btn__text">{{uiText.history.redo}}</span>
         </button>
       </div>
       <div class="history-log">
@@ -362,48 +356,52 @@
             <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
             {{histItem}}
           </span>
-          <span class="history-eval">SF {{getMockEvaluationForMove(histIdx)}}</span>
+          <span class="history-eval">{{uiText.history.sfPrefix}} {{getMockEvaluationForMove(histIdx)}}</span>
         </div>
       </div>
     </div>
 
     <div class="tool-card panel-card cct-card">
-      <h3 class="section-title">CCT</h3>
-      <div class="cct-row cct-row--capture" title="Captures: forcing moves that win or trade material.">
-        <span class="cct-row__icon" title="Captures">✕</span>
+      <h3 class="section-title">{{uiText.cct.sectionTitle}}</h3>
+      <div class="cct-row cct-row--capture" [attr.title]="uiText.cct.capturesRowTitle">
+        <span class="cct-row__icon" [attr.title]="uiText.cct.capturesIconTitle">✕</span>
         <ng-container *ngIf="getCctRecommendations(cctCategory.Captures) as captureRecs">
               <span class="cct-step"
                 *ngFor="let rec of captureRecs"
                 [title]="rec.tooltip"
                 (mouseenter)="previewSuggestedMoveArrows(rec.move)"
                 (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
-          <span class="cct-empty" *ngIf="captureRecs.length < 1" title="No immediate forcing captures found.">—</span>
+          <span class="cct-empty" *ngIf="captureRecs.length < 1" [attr.title]="uiText.cct.noCapturesTitle">—</span>
         </ng-container>
       </div>
-      <div class="cct-row cct-row--check" title="Checks: direct king pressure that forces responses.">
-        <span class="cct-row__icon" title="Checks">♔</span>
+      <div class="cct-row cct-row--check" [attr.title]="uiText.cct.checksRowTitle">
+        <span class="cct-row__icon" [attr.title]="uiText.cct.checksIconTitle">♔</span>
         <ng-container *ngIf="getCctRecommendations(cctCategory.Checks) as checkRecs">
               <span class="cct-step"
                 *ngFor="let rec of checkRecs"
                 [title]="rec.tooltip"
                 (mouseenter)="previewSuggestedMoveArrows(rec.move)"
                 (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
-          <span class="cct-empty" *ngIf="checkRecs.length < 1" title="No immediate forcing checks found.">—</span>
+          <span class="cct-empty" *ngIf="checkRecs.length < 1" [attr.title]="uiText.cct.noChecksTitle">—</span>
         </ng-container>
       </div>
-      <div class="cct-row cct-row--threat" title="Threats: moves that create tactical pressure next move.">
-        <span class="cct-row__icon" title="Threats">⚠</span>
+      <div class="cct-row cct-row--threat" [attr.title]="uiText.cct.threatsRowTitle">
+        <span class="cct-row__icon" [attr.title]="uiText.cct.threatsIconTitle">⚠</span>
         <ng-container *ngIf="getCctRecommendations(cctCategory.Threats) as threatRecs">
               <span class="cct-step"
                 *ngFor="let rec of threatRecs"
                 [title]="rec.tooltip"
                 (mouseenter)="previewSuggestedMoveArrows(rec.move)"
                 (mouseleave)="clearSuggestedMoveArrows()">{{rec.move}}</span>
-          <span class="cct-empty" *ngIf="threatRecs.length < 1" title="No immediate forcing threats found.">—</span>
+          <span class="cct-empty" *ngIf="threatRecs.length < 1" [attr.title]="uiText.cct.noThreatsTitle">—</span>
         </ng-container>
       </div>
     </div>
 
   </section>
 </div>
+
+
+
+
 

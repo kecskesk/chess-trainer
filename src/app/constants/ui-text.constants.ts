@@ -1,0 +1,231 @@
+type JsonObject = Record<string, unknown>;
+
+export const UiText = {
+  app: {
+    brandTitle: ''
+  },
+  infoOverlay: {
+    ariaLabel: '',
+    triggerAriaLabel: '',
+    title: '',
+    items: [] as string[]
+  },
+  debugPanel: {
+    summary: ''
+  },
+  clock: {
+    sectionTitle: '',
+    brandAriaLabel: '',
+    logoAlt: '',
+    black: '',
+    white: '',
+    reset: '',
+    start: '',
+    pause: ''
+  },
+  status: {
+    showPossibleMovesTitle: '',
+    showPossibleMovesAriaLabel: '',
+    showMoves: '',
+    clearHighlightsTitle: '',
+    clearHighlightsAriaLabel: '',
+    clearHighlights: '',
+    startNewGameTitle: '',
+    startNewGameAriaLabel: '',
+    newGame: '',
+    offerDrawTitle: '',
+    offerDrawAriaLabel: '',
+    offerDraw: '',
+    acceptDrawTitle: '',
+    acceptDrawAriaLabel: '',
+    acceptDraw: '',
+    declineDrawTitle: '',
+    declineDrawAriaLabel: '',
+    declineDraw: '',
+    claimDrawTitle: '',
+    claimDrawAriaLabel: '',
+    claimDraw: '',
+    whiteResignTitle: '',
+    whiteResignAriaLabel: '',
+    blackResignTitle: '',
+    blackResignAriaLabel: '',
+    white: '',
+    black: '',
+    drawFallback: '',
+    toMoveSuffix: '',
+    checkmatePrefix: ''
+  },
+  resignConfirm: {
+    dialogAriaLabel: '',
+    titleTemplate: '',
+    cancelTitle: '',
+    cancelAriaLabel: '',
+    cancel: '',
+    confirmTitle: '',
+    confirmAriaLabel: '',
+    confirm: ''
+  },
+  promotion: {
+    sectionTitle: '',
+    promoteToRookTitle: '',
+    promoteToRookAriaLabel: '',
+    rook: '',
+    promoteToBishopTitle: '',
+    promoteToBishopAriaLabel: '',
+    bishop: '',
+    promoteToKnightTitle: '',
+    promoteToKnightAriaLabel: '',
+    knight: '',
+    promoteToQueenTitle: '',
+    promoteToQueenAriaLabel: '',
+    queen: ''
+  },
+  magicToolkit: {
+    sectionTitle: '',
+    myThreatsTitle: '',
+    myThreatsAriaLabel: '',
+    mine: '',
+    myProtectedTitle: '',
+    myProtectedAriaLabel: '',
+    safe: '',
+    enemyThreatsTitle: '',
+    enemyThreatsAriaLabel: '',
+    enemy: '',
+    enemyProtectedTitle: '',
+    enemyProtectedAriaLabel: '',
+    guarded: ''
+  },
+  magicerToolkit: {
+    sectionTitle: '',
+    myHangingTitle: '',
+    myHangingAriaLabel: '',
+    blunder: '',
+    enemyHangingTitle: '',
+    enemyHangingAriaLabel: '',
+    target: '',
+    forkIdeasTitle: '',
+    forkIdeasAriaLabel: '',
+    fork: '',
+    pinIdeasTitle: '',
+    pinIdeasAriaLabel: '',
+    pin: ''
+  },
+  gameTools: {
+    sectionTitle: '',
+    flipBoardTitle: '',
+    flipBoardAriaLabel: '',
+    flip: '',
+    exportPgnTitle: '',
+    exportPgnAriaLabel: '',
+    pgn: '',
+    exportImageTitle: '',
+    exportImageAriaLabel: '',
+    image: '',
+    exportFenTitle: '',
+    exportFenAriaLabel: '',
+    fen: ''
+  },
+  recognition: {
+    sectionTitle: '',
+    openingLabel: '',
+    endgameLabel: '',
+    suggestedLabel: '',
+    waitingForOpening: '',
+    loadingOpenings: '',
+    noOpeningMatch: '',
+    likelyEndgame: '',
+    transitionPhase: '',
+    notEndgameYet: ''
+  },
+  history: {
+    sectionTitle: '',
+    undoTitle: '',
+    undoAriaLabel: '',
+    undo: '',
+    redoTitle: '',
+    redoAriaLabel: '',
+    redo: '',
+    sfPrefix: ''
+  },
+  cct: {
+    sectionTitle: '',
+    capturesRowTitle: '',
+    capturesIconTitle: '',
+    noCapturesTitle: '',
+    checksRowTitle: '',
+    checksIconTitle: '',
+    noChecksTitle: '',
+    threatsRowTitle: '',
+    threatsIconTitle: '',
+    noThreatsTitle: ''
+  },
+  message: {
+    gameOverNoMoves: '',
+    gameOverStartNew: '',
+    noPieceOnSquare: '',
+    drawByAgreementText: '',
+    drawByAgreementTitle: '',
+    drawByThreefoldText: '',
+    drawByThreefoldTitle: '',
+    drawByFiftyMoveText: '',
+    drawByFiftyMoveTitle: '',
+    drawByStalemateText: '',
+    drawByStalemateTitle: '',
+    drawByInsufficientText: '',
+    drawByInsufficientTitle: '',
+    drawByFivefoldText: '',
+    drawByFivefoldTitle: '',
+    drawBySeventyFiveText: '',
+    drawBySeventyFiveTitle: '',
+    checkmateCallout: '',
+    turnMessageTemplate: '',
+    noLegalTargetsTemplate: '',
+    checkmateWinner: '',
+    resigns: '',
+    resignsNoPeriod: '',
+    forfeitsOnTime: '',
+    forfeitsOnTimeNoPeriod: '',
+    mockExportPgnReady: '',
+    mockExportImageReady: '',
+    mockExportFenCopied: '',
+    mockForkIdeas: '',
+    mockPinIdeas: '',
+    subtlePrefix: '',
+    na: '',
+    openingPrefix: '',
+    matchedStepsPrefix: '',
+    linePrefix: '',
+    bookRecommendationPrefix: '',
+    notesPrefix: ''
+  }
+};
+
+export function mergeUiText(source: JsonObject): void {
+  deepAssign(UiText as unknown as JsonObject, source);
+}
+
+function deepAssign(target: JsonObject, source: JsonObject): void {
+  Object.keys(source).forEach((key) => {
+    const srcValue = source[key];
+    const tgtValue = target[key];
+
+    if (Array.isArray(srcValue)) {
+      target[key] = [...srcValue];
+      return;
+    }
+
+    if (isObject(srcValue)) {
+      if (!isObject(tgtValue)) {
+        target[key] = {};
+      }
+      deepAssign(target[key] as JsonObject, srcValue);
+      return;
+    }
+
+    target[key] = srcValue;
+  });
+}
+
+function isObject(value: unknown): value is JsonObject {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}

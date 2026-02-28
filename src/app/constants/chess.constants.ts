@@ -1,4 +1,5 @@
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
+import { UiText } from './ui-text.constants';
 
 /**
  * Core chess domain constants reused across rules, board parsing, and notation.
@@ -122,35 +123,35 @@ export class ChessBoardUiConstants {
  */
 export class ChessBoardMessageConstants {
   /** Debug message when move input is blocked due to finished game. */
-  static readonly GAME_OVER_NO_MOVES = 'Game is over. No more moves allowed.';
+  static get GAME_OVER_NO_MOVES(): string { return UiText.message.gameOverNoMoves; }
   /** Debug message prompting user to reset after game end. */
-  static readonly GAME_OVER_START_NEW = 'Game is over. Start a new game to move pieces.';
+  static get GAME_OVER_START_NEW(): string { return UiText.message.gameOverStartNew; }
   /** Debug message when selecting an empty board square. */
-  static readonly NO_PIECE_ON_SQUARE = 'No piece on this square.';
+  static get NO_PIECE_ON_SQUARE(): string { return UiText.message.noPieceOnSquare; }
 
   /** Draw text and PGN reason labels by draw scenario. */
-  static readonly DRAW_BY_AGREEMENT_TEXT = 'Draw by agreement.';
-  static readonly DRAW_BY_AGREEMENT_TITLE = 'Draw agreed';
-  static readonly DRAW_BY_THREEFOLD_TEXT = 'Draw by threefold repetition (claimed).';
-  static readonly DRAW_BY_THREEFOLD_TITLE = 'Draw by threefold repetition';
-  static readonly DRAW_BY_FIFTY_MOVE_TEXT = 'Draw by fifty-move rule (claimed).';
-  static readonly DRAW_BY_FIFTY_MOVE_TITLE = 'Draw by fifty-move rule';
-  static readonly DRAW_BY_STALEMATE_TEXT = 'Draw by stalemate.';
-  static readonly DRAW_BY_STALEMATE_TITLE = 'Draw by stalemate';
-  static readonly DRAW_BY_INSUFFICIENT_TEXT = 'Draw by insufficient material.';
-  static readonly DRAW_BY_INSUFFICIENT_TITLE = 'Draw by insufficient material';
-  static readonly DRAW_BY_FIVEFOLD_TEXT = 'Draw by fivefold repetition.';
-  static readonly DRAW_BY_FIVEFOLD_TITLE = 'Draw by fivefold repetition';
-  static readonly DRAW_BY_SEVENTYFIVE_TEXT = 'Draw by seventy-five-move rule.';
-  static readonly DRAW_BY_SEVENTYFIVE_TITLE = 'Draw by seventy-five-move rule';
+  static get DRAW_BY_AGREEMENT_TEXT(): string { return UiText.message.drawByAgreementText; }
+  static get DRAW_BY_AGREEMENT_TITLE(): string { return UiText.message.drawByAgreementTitle; }
+  static get DRAW_BY_THREEFOLD_TEXT(): string { return UiText.message.drawByThreefoldText; }
+  static get DRAW_BY_THREEFOLD_TITLE(): string { return UiText.message.drawByThreefoldTitle; }
+  static get DRAW_BY_FIFTY_MOVE_TEXT(): string { return UiText.message.drawByFiftyMoveText; }
+  static get DRAW_BY_FIFTY_MOVE_TITLE(): string { return UiText.message.drawByFiftyMoveTitle; }
+  static get DRAW_BY_STALEMATE_TEXT(): string { return UiText.message.drawByStalemateText; }
+  static get DRAW_BY_STALEMATE_TITLE(): string { return UiText.message.drawByStalemateTitle; }
+  static get DRAW_BY_INSUFFICIENT_TEXT(): string { return UiText.message.drawByInsufficientText; }
+  static get DRAW_BY_INSUFFICIENT_TITLE(): string { return UiText.message.drawByInsufficientTitle; }
+  static get DRAW_BY_FIVEFOLD_TEXT(): string { return UiText.message.drawByFivefoldText; }
+  static get DRAW_BY_FIVEFOLD_TITLE(): string { return UiText.message.drawByFivefoldTitle; }
+  static get DRAW_BY_SEVENTYFIVE_TEXT(): string { return UiText.message.drawBySeventyFiveText; }
+  static get DRAW_BY_SEVENTYFIVE_TITLE(): string { return UiText.message.drawBySeventyFiveTitle; }
 
   /** Builds turn guidance message (e.g. "It is White's move."). */
   static turnMessage(color: string): string {
-    return `It is ${color}'s move.`;
+    return UiText.message.turnMessageTemplate.replace('{color}', color);
   }
 
   /** Builds message shown when selected piece has zero legal moves. */
   static noLegalTargetsMessage(piece: string): string {
-    return `No legal targets for this ${piece}.`;
+    return UiText.message.noLegalTargetsTemplate.replace('{piece}', piece);
   }
 }
