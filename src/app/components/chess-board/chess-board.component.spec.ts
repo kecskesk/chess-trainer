@@ -179,6 +179,202 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(globals.boardHelper.debugText).not.toContain('Book recommendation (Black now): Queen\'s Gambit Declined (2... e7-e6)');
   });
 
+  it('extends Dutch line with first variation move and labels the opening as Dutch Defense: Classical Variation', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Dutch Defense',
+        steps: ['d2-d4', 'f7-f5'],
+        raw: {
+          name: 'Dutch Defense',
+          long_algebraic_notation: '1. d2-d4 f7-f5',
+          suggested_best_response_name: 'Classical Variation',
+          suggested_best_response_notation_step: '2. c2-c4 Ng8-f6 3. g2-g3',
+          short_description: 'An aggressive defense aiming for kingside chances.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(canDropLike(1, 5, 3, 5)).toBeTrue();
+    component.onDrop(createDropLike(1, 5, 3, 5));
+    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
+    component.onDrop(createDropLike(6, 2, 4, 2));
+
+    expect(component.getMockOpeningRecognition()).toBe('Dutch Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Opening: Dutch Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. d2-d4 f7-f5 2. c2-c4 Ng8-f6 3. g2-g3');
+  });
+
+  it('labels Alekhine line as Alekhine\'s Defense: Four Pawns Attack when the suggested move is played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Alekhine\'s Defense',
+        steps: ['e2-e4', 'Ng8-f6'],
+        raw: {
+          name: 'Alekhine\'s Defense',
+          long_algebraic_notation: '1. e2-e4 Ng8-f6',
+          suggested_best_response_name: 'Four Pawns Attack',
+          suggested_best_response_notation_step: '2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4',
+          short_description: 'A provocative defense inviting White to overextend the center.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(0, 6, 2, 5)).toBeTrue();
+    component.onDrop(createDropLike(0, 6, 2, 5));
+    expect(canDropLike(4, 4, 3, 4)).toBeTrue();
+    component.onDrop(createDropLike(4, 4, 3, 4));
+
+    expect(component.getMockOpeningRecognition()).toBe('Alekhine\'s Defense: Four Pawns Attack');
+    expect(globals.boardHelper.debugText).toContain('Opening: Alekhine\'s Defense: Four Pawns Attack');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/7');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 Ng8-f6 2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4');
+  });
+
+  it('shows prefixed response name in recommendation text for Alekhine\'s Defense', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Alekhine\'s Defense',
+        steps: ['e2-e4', 'Ng8-f6'],
+        raw: {
+          name: 'Alekhine\'s Defense',
+          long_algebraic_notation: '1. e2-e4 Ng8-f6',
+          suggested_best_response_name: 'Four Pawns Attack',
+          suggested_best_response_notation_step: '2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4',
+          short_description: 'A provocative defense inviting White to overextend the center.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(0, 6, 2, 5)).toBeTrue();
+    component.onDrop(createDropLike(0, 6, 2, 5));
+
+    component.getMockOpeningRecognition();
+
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): e4-e5');
+  });
+
+  it('does not repeat Scandinavian main line recommendation after the projected line is fully played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Scandinavian Defense',
+        steps: ['e2-e4', 'd7-d5'],
+        raw: {
+          name: 'Scandinavian Defense',
+          long_algebraic_notation: '1. e2-e4 d7-d5',
+          suggested_best_response_name: 'Main Line',
+          suggested_best_response_notation_step: '2. e4xd5 Qd8xd5',
+          short_description: 'An immediate central challenge where Black activates the queen.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+    expect(canDropLike(4, 4, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(4, 4, 3, 3));
+    expect(canDropLike(0, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(0, 3, 3, 3));
+
+    component.getMockOpeningRecognition();
+
+    expect(globals.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 4/4');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 d7-d5 2. e4xd5 Qd8xd5');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): —');
+  });
+
+  it('does not show redundant white-after recommendation while projecting Scandinavian main line', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Scandinavian Defense',
+        steps: ['e2-e4', 'd7-d5'],
+        raw: {
+          name: 'Scandinavian Defense',
+          long_algebraic_notation: '1. e2-e4 d7-d5',
+          suggested_best_response_name: 'Main Line',
+          suggested_best_response_notation_step: '2. e4xd5 Qd8xd5',
+          short_description: 'An immediate central challenge where Black activates the queen.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+    expect(canDropLike(4, 4, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(4, 4, 3, 3));
+
+    component.getMockOpeningRecognition();
+
+    expect(globals.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/4');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (Black now): Qd8xd5');
+    expect(globals.boardHelper.debugText).not.toContain('Book recommendation (White after):');
+  });
+
+  it('keeps Caro-Kann as Classical Variation before e5 is played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Caro-Kann Defense',
+        steps: ['e2-e4', 'c7-c6'],
+        raw: {
+          name: 'Caro-Kann Defense',
+          long_algebraic_notation: '1. e2-e4 c7-c6',
+          suggested_best_response_name: 'Classical Variation',
+          suggested_best_response_notation_step: '2. d2-d4 d7-d5 3. Nb1-c3',
+          short_description: 'A solid defense known for its strong pawn structure.'
+        }
+      },
+      {
+        name: 'Caro-Kann Defense: Advance Variation',
+        steps: ['e2-e4', 'c7-c6', 'd2-d4', 'd7-d5', 'e4-e5'],
+        raw: {
+          name: 'Caro-Kann Defense: Advance Variation',
+          long_algebraic_notation: '1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. e4-e5',
+          suggested_best_response_name: 'Main Line',
+          suggested_best_response_notation_step: '3... Bc8-f5',
+          short_description: 'White gains space while Black targets the d4 chain base.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+    expect(canDropLike(1, 2, 2, 2)).toBeTrue();
+    component.onDrop(createDropLike(1, 2, 2, 2));
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
+
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 4/5');
+    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
+  });
+
   it('supports d2d4, e7e5, and d4xe5 with capture highlight', () => {
     expect(canDropLike(6, 3, 4, 3)).toBeTrue();
     component.onDrop(createDropLike(6, 3, 4, 3));
@@ -693,6 +889,106 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.getSquareHighlightClass(4, 4)).toBe('killer');
     delete globals.boardHelper.hits['44'];
     expect(component.getSquareHighlightClass(4, 4)).toBe('shaded');
+  });
+
+  it('writes pointer-down debug reasons for game over, empty square, and wrong turn', () => {
+    globals.boardHelper.gameOver = true;
+    component.onSquarePointerDown([] as any);
+    expect(globals.boardHelper.debugText).toBe('· Game is over. Start a new game to move pieces.');
+
+    globals.boardHelper.gameOver = false;
+    component.onSquarePointerDown([] as any);
+    expect(globals.boardHelper.debugText).toBe('· No piece on this square.');
+
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    component.onSquarePointerDown([{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any]);
+    expect(globals.boardHelper.debugText).toBe('· It is white\'s move.');
+  });
+
+  it('resets drag preview state when drag ends', () => {
+    component.isDragPreviewActive = true;
+    component.mateInOneTargets = { '11': true };
+    component.mateInOneBlunderTargets = { '22': true };
+    (component as any).lastMatePreviewKey = '12-34';
+
+    component.onDragEnded();
+
+    expect(component.isDragPreviewActive).toBeFalse();
+    expect(component.mateInOneTargets).toEqual({});
+    expect(component.mateInOneBlunderTargets).toEqual({});
+    expect((component as any).lastMatePreviewKey).toBe('');
+  });
+
+  it('startOrPauseClock handles game-over, pause, and start branches', () => {
+    const startClockSpy = spyOn<any>(component, 'startClock').and.callFake(() => undefined);
+    const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+
+    globals.boardHelper.gameOver = true;
+    component.clockRunning = false;
+    component.startOrPauseClock();
+    expect(startClockSpy).not.toHaveBeenCalled();
+    expect(stopClockSpy).not.toHaveBeenCalled();
+
+    globals.boardHelper.gameOver = false;
+    component.clockRunning = true;
+    component.startOrPauseClock();
+    expect(stopClockSpy).toHaveBeenCalled();
+
+    component.clockRunning = false;
+    component.clockStarted = false;
+    component.startOrPauseClock();
+    expect(startClockSpy).toHaveBeenCalled();
+    expect(component.clockStarted).toBeTrue();
+  });
+
+  it('resetClock applies selected preset and ignores unknown label', () => {
+    const applyTimeControlSpy = spyOn(component, 'applyTimeControl').and.callThrough();
+
+    component.selectedClockPresetLabel = '3+2';
+    component.resetClock();
+    expect(applyTimeControlSpy).toHaveBeenCalledWith(3, 2, '3+2');
+
+    applyTimeControlSpy.calls.reset();
+    component.selectedClockPresetLabel = 'does-not-exist';
+    component.resetClock();
+    expect(applyTimeControlSpy).not.toHaveBeenCalled();
+  });
+
+  it('tickClock decrements active side and triggers time forfeit at zero', () => {
+    const dateNowSpy = spyOn(Date, 'now').and.returnValue(1200);
+    const forfeitSpy = spyOn<any>(component, 'handleTimeForfeit').and.callFake(() => undefined);
+    spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+
+    globals.boardHelper.gameOver = false;
+    component.clockRunning = true;
+    component.clockStarted = true;
+    (component as any).lastClockTickAt = 1000;
+
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    component.whiteClockMs = 100;
+    (component as any).tickClock();
+    expect(component.whiteClockMs).toBe(0);
+    expect(forfeitSpy).toHaveBeenCalledWith(ChessColorsEnum.White);
+
+    forfeitSpy.calls.reset();
+    dateNowSpy.and.returnValue(1300);
+    (component as any).lastClockTickAt = 1200;
+    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    component.blackClockMs = 500;
+    (component as any).tickClock();
+    expect(component.blackClockMs).toBe(400);
+    expect(forfeitSpy).not.toHaveBeenCalled();
+  });
+
+  it('tickClock stops immediately when clock is not active', () => {
+    const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+
+    component.clockRunning = false;
+    component.clockStarted = true;
+    globals.boardHelper.gameOver = false;
+
+    (component as any).tickClock();
+    expect(stopClockSpy).toHaveBeenCalled();
   });
 });
 

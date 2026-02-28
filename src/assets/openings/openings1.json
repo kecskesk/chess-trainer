@@ -103,5 +103,47 @@
     "suggested_best_response_name": "Exchange Variation",
     "suggested_best_response_notation_step": "4. c4xd5 Nf6xd5",
     "short_description": "A dynamic defense where Black challenges White’s center immediately and relies on piece activity."
+  },
+  {
+    "name": "Sicilian Defense: Najdorf Variation",
+    "long_algebraic_notation": "1. e2-e4 c7-c5 2. Ng1-f3 d7-d6 3. d2-d4 c5xd4 4. Nf3xd4 Ng8-f6 5. Nb1-c3 a7-a6",
+    "suggested_best_response_name": "English Attack Setup",
+    "suggested_best_response_notation_step": "6. Bc1-e3",
+    "short_description": "A premier Sicilian system where Black gains queenside expansion and flexible piece play in highly theoretical positions."
+  },
+  {
+    "name": "Sicilian Defense: Dragon Variation",
+    "long_algebraic_notation": "1. e2-e4 c7-c5 2. Ng1-f3 d7-d6 3. d2-d4 c5xd4 4. Nf3xd4 Ng8-f6 5. Nb1-c3 g7-g6",
+    "suggested_best_response_name": "Yugoslav Attack",
+    "suggested_best_response_notation_step": "6. Bc1-e3",
+    "short_description": "A sharp fianchetto Sicilian where opposite-side attacks and tactical races are common."
+  },
+  {
+    "name": "French Defense: Winawer Variation",
+    "long_algebraic_notation": "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. Nb1-c3 Bf8-b4",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4. e4-e5",
+    "short_description": "A combative French line defined by bishop pin pressure and long-term structural complexity."
+  },
+  {
+    "name": "Caro-Kann Defense: Advance Variation",
+    "long_algebraic_notation": "1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. e4-e5",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "3... Bc8-f5",
+    "short_description": "White gains space while Black targets the d4 chain base and seeks queenside counterplay."
+  },
+  {
+    "name": "Queen's Gambit Accepted",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 d5xc4",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "3. Ng1-f3",
+    "short_description": "Black accepts the pawn and challenges White to prove compensation through rapid development."
+  },
+  {
+    "name": "Ruy Lopez: Morphy Defense",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-b5 a7-a6",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4. Bb5-a4",
+    "short_description": "The main gateway to closed Spanish structures and one of the most deeply studied openings in chess."
   }
 ]

@@ -835,10 +835,25 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     if (historySteps[opening.steps.length] === suggestedMove) {
+      if (this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)) {
+        return `${opening.name}: ${suggestedName}`;
+      }
       return suggestedName;
     }
 
     return opening.name;
+  }
+
+  private shouldPrefixSuggestedOpeningName(openingName: string, suggestedName: string): boolean {
+    const base = (openingName || '').trim();
+    const suggestion = (suggestedName || '').trim();
+    if (!base || !suggestion) {
+      return false;
+    }
+
+    const normalizedBase = base.toLowerCase();
+    const normalizedSuggestion = suggestion.toLowerCase();
+    return !(normalizedSuggestion.includes(normalizedBase) || normalizedBase.includes(normalizedSuggestion));
   }
 
   private loadOpeningsFromAssets(): void {
@@ -915,45 +930,70 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     let bestMatch: IParsedOpening | null = null;
     let bestMatchDepth = 0;
+    let bestMatchBaseDepth = 0;
     let bestMatchIsComplete = false;
     let bestMatchStepLength = Number.MAX_SAFE_INTEGER;
 
     this.openings.forEach(opening => {
       const maxComparableLength = Math.min(historySteps.length, opening.steps.length);
-      let matchedDepth = 0;
+      let baseMatchedDepth = 0;
       for (let idx = 0; idx < maxComparableLength; idx++) {
         if (historySteps[idx] !== opening.steps[idx]) {
           break;
         }
-        matchedDepth += 1;
+        baseMatchedDepth += 1;
       }
 
-      if (matchedDepth < 1) {
+      if (baseMatchedDepth < 1) {
         return;
       }
 
-      const isCompleteMatch = matchedDepth === opening.steps.length;
+      let effectiveMatchedDepth = baseMatchedDepth;
+      let effectiveStepLength = opening.steps.length;
+      const suggestedSequence = this.extractNotationSteps(opening.raw.suggested_best_response_notation_step || '');
+      const hasStartedSuggestedLine =
+        baseMatchedDepth === opening.steps.length &&
+        suggestedSequence.length > 0 &&
+        historySteps.length > opening.steps.length &&
+        historySteps[opening.steps.length] === suggestedSequence[0];
 
-      if (matchedDepth > bestMatchDepth) {
-        bestMatchDepth = matchedDepth;
+      if (hasStartedSuggestedLine) {
+        const extraHistoryCount = Math.max(historySteps.length - opening.steps.length, 0);
+        const maxComparableSuggestedCount = Math.min(extraHistoryCount, suggestedSequence.length);
+        for (let idx = 0; idx < maxComparableSuggestedCount; idx++) {
+          if (historySteps[opening.steps.length + idx] !== suggestedSequence[idx]) {
+            break;
+          }
+          effectiveMatchedDepth += 1;
+        }
+        effectiveStepLength += suggestedSequence.length;
+      }
+
+      const isCompleteMatch = effectiveMatchedDepth === effectiveStepLength;
+
+      if (effectiveMatchedDepth > bestMatchDepth) {
+        bestMatchDepth = effectiveMatchedDepth;
+        bestMatchBaseDepth = baseMatchedDepth;
         bestMatch = opening;
         bestMatchIsComplete = isCompleteMatch;
-        bestMatchStepLength = opening.steps.length;
+        bestMatchStepLength = effectiveStepLength;
         return;
       }
 
-      if (matchedDepth === bestMatchDepth) {
+      if (effectiveMatchedDepth === bestMatchDepth) {
         if (isCompleteMatch && !bestMatchIsComplete) {
           bestMatch = opening;
+          bestMatchBaseDepth = baseMatchedDepth;
           bestMatchIsComplete = true;
-          bestMatchStepLength = opening.steps.length;
+          bestMatchStepLength = effectiveStepLength;
           return;
         }
 
-        if (isCompleteMatch === bestMatchIsComplete && opening.steps.length < bestMatchStepLength) {
+        if (isCompleteMatch === bestMatchIsComplete && effectiveStepLength < bestMatchStepLength) {
           bestMatch = opening;
+          bestMatchBaseDepth = baseMatchedDepth;
           bestMatchIsComplete = isCompleteMatch;
-          bestMatchStepLength = opening.steps.length;
+          bestMatchStepLength = effectiveStepLength;
         }
       }
     });
@@ -965,7 +1005,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.activeOpeningHistoryKey = debugKey;
       this.globalVariablesService.boardHelper.debugText = this.formatOpeningDebugText(
         this.activeOpening,
-        bestMatchDepth,
+        bestMatchBaseDepth,
         historySteps.length,
         historySteps
       );
@@ -984,34 +1024,66 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     const openingLine = opening.raw.long_algebraic_notation || 'n/a';
     const suggestedName = opening.raw.suggested_best_response_name || 'n/a';
+    const suggestedDisplayName =
+      suggestedName !== 'n/a' && this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
+        ? `${opening.name}: ${suggestedName}`
+        : suggestedName;
     const suggestedStep = opening.raw.suggested_best_response_notation_step || 'n/a';
     const description = opening.raw.short_description || 'n/a';
     const displayedOpeningName = this.getDisplayedOpeningName(opening, historySteps);
-    const lineContinuation = matchedDepth < opening.steps.length ? opening.steps[matchedDepth] : '—';
-    const suggestedResponseMove = this.extractNotationSteps(suggestedStep)[0] || 'n/a';
-    const lastHistoryStep = historySteps.length > 0 ? historySteps[historySteps.length - 1] : '';
-    const suggestedResponseAlreadyPlayed =
-      suggestedResponseMove !== 'n/a' &&
-      lastHistoryStep === suggestedResponseMove;
+    const suggestedSequence = this.extractNotationSteps(suggestedStep);
+    const suggestedResponseMove = suggestedSequence[0] || 'n/a';
+    const hasStartedSuggestedLine =
+      suggestedSequence.length > 0 &&
+      historySteps.length > opening.steps.length &&
+      historySteps[opening.steps.length] === suggestedSequence[0];
+    const shouldProjectSuggestedLine =
+      matchedDepth === opening.steps.length &&
+      hasStartedSuggestedLine;
 
+    const fullProjectedLineSteps = shouldProjectSuggestedLine
+      ? [...opening.steps, ...suggestedSequence]
+      : [...opening.steps];
+
+    let effectiveMatchedDepth = matchedDepth;
+    if (shouldProjectSuggestedLine) {
+      const extraHistoryCount = Math.max(historySteps.length - opening.steps.length, 0);
+      const maxComparableSuggestedCount = Math.min(extraHistoryCount, suggestedSequence.length);
+      for (let idx = 0; idx < maxComparableSuggestedCount; idx++) {
+        if (historySteps[opening.steps.length + idx] !== suggestedSequence[idx]) {
+          break;
+        }
+        effectiveMatchedDepth += 1;
+      }
+    }
+
+    const effectiveLineDepth = fullProjectedLineSteps.length;
+    const openingLineWithExtension =
+      shouldProjectSuggestedLine && suggestedStep !== 'n/a'
+        ? `${openingLine} ${suggestedStep}`
+        : openingLine;
+
+    const lineContinuation = effectiveMatchedDepth < effectiveLineDepth
+      ? fullProjectedLineSteps[effectiveMatchedDepth]
+      : '—';
     const nextSide = historyDepth % 2 === 0 ? 'White' : 'Black';
     const responseSide = nextSide === 'White' ? 'Black' : 'White';
     let bookRecommendationNow = '—';
     if (lineContinuation !== '—') {
       bookRecommendationNow = lineContinuation;
-    } else if (!suggestedResponseAlreadyPlayed && suggestedStep !== 'n/a') {
-      bookRecommendationNow = `${suggestedName} (${suggestedStep})`;
+    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== 'n/a') {
+      bookRecommendationNow = suggestedResponseMove;
     }
 
     const debugLines = [
       `Opening: ${displayedOpeningName}`,
-      `Matched steps: ${matchedDepth}/${Math.max(opening.steps.length, historyDepth)}`,
-      `Line: ${openingLine}`,
+      `Matched steps: ${effectiveMatchedDepth}/${Math.max(effectiveLineDepth, historyDepth)}`,
+      `Line: ${openingLineWithExtension}`,
       `Book recommendation (${nextSide} now): ${bookRecommendationNow}`
     ];
 
-    if (lineContinuation !== '—' && suggestedStep !== 'n/a') {
-      debugLines.push(`Book recommendation (${responseSide} after): ${suggestedName} (${suggestedStep})`);
+    if (lineContinuation !== '—' && suggestedStep !== 'n/a' && !shouldProjectSuggestedLine) {
+      debugLines.push(`Book recommendation (${responseSide} after): ${suggestedDisplayName} (${suggestedStep})`);
     }
 
     debugLines.push(`Notes: ${description}`);
