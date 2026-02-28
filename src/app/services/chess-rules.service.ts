@@ -3,11 +3,11 @@ import { GlobalVariablesService } from './global-variables.service';
 import { ChessMoveResultDto } from '../model/chess-move-result.dto';
 import { ChessMoveParamsDto } from '../model/chess-move-params.dto';
 import { ChessPieceDto } from '../model/chess-piece.dto';
-import { ChessColorsEnum } from '../model/chess.colors';
-import { ChessPiecesEnum } from '../model/chess.pieces';
-import { IMoveValidationResult } from '../model/move-validation-result.interface';
-import { IBoardHighlight } from '../model/board-highlight.interface';
-import { IVisualizationArrow } from '../model/visualization-arrow.interface';
+import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
+import { IMoveValidationResult } from '../model/interfaces/move-validation-result.interface';
+import { IBoardHighlight } from '../model/interfaces/board-highlight.interface';
+import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
 
 @Injectable()
 export class ChessRulesService {

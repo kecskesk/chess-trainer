@@ -4,26 +4,26 @@
     "long_algebraic_notation": "1. e2-e4",
     "suggested_best_response_name": "Sicilian Defense",
     "suggested_best_response_notation_step": "1... c7-c5",
-    "short_description": "White immediately occupies the center and opens lines for the queen and bishop, leading to open and tactical games."
+    "short_description": "The most popular opening move, immediately claiming central space and opening lines for the queen and bishop."
   },
   {
     "name": "Queen's Pawn Opening",
     "long_algebraic_notation": "1. d2-d4",
     "suggested_best_response_name": "King's Indian Defense",
     "suggested_best_response_notation_step": "1... Ng8-f6",
-    "short_description": "White claims central space and prepares c4, often leading to strategic and positional battles."
+    "short_description": "A classical central advance leading to strategic and positional battles."
   },
   {
     "name": "English Opening",
     "long_algebraic_notation": "1. c2-c4",
     "suggested_best_response_name": "Symmetrical English",
     "suggested_best_response_notation_step": "1... c7-c5",
-    "short_description": "A flank opening focused on controlling d5 and creating flexible pawn structures."
+    "short_description": "A flank opening aiming to control d5 and create flexible pawn structures."
   },
   {
     "name": "Réti Opening",
     "long_algebraic_notation": "1. Ng1-f3",
-    "suggested_best_response_name": "Classical Response",
+    "suggested_best_response_name": "Classical Center",
     "suggested_best_response_notation_step": "1... d7-d5",
     "short_description": "A hypermodern move emphasizing flexible development and indirect central control."
   },
@@ -32,42 +32,42 @@
     "long_algebraic_notation": "1. f2-f4",
     "suggested_best_response_name": "From's Gambit",
     "suggested_best_response_notation_step": "1... e7-e5",
-    "short_description": "A kingside-oriented flank opening resembling a reversed Dutch Defense."
+    "short_description": "An aggressive flank opening preparing kingside attacks."
   },
   {
     "name": "King's Fianchetto Opening",
     "long_algebraic_notation": "1. g2-g3",
     "suggested_best_response_name": "Classical Center",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "White prepares to fianchetto the bishop to g2, focusing on long diagonal control and flexible setup."
+    "short_description": "Prepares to fianchetto the bishop on g2 for long diagonal control."
   },
   {
     "name": "Larsen's Opening",
     "long_algebraic_notation": "1. b2-b3",
     "suggested_best_response_name": "Classical Center",
     "suggested_best_response_notation_step": "1... e7-e5",
-    "short_description": "A hypermodern opening preparing Bb2 and indirect central influence from the long diagonal."
+    "short_description": "Prepares Bb2 and indirect pressure on the center."
   },
   {
     "name": "Saragossa Opening",
     "long_algebraic_notation": "1. c2-c3",
     "suggested_best_response_name": "Classical Center",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A quiet and flexible move preparing d4 while keeping central tension low."
+    "short_description": "A quiet move preparing d4 and flexible pawn structures."
   },
   {
     "name": "Van't Kruijs Opening",
     "long_algebraic_notation": "1. e2-e3",
     "suggested_best_response_name": "Classical Center",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A modest central preparation move leading to flexible pawn structures."
+    "short_description": "A modest central preparation move leading to flexible development."
   },
   {
     "name": "Amar Opening",
-    "long_algebraic_notation": "1. Nh2-h3",
+    "long_algebraic_notation": "1. Ng1-h3",
     "suggested_best_response_name": "Central Occupation",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "An unusual and rarely played opening aiming for surprise value."
+    "short_description": "A rare knight move aiming for surprise and unconventional play."
   },
   {
     "name": "Dunst Opening",
@@ -77,32 +77,39 @@
     "short_description": "A flexible knight development that can transpose into many mainstream openings."
   },
   {
+    "name": "Knight to the Rim (Na3)",
+    "long_algebraic_notation": "1. Nb1-a3",
+    "suggested_best_response_name": "Central Occupation",
+    "suggested_best_response_notation_step": "1... d7-d5",
+    "short_description": "An uncommon knight move to the edge, generally considered suboptimal but playable."
+  },
+  {
     "name": "Polish Opening (Sokolsky)",
     "long_algebraic_notation": "1. b2-b4",
     "suggested_best_response_name": "Central Counter",
     "suggested_best_response_notation_step": "1... e7-e5",
-    "short_description": "An aggressive flank opening targeting the queenside and aiming for early imbalance."
+    "short_description": "An aggressive flank pawn thrust aiming to control c5 and disrupt central plans."
   },
   {
     "name": "Grob Opening",
     "long_algebraic_notation": "1. g2-g4",
     "suggested_best_response_name": "Central Strike",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A highly unorthodox and risky opening that weakens the kingside in exchange for surprise."
+    "short_description": "A highly unorthodox and risky opening weakening the kingside."
   },
   {
     "name": "Clemenz Opening",
     "long_algebraic_notation": "1. h2-h3",
     "suggested_best_response_name": "Central Occupation",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A slow and rare opening move that prepares g4 or restricts Bg4."
+    "short_description": "A waiting move that prevents Bg4 and prepares potential g4 expansion."
   },
   {
     "name": "Desprez Opening",
     "long_algebraic_notation": "1. h2-h4",
     "suggested_best_response_name": "Central Occupation",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "An offbeat flank pawn thrust aiming for early kingside expansion."
+    "short_description": "A flank pawn thrust aiming for early kingside space."
   },
   {
     "name": "Barnes Opening",
@@ -116,13 +123,20 @@
     "long_algebraic_notation": "1. a2-a4",
     "suggested_best_response_name": "Central Occupation",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A flank pawn thrust aimed at queenside expansion and surprise value."
+    "short_description": "A flank pawn push aimed at queenside expansion."
   },
   {
     "name": "Anderssen's Opening",
     "long_algebraic_notation": "1. a2-a3",
     "suggested_best_response_name": "Central Occupation",
     "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A waiting move that prepares b4 while conceding the center."
+    "short_description": "A slow waiting move preparing b4 and limiting opponent piece activity."
+  },
+  {
+    "name": "Queen's Pawn One Step",
+    "long_algebraic_notation": "1. d2-d3",
+    "suggested_best_response_name": "Classical Center",
+    "suggested_best_response_notation_step": "1... d7-d5",
+    "short_description": "A restrained central move keeping options flexible."
   }
 ]

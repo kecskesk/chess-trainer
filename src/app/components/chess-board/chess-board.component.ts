@@ -1,24 +1,18 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
+import { HttpClient } from '@angular/common/http';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { GlobalVariablesService } from '../../services/global-variables.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessPositionDto } from '../../model/chess-position.dto';
-import { ChessColorsEnum } from '../../model/chess.colors';
-import { ChessPiecesEnum } from '../../model/chess.pieces';
-import { IBoardHighlight } from '../../model/board-highlight.interface';
-import { IVisualizationArrow } from '../../model/visualization-arrow.interface';
-
-type CctCategory = 'captures' | 'checks' | 'threats';
-
-interface ICctRecommendation {
-  move: string;
-  tooltip: string;
-}
-
-interface ICctRecommendationScored extends ICctRecommendation {
-  score: number;
-}
+import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
+import { IBoardHighlight } from '../../model/interfaces/board-highlight.interface';
+import { IVisualizationArrow } from '../../model/interfaces/visualization-arrow.interface';
+import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
+import { ICctRecommendation, ICctRecommendationScored } from '../../model/interfaces/cct-recommendation.interface';
+import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.interface';
+import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
 
 @Component({
   selector: 'app-chess-board',
@@ -60,31 +54,31 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   areMockControlsDisabled = true;
   isDebugPanelOpen = false;
   isInfoOverlayOpen = false;
+  cctCategory = CctCategoryEnum;
   private readonly debugPanelStorageKey = 'chess-trainer.debug-panel-open';
   private cctRecommendationsCacheKey = '';
-  private cctRecommendationsCache: Record<CctCategory, ICctRecommendation[]> = {
-    captures: [],
-    checks: [],
-    threats: []
+  private cctRecommendationsCache: Record<CctCategoryEnum, ICctRecommendation[]> = {
+    [CctCategoryEnum.Captures]: [],
+    [CctCategoryEnum.Checks]: [],
+    [CctCategoryEnum.Threats]: []
   };
   private readonly mockEvalCycle: string[] = [
     '+0.1', '+0.3', '+0.0', '-0.2', '+0.5', '+0.8', '-0.1', '+1.1'
   ];
-  private readonly mockOpeningCycle: string[] = [
-    'Ruy Lopez (mock)',
-    'Queen\'s Gambit (mock)',
-    'Italian Game (mock)',
-    'Sicilian Defense (mock)'
-  ];
+  openingsLoaded = false;
+  private openings: IParsedOpening[] = [];
+  private activeOpening: IParsedOpening | null = null;
+  private activeOpeningHistoryKey = '';
   private suggestedMoveArrowSnapshot: {[key: string]: any} | null = null;
   ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
-  constructor(public globalVariablesService: GlobalVariablesService) {
+  constructor(public globalVariablesService: GlobalVariablesService, private readonly http: HttpClient) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, '5+0');
     this.isDebugPanelOpen = this.readDebugPanelOpenState();
+    this.loadOpeningsFromAssets();
   }
 
   ngOnDestroy(): void {
@@ -806,12 +800,223 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getMockOpeningRecognition(): string {
-    const moveCount = this.getVisibleHistory().length;
-    if (moveCount < 2) {
+    this.updateRecognizedOpeningForCurrentHistory();
+    const historySteps = this.getVisibleHistory()
+      .map(step => this.normalizeNotationToken(step))
+      .filter(step => step.length > 0);
+    const moveCount = historySteps.length;
+    if (moveCount < 1) {
       return 'Waiting for opening line...';
     }
-    const cycleIndex = Math.floor(moveCount / 2) % this.mockOpeningCycle.length;
-    return this.mockOpeningCycle[cycleIndex];
+    if (!this.openingsLoaded) {
+      return 'Loading openings...';
+    }
+    if (this.activeOpening) {
+      return this.getDisplayedOpeningName(this.activeOpening, historySteps);
+    }
+    return 'No opening match';
+  }
+
+  private getDisplayedOpeningName(opening: IParsedOpening, historySteps: string[]): string {
+    if (!opening || !opening.raw) {
+      return '';
+    }
+
+    const suggestedName = (opening.raw.suggested_best_response_name || '').trim();
+    const suggestedStep = opening.raw.suggested_best_response_notation_step || '';
+    const suggestedMove = this.extractNotationSteps(suggestedStep)[0] || '';
+    if (!suggestedName || !suggestedMove || historySteps.length <= opening.steps.length) {
+      return opening.name;
+    }
+
+    const openingPrefixMatches = opening.steps.every((step, idx) => historySteps[idx] === step);
+    if (!openingPrefixMatches) {
+      return opening.name;
+    }
+
+    if (historySteps[opening.steps.length] === suggestedMove) {
+      return suggestedName;
+    }
+
+    return opening.name;
+  }
+
+  private loadOpeningsFromAssets(): void {
+    const openingFiles = [
+      'assets/openings/openings1.json',
+      'assets/openings/openings2.json',
+      'assets/openings/openings3.json'
+    ];
+
+    openingFiles.forEach(filePath => {
+      this.http.get<IOpeningAssetItem[]>(filePath).subscribe({
+        next: (items) => {
+          const parsedItems = this.parseOpeningsPayload(items);
+          if (parsedItems.length > 0) {
+            this.openings = [...this.openings, ...parsedItems];
+          }
+          this.openingsLoaded = true;
+          this.updateRecognizedOpeningForCurrentHistory();
+        },
+        error: () => {
+          this.openingsLoaded = true;
+        }
+      });
+    });
+  }
+
+  private parseOpeningsPayload(items: IOpeningAssetItem[]): IParsedOpening[] {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    return items
+      .filter(item => !!(item && item.name && item.long_algebraic_notation))
+      .map(item => ({
+        name: item.name,
+        raw: item,
+        steps: this.extractNotationSteps(item.long_algebraic_notation)
+      }))
+      .filter(item => item.steps.length > 0);
+  }
+
+  private extractNotationSteps(notation: string): string[] {
+    if (!notation) {
+      return [];
+    }
+    return notation
+      .split(/\s+/)
+      .map(token => token.trim())
+      .filter(token => token.length > 0)
+      .filter(token => !/^\d+\.{1,3}$/.test(token))
+      .map(token => this.normalizeNotationToken(token))
+      .filter(token => token.length > 0);
+  }
+
+  private normalizeNotationToken(token: string): string {
+    if (!token) {
+      return '';
+    }
+    return token
+      .replace(/[+#?!]+$/g, '')
+      .replace(/\s*e\.p\.$/i, '')
+      .trim();
+  }
+
+  private updateRecognizedOpeningForCurrentHistory(): void {
+    if (this.openings.length < 1) {
+      this.activeOpening = null;
+      return;
+    }
+
+    const historySteps = this.getVisibleHistory()
+      .map(step => this.normalizeNotationToken(step))
+      .filter(step => step.length > 0);
+
+    let bestMatch: IParsedOpening | null = null;
+    let bestMatchDepth = 0;
+    let bestMatchIsComplete = false;
+    let bestMatchStepLength = Number.MAX_SAFE_INTEGER;
+
+    this.openings.forEach(opening => {
+      const maxComparableLength = Math.min(historySteps.length, opening.steps.length);
+      let matchedDepth = 0;
+      for (let idx = 0; idx < maxComparableLength; idx++) {
+        if (historySteps[idx] !== opening.steps[idx]) {
+          break;
+        }
+        matchedDepth += 1;
+      }
+
+      if (matchedDepth < 1) {
+        return;
+      }
+
+      const isCompleteMatch = matchedDepth === opening.steps.length;
+
+      if (matchedDepth > bestMatchDepth) {
+        bestMatchDepth = matchedDepth;
+        bestMatch = opening;
+        bestMatchIsComplete = isCompleteMatch;
+        bestMatchStepLength = opening.steps.length;
+        return;
+      }
+
+      if (matchedDepth === bestMatchDepth) {
+        if (isCompleteMatch && !bestMatchIsComplete) {
+          bestMatch = opening;
+          bestMatchIsComplete = true;
+          bestMatchStepLength = opening.steps.length;
+          return;
+        }
+
+        if (isCompleteMatch === bestMatchIsComplete && opening.steps.length < bestMatchStepLength) {
+          bestMatch = opening;
+          bestMatchIsComplete = isCompleteMatch;
+          bestMatchStepLength = opening.steps.length;
+        }
+      }
+    });
+
+    this.activeOpening = bestMatch;
+    const historyKey = historySteps.join('|');
+    const debugKey = `${historyKey}::${this.activeOpening ? this.activeOpening.name : 'none'}`;
+    if (this.activeOpening && debugKey !== this.activeOpeningHistoryKey) {
+      this.activeOpeningHistoryKey = debugKey;
+      this.globalVariablesService.boardHelper.debugText = this.formatOpeningDebugText(
+        this.activeOpening,
+        bestMatchDepth,
+        historySteps.length,
+        historySteps
+      );
+    }
+  }
+
+  private formatOpeningDebugText(
+    opening: IParsedOpening,
+    matchedDepth: number,
+    historyDepth: number,
+    historySteps: string[]
+  ): string {
+    if (!opening || !opening.raw) {
+      return '';
+    }
+
+    const openingLine = opening.raw.long_algebraic_notation || 'n/a';
+    const suggestedName = opening.raw.suggested_best_response_name || 'n/a';
+    const suggestedStep = opening.raw.suggested_best_response_notation_step || 'n/a';
+    const description = opening.raw.short_description || 'n/a';
+    const displayedOpeningName = this.getDisplayedOpeningName(opening, historySteps);
+    const lineContinuation = matchedDepth < opening.steps.length ? opening.steps[matchedDepth] : '—';
+    const suggestedResponseMove = this.extractNotationSteps(suggestedStep)[0] || 'n/a';
+    const lastHistoryStep = historySteps.length > 0 ? historySteps[historySteps.length - 1] : '';
+    const suggestedResponseAlreadyPlayed =
+      suggestedResponseMove !== 'n/a' &&
+      lastHistoryStep === suggestedResponseMove;
+
+    const nextSide = historyDepth % 2 === 0 ? 'White' : 'Black';
+    const responseSide = nextSide === 'White' ? 'Black' : 'White';
+    let bookRecommendationNow = '—';
+    if (lineContinuation !== '—') {
+      bookRecommendationNow = lineContinuation;
+    } else if (!suggestedResponseAlreadyPlayed && suggestedStep !== 'n/a') {
+      bookRecommendationNow = `${suggestedName} (${suggestedStep})`;
+    }
+
+    const debugLines = [
+      `Opening: ${displayedOpeningName}`,
+      `Matched steps: ${matchedDepth}/${Math.max(opening.steps.length, historyDepth)}`,
+      `Line: ${openingLine}`,
+      `Book recommendation (${nextSide} now): ${bookRecommendationNow}`
+    ];
+
+    if (lineContinuation !== '—' && suggestedStep !== 'n/a') {
+      debugLines.push(`Book recommendation (${responseSide} after): ${suggestedName} (${suggestedStep})`);
+    }
+
+    debugLines.push(`Notes: ${description}`);
+
+    return debugLines.join('\n');
   }
 
   getMockEndgameRecognition(): string {
@@ -904,7 +1109,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.suggestedMoveArrowSnapshot = null;
   }
 
-  getCctRecommendations(category: CctCategory): ICctRecommendation[] {
+  getCctRecommendations(category: CctCategoryEnum): ICctRecommendation[] {
     this.ensureCctRecommendations();
     return this.cctRecommendationsCache[category];
   }
@@ -931,7 +1136,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private ensureCctRecommendations(): void {
     if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
-      this.cctRecommendationsCache = { captures: [], checks: [], threats: [] };
+      this.cctRecommendationsCache = {
+        [CctCategoryEnum.Captures]: [],
+        [CctCategoryEnum.Checks]: [],
+        [CctCategoryEnum.Threats]: []
+      };
       this.cctRecommendationsCacheKey = '';
       return;
     }
@@ -1031,9 +1240,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     this.cctRecommendationsCache = {
-      captures: this.pickTopCctRecommendations(captures),
-      checks: this.pickTopCctRecommendations(checks),
-      threats: this.pickTopCctRecommendations(threats)
+      [CctCategoryEnum.Captures]: this.pickTopCctRecommendations(captures),
+      [CctCategoryEnum.Checks]: this.pickTopCctRecommendations(checks),
+      [CctCategoryEnum.Threats]: this.pickTopCctRecommendations(threats)
     };
     this.cctRecommendationsCacheKey = positionKey;
   }

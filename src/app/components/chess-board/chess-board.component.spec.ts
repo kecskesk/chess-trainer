@@ -1,11 +1,14 @@
 import { ChessBoardComponent } from './chess-board.component';
 import { GlobalVariablesService } from '../../services/global-variables.service';
-import { ChessColorsEnum } from '../../model/chess.colors';
-import { ChessPiecesEnum } from '../../model/chess.pieces';
+import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { of } from 'rxjs';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('ChessBoardComponent move sequence integration', () => {
   let globals: GlobalVariablesService;
@@ -64,8 +67,116 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   beforeEach(() => {
     globals = new GlobalVariablesService();
-    component = new ChessBoardComponent(globals);
+    component = new ChessBoardComponent(globals, {
+      get: () => of([])
+    } as any);
     globals.boardHelper.colorTurn = ChessColorsEnum.White;
+  });
+
+  it('updates opening recognition on first half-move when opening line has one step', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Pawn Opening',
+        steps: ['d2-d4'],
+        raw: {
+          name: 'Queen\'s Pawn Opening',
+          long_algebraic_notation: '1. d2-d4'
+        }
+      }
+    ];
+
+    expect(component.getMockOpeningRecognition()).toBe('Waiting for opening line...');
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Pawn Opening');
+  });
+
+  it('prefers a complete one-step opening over a longer partial prefix match', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Gambit',
+        steps: ['d2-d4', 'd7-d5', 'c2-c4'],
+        raw: {
+          name: 'Queen\'s Gambit',
+          long_algebraic_notation: '1. d2-d4 d7-d5 2. c2-c4'
+        }
+      },
+      {
+        name: 'Queen\'s Pawn Opening',
+        steps: ['d2-d4'],
+        raw: {
+          name: 'Queen\'s Pawn Opening',
+          long_algebraic_notation: '1. d2-d4'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Pawn Opening');
+    expect(globals.boardHelper.debugText).toContain('Opening: Queen\'s Pawn Opening');
+  });
+
+  it('shows matched sequence and next expected move for partial opening match', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Gambit',
+        steps: ['d2-d4', 'd7-d5', 'c2-c4'],
+        raw: {
+          name: 'Queen\'s Gambit',
+          long_algebraic_notation: '1. d2-d4 d7-d5 2. c2-c4',
+          suggested_best_response_name: 'Queen\'s Gambit Declined',
+          suggested_best_response_notation_step: '2... e7-e6',
+          short_description: 'A fundamental d4 opening where White offers a pawn.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit');
+    expect(globals.boardHelper.debugText).toContain('Matched steps: 2/3');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): c2-c4');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (Black after): Queen\'s Gambit Declined (2... e7-e6)');
+  });
+
+  it('does not repeat suggested response after it has been played', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Queen\'s Gambit',
+        steps: ['d2-d4', 'd7-d5', 'c2-c4'],
+        raw: {
+          name: 'Queen\'s Gambit',
+          long_algebraic_notation: '1. d2-d4 d7-d5 2. c2-c4',
+          suggested_best_response_name: 'Queen\'s Gambit Declined',
+          suggested_best_response_notation_step: '2... e7-e6',
+          short_description: 'A fundamental d4 opening where White offers a pawn.'
+        }
+      }
+    ];
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
+    component.onDrop(createDropLike(1, 3, 3, 3));
+    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
+    component.onDrop(createDropLike(6, 2, 4, 2));
+    expect(canDropLike(1, 4, 2, 4)).toBeTrue();
+    component.onDrop(createDropLike(1, 4, 2, 4));
+
+    expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit Declined');
+    expect(globals.boardHelper.debugText).toContain('Opening: Queen\'s Gambit Declined');
+    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): —');
+    expect(globals.boardHelper.debugText).not.toContain('Book recommendation (Black now): Queen\'s Gambit Declined (2... e7-e6)');
   });
 
   it('supports d2d4, e7e5, and d4xe5 with capture highlight', () => {
@@ -602,7 +713,7 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     await TestBed.configureTestingModule({
       declarations: [ChessBoardComponent],
       imports: [DragDropModule],
-      providers: [GlobalVariablesService],
+      providers: [GlobalVariablesService, provideHttpClient(), provideHttpClientTesting()],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 

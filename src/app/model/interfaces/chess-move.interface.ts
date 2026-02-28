@@ -1,5 +1,5 @@
-import { ChessPiecesEnum } from './chess.pieces';
-import { ChessColorsEnum } from './chess.colors';
+import { ChessPiecesEnum } from '../enums/chess-pieces.enum';
+import { ChessColorsEnum } from '../enums/chess-colors.enum';
 
 /**
  * Interface for a chess move
@@ -28,4 +28,3 @@ export interface IChessMove {
   /** If castling: 'O-O' or 'O-O-O', otherwise null */
   castleType?: 'O-O' | 'O-O-O' | null;
 }
-

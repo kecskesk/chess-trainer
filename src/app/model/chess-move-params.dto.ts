@@ -1,4 +1,4 @@
-import { ChessColorsEnum } from './chess.colors';
+import { ChessColorsEnum } from './enums/chess-colors.enum';
 
 export class ChessMoveParamsDto {
   constructor(public targetRow: number,

@@ -2,11 +2,11 @@ import { Injectable } from '@angular/core';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
 import { ChessArrowDto } from '../model/chess-arrow.dto';
-import { ChessColorsEnum } from '../model/chess.colors';
-import { ChessPiecesEnum } from '../model/chess.pieces';
+import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { ChessPositionDto } from '../model/chess-position.dto';
-import { IBoardHighlight } from '../model/board-highlight.interface';
-import { IVisualizationArrow } from '../model/visualization-arrow.interface';
+import { IBoardHighlight } from '../model/interfaces/board-highlight.interface';
+import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
 
 @Injectable()
 export class GlobalVariablesService {

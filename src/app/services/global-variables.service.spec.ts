@@ -1,5 +1,5 @@
 import { GlobalVariablesService } from './global-variables.service';
-import { ChessPiecesEnum } from '../model/chess.pieces';
+import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 
 describe('GlobalVariablesService notation helpers', () => {
   it('translates piece notation correctly', () => {

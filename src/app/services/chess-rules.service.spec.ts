@@ -1,8 +1,8 @@
 import { ChessRulesService } from './chess-rules.service';
 import { GlobalVariablesService } from './global-variables.service';
 import { ChessPieceDto } from '../model/chess-piece.dto';
-import { ChessColorsEnum } from '../model/chess.colors';
-import { ChessPiecesEnum } from '../model/chess.pieces';
+import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 
 describe('ChessRulesService pawn captures', () => {
   let globals: GlobalVariablesService;
