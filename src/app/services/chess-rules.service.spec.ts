@@ -4,6 +4,12 @@ import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 
+describe('ChessRulesService instantiation', () => {
+  it('creates service instance', () => {
+    expect(new ChessRulesService()).toBeTruthy();
+  });
+});
+
 describe('ChessRulesService pawn captures', () => {
   let globals: GlobalVariablesService;
 
@@ -210,5 +216,90 @@ describe('ChessRulesService king safety', () => {
     const isValid = ChessRulesService.validateMove(6, 5, globals.field[6][5], 6, 4).isValid;
 
     expect(isValid).toBeFalse();
+  });
+});
+
+describe('ChessRulesService branch coverage helpers', () => {
+  let globals: GlobalVariablesService;
+
+  beforeEach(() => {
+    globals = new GlobalVariablesService();
+  });
+
+  it('returns invalid validation when source square has no piece', () => {
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    const result = ChessRulesService.validateMove(4, 4, globals.field[4][4], 4, 4);
+
+    expect(result.isValid).toBeFalse();
+    expect(result.isEnemyPiece).toBeFalse();
+    expect(result.isEmptyTarget).toBeTrue();
+  });
+
+  it('accepts unknown piece enum in valueOfPiece default branch', () => {
+    expect(ChessRulesService.valueOfPiece(ChessPiecesEnum.Knight)).toBe(3);
+    expect(ChessRulesService.valueOfPiece('Unknown' as any)).toBeUndefined();
+  });
+
+  it('handles unknown source piece in canStepThere default switch branch', () => {
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    const canStep = ChessRulesService.canStepThere(
+      4,
+      4,
+      globals.field[4][4],
+      6,
+      4,
+      new ChessPieceDto(ChessColorsEnum.White, 'Dragon' as any)
+    );
+
+    expect(canStep).toBeTrue();
+  });
+
+  it('covers bishop notation parsing path through en-passant rights calculation', () => {
+    const board = globals.field;
+    const enPassant = ChessRulesService.getEnPassantRightsNotation(
+      board,
+      { 1: 'Bc1-e3' },
+      ChessColorsEnum.Black
+    );
+
+    expect(enPassant).toBe('-');
+  });
+
+  it('simulates queenside castle king move path during legality check', () => {
+    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    globals.boardHelper.history = {};
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        globals.field[row][col] = [];
+      }
+    }
+    globals.field[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    globals.field[7][0] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)];
+    globals.field[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+
+    const canCastleQueenSide = ChessRulesService.canStepThere(7, 2, globals.field[7][2], 7, 4);
+
+    expect(canCastleQueenSide).toBeTrue();
+    expect(globals.boardHelper.justDidCastle).toEqual({ row: 7, col: 2 });
+  });
+
+  it('returns unchanged board when simulating a move from empty source square', () => {
+    const emptyBoard = globals.field.map(row => row.map(() => []));
+    const simulated = (ChessRulesService as any).simulateMoveOnBoard(emptyBoard, 4, 4, 4, 5);
+
+    expect(simulated[4][4]).toEqual([]);
+    expect(simulated[4][5]).toEqual([]);
+  });
+
+  it('handles withBoardContext when BOARD_HELPER is temporarily null', () => {
+    const previousHelper = GlobalVariablesService.BOARD_HELPER;
+    try {
+      GlobalVariablesService.BOARD_HELPER = null as any;
+      const board = globals.field;
+      const result = (ChessRulesService as any).withBoardContext(board, ChessColorsEnum.White, () => 'ok');
+      expect(result).toBe('ok');
+    } finally {
+      GlobalVariablesService.BOARD_HELPER = previousHelper;
+    }
   });
 });
