@@ -3,6 +3,7 @@ import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
+import { ChessMoveNotation } from '../utils/chess-utils';
 
 describe('ChessRulesService instantiation', () => {
   it('creates service instance', () => {
@@ -400,6 +401,166 @@ describe('ChessRulesService branch coverage helpers (notation and context)', () 
     } finally {
       ChessBoardStateService.BOARD_HELPER = previousHelper;
     }
+  });
+});
+
+describe('ChessRulesService branch coverage helpers (uncovered guards I)', () => {
+  let chessBoardStateService: ChessBoardStateService;
+
+  beforeEach(() => {
+    chessBoardStateService = new ChessBoardStateService();
+  });
+
+  it('covers canStepThere early-return guards and wrong-turn branch', () => {
+    const originalField = ChessBoardStateService.CHESS_FIELD;
+    const originalHelper = ChessBoardStateService.BOARD_HELPER;
+    try {
+      ChessBoardStateService.CHESS_FIELD = null as any;
+      expect(ChessRulesService.canStepThere(4, 4, [], 6, 4)).toBeFalse();
+
+      ChessBoardStateService.CHESS_FIELD = originalField;
+      ChessBoardStateService.BOARD_HELPER = null as any;
+      expect(ChessRulesService.canStepThere(4, 4, [], 6, 4)).toBeFalse();
+    } finally {
+      ChessBoardStateService.CHESS_FIELD = originalField;
+      ChessBoardStateService.BOARD_HELPER = originalHelper;
+    }
+
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    expect(ChessRulesService.canStepThere(5, 4, chessBoardStateService.field[5][4], 6, 4)).toBeFalse();
+  });
+
+  it('covers highlight-initialization and missing-enemy-king branch', () => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[6][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    chessBoardStateService.field[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.possibles = null as any;
+    chessBoardStateService.boardHelper.hits = null as any;
+    chessBoardStateService.boardHelper.checks = null as any;
+
+    expect(ChessRulesService.canStepThere(5, 4, chessBoardStateService.field[5][4], 6, 4)).toBeTrue();
+    expect(chessBoardStateService.boardHelper.possibles).toBeDefined();
+    expect(chessBoardStateService.boardHelper.hits).toBeDefined();
+    expect(chessBoardStateService.boardHelper.checks).toBeDefined();
+  });
+
+  it('covers canStepThere branch when enemy king is absent', () => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[6][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect(ChessRulesService.canStepThere(5, 4, chessBoardStateService.field[5][4], 6, 4)).toBeTrue();
+  });
+
+  it('covers kingRules non-castle-file and missing-rook branches', () => {
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    const absSpy = spyOn(Math, 'abs').and.callFake((value: number) => value === 1 ? 2 : 0);
+    const resultA = { canDrop: true, canHit: false, targetEmpty: true } as any;
+    const paramsA = {
+      targetRow: 7,
+      targetCol: 5,
+      srcRow: 7,
+      srcCol: 4,
+      sourceColor: ChessColorsEnum.White,
+      moveHistory: {},
+      justLooking: false
+    } as any;
+    ChessRulesService.kingRules(resultA, paramsA);
+    expect(resultA.canDrop).toBeFalse();
+    absSpy.and.callThrough();
+
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    chessBoardStateService.field[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+    const resultB = { canDrop: true, canHit: false, targetEmpty: true } as any;
+    const paramsB = {
+      targetRow: 7,
+      targetCol: 6,
+      srcRow: 7,
+      srcCol: 4,
+      sourceColor: ChessColorsEnum.White,
+      moveHistory: {},
+      justLooking: false
+    } as any;
+    ChessRulesService.kingRules(resultB, paramsB);
+    expect(resultB.canDrop).toBeFalse();
+  });
+});
+
+describe('ChessRulesService branch coverage helpers (uncovered guards I-b)', () => {
+  it('covers notation parsing and king-check helper branches via private calls', () => {
+    expect((ChessRulesService as any).hasPieceMoved(ChessColorsEnum.White, ChessPiecesEnum.King, 7, 4, null)).toBeFalse();
+    expect((ChessRulesService as any).hasPieceMoved(ChessColorsEnum.White, ChessPiecesEnum.King, 7, 4, { 1: 'O-O' })).toBeTrue();
+    expect((ChessRulesService as any).hasPieceMoved(ChessColorsEnum.White, ChessPiecesEnum.Rook, 7, 0, { 1: '??' })).toBeFalse();
+    expect((ChessRulesService as any).parseMoveNotation(null)).toBeNull();
+    expect((ChessRulesService as any).parseMoveNotation('O-O')).toBeNull();
+    expect((ChessRulesService as any).parseMoveNotation('invalid')).toBeNull();
+    const notationSpy = spyOn(ChessMoveNotation, 'isValidLongNotation').and.returnValue(true);
+    expect((ChessRulesService as any).parseMoveNotation('totally-bad')).toBeNull();
+    notationSpy.and.callThrough();
+    expect((ChessRulesService as any).parseMoveNotation('Ke9-e8')).toBeNull();
+    expect((ChessRulesService as any).fromSquareNotation('')).toBeNull();
+    expect((ChessRulesService as any).fromSquareNotation('z9')).toBeNull();
+    const emptyBoard = Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => [] as ChessPieceDto[]));
+    expect((ChessRulesService as any).isKingInCheckOnBoard(emptyBoard, ChessColorsEnum.White)).toBeFalse();
+
+    const previousHelper = ChessBoardStateService.BOARD_HELPER;
+    ChessBoardStateService.BOARD_HELPER = null as any;
+    (ChessRulesService as any).ensureHighlightCollectionsInitialized();
+    ChessBoardStateService.BOARD_HELPER = previousHelper;
+  });
+});
+
+describe('ChessRulesService branch coverage helpers (uncovered guards II)', () => {
+  it('covers en-passant and castling-rights guard branches', () => {
+    const chessBoardStateService = new ChessBoardStateService();
+    expect(ChessRulesService.getEnPassantRightsNotation(null as any, null as any, null as any)).toBe('-');
+    const originalField = ChessBoardStateService.CHESS_FIELD;
+    ChessBoardStateService.CHESS_FIELD = null as any;
+    expect(ChessRulesService.validateMove(4, 4, [], 6, 4).isValid).toBeFalse();
+    ChessBoardStateService.CHESS_FIELD = originalField;
+
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    chessBoardStateService.field[7][7] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)];
+    chessBoardStateService.field[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+    const rights = ChessRulesService.getCastlingRightsNotation(chessBoardStateService.field, { 1: 'Rh1-h3' } as any);
+    expect(rights).not.toContain('K');
+
+    const epNoPawn = ChessRulesService.getEnPassantRightsNotation(
+      chessBoardStateService.field,
+      { 2: 'd7-d5' } as any,
+      ChessColorsEnum.White
+    );
+    expect(epNoPawn).toBe('-');
+
+    spyOn(ChessRulesService as any, 'parseMoveNotation').and.returnValue({
+      piece: ChessPiecesEnum.Pawn,
+      sourceSquare: 'z9',
+      targetSquare: 'z7'
+    });
+    const epInvalidSquares = ChessRulesService.getEnPassantRightsNotation(
+      chessBoardStateService.field,
+      { 2: 'd7-d5' } as any,
+      ChessColorsEnum.White
+    );
+    expect(epInvalidSquares).toBe('-');
   });
 });
 

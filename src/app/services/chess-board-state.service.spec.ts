@@ -2,6 +2,7 @@ import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessArrowDto } from '../model/chess-arrow.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
+import { VisualizationConstants } from '../constants/chess.constants';
 
 describe('ChessBoardStateService notation helpers', () => {
   it('translates piece notation correctly', () => {
@@ -203,6 +204,46 @@ describe('ChessBoardStateService state helpers (notation/path)', () => {
 
     expect(ChessBoardStateService.pieceIsInWay(-1, 0, 0, 0)).toBeFalse();
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChessBoardStateService branch coverage helpers', () => {
+  let chessBoardStateService: ChessBoardStateService;
+  let restoreContext: () => void;
+
+  beforeEach(() => {
+    const context = setupStateServiceTestContext();
+    chessBoardStateService = context.chessBoardStateService;
+    restoreContext = context.restore;
+  });
+
+  afterEach(() => {
+    restoreContext();
+  });
+
+  it('handles null highlight and deep path guard branches', () => {
+    const warnSpy = spyOn(console, 'warn');
+    ChessBoardStateService.addHighlight(null as any);
+    expect(chessBoardStateService.boardHelper.possibles).toEqual({});
+
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    const originalVisualizationMax = VisualizationConstants.MAX_PATH_ITERATIONS;
+    (VisualizationConstants as any).MAX_PATH_ITERATIONS = 0;
+    expect(ChessBoardStateService.pieceIsInWay(7, 7, 0, 0)).toBeFalse();
+    expect(warnSpy).toHaveBeenCalled();
+    (VisualizationConstants as any).MAX_PATH_ITERATIONS = originalVisualizationMax;
+  });
+
+  it('covers pieceIsInWay bounds and missing-cell branches', () => {
+    ChessBoardStateService.CHESS_FIELD = chessBoardStateService.field;
+    expect(ChessBoardStateService.pieceIsInWay(9, 9, 7, 7)).toBeFalse();
+
+    (ChessBoardStateService as any).CHESS_FIELD = [[]];
+    expect(ChessBoardStateService.pieceIsInWay(2, 2, 0, 0)).toBeFalse();
   });
 });
 

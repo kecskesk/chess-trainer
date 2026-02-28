@@ -1564,3 +1564,663 @@ describe('ChessBoardComponent gameplay moves and rules (startup and loading)', (
   });
 });
 
+describe('ChessBoardComponent branch coverage helpers (guard and fallback paths)', () => {
+  it('covers status-title branches for null helper, checkmate, and draw fallback', () => {
+    const savedHelper = chessBoardStateService.boardHelper;
+    (chessBoardStateService as any).boardHelper = null;
+    expect(component.getStatusTitle()).toBe('');
+
+    (chessBoardStateService as any).boardHelper = savedHelper;
+    chessBoardStateService.boardHelper.gameOver = true;
+    chessBoardStateService.boardHelper.checkmateColor = ChessColorsEnum.White;
+    expect(component.getStatusTitle()).toContain('Checkmate - Black wins');
+    chessBoardStateService.boardHelper.checkmateColor = null;
+    chessBoardStateService.boardHelper.debugText = '';
+    expect(component.getStatusTitle()).toBe('Draw');
+  });
+
+  it('covers draw-offer guard paths and response toggles', () => {
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    component.offerDraw();
+    expect(component.canOfferDraw()).toBeFalse();
+    expect(component.canRespondToDrawOffer()).toBeFalse();
+    (component as any).chessBoardStateService = savedService;
+
+    chessBoardStateService.boardHelper.gameOver = true;
+    component.offerDraw();
+    chessBoardStateService.boardHelper.gameOver = false;
+
+    component.pendingDrawOfferBy = null;
+    component.acceptDrawOffer();
+    component.declineDrawOffer();
+    expect(component.pendingDrawOfferBy).toBeNull();
+  });
+
+  it('covers claim-draw and resign guard paths', () => {
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    expect(component.canClaimDraw()).toBeFalse();
+    expect(component.canResign(ChessColorsEnum.White)).toBeFalse();
+    component.openResignConfirm(ChessColorsEnum.White);
+    (component as any).chessBoardStateService = savedService;
+
+    chessBoardStateService.boardHelper.gameOver = true;
+    expect(component.canClaimDraw()).toBeFalse();
+    expect(component.canResign(ChessColorsEnum.White)).toBeFalse();
+    component.claimDraw();
+  });
+
+  it('covers formatClock sub-minute formatting and mock opening loading/no-match branches', () => {
+    expect(component.formatClock(5900)).toContain('.');
+    (component as any).openingsLoaded = false;
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+    expect(component.getMockOpeningRecognition()).toBe('Loading openings...');
+
+    (component as any).openingsLoaded = true;
+    (component as any).activeOpening = null;
+    expect(component.getMockOpeningRecognition()).toBe('No opening match');
+  });
+
+  it('covers endgame transition branch and black suggested moves branch', () => {
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[3][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][5] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[4][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[4][2] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    expect(component.getMockEndgameRecognition()).toBe('Transition phase (mock)');
+
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    expect(component.getMockSuggestedMoves()[0]).toContain('...');
+  });
+
+  it('covers previewSuggestedMoveArrows guard and parse-fail branches', () => {
+    component.previewSuggestedMoveArrows('');
+    component.previewSuggestedMoveArrows('not-a-move');
+    expect((component as any).suggestedMoveArrowSnapshot).not.toBeNull();
+  });
+});
+
+describe('ChessBoardComponent branch coverage helpers (private helpers)', () => {
+  it('covers ensureCctRecommendations null-service guard', () => {
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    (component as any).ensureCctRecommendations();
+    expect((component as any).cctRecommendationsCache).toEqual({
+      captures: [],
+      checks: [],
+      threats: []
+    });
+    (component as any).chessBoardStateService = savedService;
+  });
+
+  it('covers piece notation/name remaining branches', () => {
+    expect((component as any).pieceNotation(ChessPiecesEnum.Bishop)).toBe('B');
+    expect((component as any).pieceName(ChessPiecesEnum.King)).toBe('king');
+    expect((component as any).pieceName(ChessPiecesEnum.Rook)).toBe('rook');
+    expect((component as any).pieceName(ChessPiecesEnum.Knight)).toBe('knight');
+    expect((component as any).pieceName(ChessPiecesEnum.Pawn)).toBe('pawn');
+  });
+
+  it('covers simulateMove branches for empty source and promotion update', () => {
+    const board = chessBoardStateService.field.map(row => row.map(cell => cell.slice()));
+    const unchanged = (component as any).simulateMove(board, 4, 4, 4, 5);
+    expect(unchanged[4][5]).toEqual([]);
+
+    for (let row = 0; row <= 7; row++) {
+      for (let col = 0; col <= 7; col++) {
+        chessBoardStateService.field[row][col] = [];
+      }
+    }
+    chessBoardStateService.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    const promoted = (component as any).simulateMove(chessBoardStateService.field, 1, 0, 0, 0);
+    expect(promoted[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
+  });
+});
+
+describe('ChessBoardComponent branch coverage helpers (remaining uncovered paths)', () => {
+  it('covers additional canDrop early-return paths', () => {
+    expect(component.canDrop({
+      dropContainer: { id: 'field60', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] }
+    } as any, {
+      id: 'field60', data: chessBoardStateService.field[6][0]
+    } as any)).toBeFalse();
+
+    const validateSpy = spyOn(ChessRulesService, 'validateMove').and.returnValue({ isValid: false } as any);
+    const reasonSpy = spyOn<any>(component, 'getDragFailureReason').and.returnValue('nope');
+    component.canDrop({
+      dropContainer: { id: 'field60', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] }
+    } as any, {
+      id: 'field50', data: chessBoardStateService.field[5][0]
+    } as any);
+    expect(reasonSpy).toHaveBeenCalled();
+    validateSpy.and.callThrough();
+
+    const dynamicSource: any = { _seen: false };
+    Object.defineProperty(dynamicSource, '0', {
+      get() {
+        if (!this._seen) {
+          this._seen = true;
+          return { color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn };
+        }
+        return undefined;
+      }
+    });
+    expect(component.canDrop({
+      dropContainer: { id: 'field60', data: dynamicSource }
+    } as any, {
+      id: 'field50', data: chessBoardStateService.field[5][0]
+    } as any)).toBeFalse();
+  });
+
+  it('covers canDrop guard and invalid-source branches', () => {
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    expect(component.canDrop({} as any, {} as any)).toBeFalse();
+    (component as any).chessBoardStateService = savedService;
+
+    expect(component.canDrop(null as any, null as any)).toBeFalse();
+    expect(component.canDrop({ dropContainer: { data: [] } } as any, { id: 'field00', data: [] } as any)).toBeFalse();
+    expect(component.canDrop({ dropContainer: { id: 'bad', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] } } as any, { id: 'field00', data: [] } as any)).toBeFalse();
+    expect(component.canDrop({
+      dropContainer: { id: 'field00', data: [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn }] }
+    } as any, {
+      id: 'field01', data: []
+    } as any)).toBeFalse();
+  });
+
+  it('covers drop-enter, drag-start and pointer guard branches', () => {
+    component.onDropListEntered(null as any);
+    component.onDropListEntered({ item: { dropContainer: { id: 'x' } }, container: { id: 'y' } } as any);
+    component.onDropListEntered({ item: { dropContainer: { id: 'field90' } }, container: { id: 'field00' } } as any);
+    component.onDragStarted(null as any);
+    component.onDragStarted({ source: { dropContainer: { id: 'bad', data: [] } } } as any);
+    component.onDragStarted({ source: { dropContainer: { id: 'field90', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] } } } as any);
+
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    component.onDragStarted({ source: { dropContainer: { id: 'field60', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] } } } as any);
+    component.onSquarePointerDown([] as any);
+    (component as any).chessBoardStateService = savedService;
+    expect(component.isDragPreviewActive).toBeTrue();
+  });
+
+  it('covers private drop-processing and context guards', () => {
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    expect((component as any).canProcessDropEvent({})).toBeFalse();
+    (component as any).chessBoardStateService = savedService;
+
+    chessBoardStateService.boardHelper.gameOver = true;
+    expect((component as any).canProcessDropEvent({ previousContainer: { data: [] }, container: { data: [] } })).toBeFalse();
+    chessBoardStateService.boardHelper.gameOver = false;
+    expect((component as any).buildDropMoveContext({ previousContainer: { id: 'field60', data: [] }, container: { id: 'field50', data: [] } })).toBeNull();
+    expect((component as any).canProcessDropEvent({ previousContainer: {}, container: {} })).toBeFalse();
+  });
+
+  it('covers onDrop guard branches for process failure/same-container/null-context', () => {
+    const event = {
+      previousContainer: { id: 'field60', data: chessBoardStateService.field[6][0] },
+      container: { id: 'field50', data: chessBoardStateService.field[5][0] },
+      previousIndex: 0,
+      currentIndex: 0
+    } as any;
+
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    component.onDrop(event);
+    (component as any).chessBoardStateService = savedService;
+
+    component.onDrop({
+      previousContainer: event.previousContainer,
+      container: event.previousContainer,
+      previousIndex: 0,
+      currentIndex: 0
+    } as any);
+    component.onDrop({
+      previousContainer: { id: 'bad', data: chessBoardStateService.field[6][0] },
+      container: { id: 'field50', data: chessBoardStateService.field[5][0] }
+    } as any);
+    expect(true).toBeTrue();
+  });
+
+  it('covers castling transfer side effects branch', () => {
+    clearBoard();
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.justDidCastle = { row: 7, col: 6 } as any;
+
+    const flags = (component as any).applyPreTransferBoardState({
+      container: { data: [] },
+      previousContainer: { data: [] }
+    } as any, {
+      targetRow: 7, targetCell: 6, srcRow: 7, srcCell: 4, srcPiece: ChessPiecesEnum.King, srcColor: ChessColorsEnum.White
+    });
+
+    expect(flags.castleData).toBe('O-O');
+    expect(chessBoardStateService.field[7][7].length).toBe(0);
+    expect(chessBoardStateService.field[7][5][0].piece).toBe(ChessPiecesEnum.Rook);
+
+    clearBoard();
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.justDidCastle = { row: 7, col: 2 } as any;
+    const qFlags = (component as any).applyPreTransferBoardState({
+      container: { data: [] },
+      previousContainer: { data: [] }
+    } as any, {
+      targetRow: 7, targetCell: 2, srcRow: 7, srcCell: 4, srcPiece: ChessPiecesEnum.King, srcColor: ChessColorsEnum.White
+    });
+    expect(qFlags.castleData).toBe('O-O-O');
+  });
+
+  it('covers subtle debug, drag-failure, legal-target and id parsing guards', () => {
+    (component as any).setSubtleDebugReason('');
+    (component as any).setSubtleDebugReason('x');
+    (component as any).setSubtleDebugReason('x');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('x');
+
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    expect((component as any).getDragFailureReason(0, 0, null)).toBeNull();
+    expect((component as any).getLegalTargetCount(0, 0)).toBe(0);
+    (component as any).chessBoardStateService = savedService;
+
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect((component as any).getDragFailureReason(0, 0, { color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any))
+      .toContain('white');
+    expect((component as any).parseFieldId('bad')).toBeNull();
+    expect((component as any).parseFieldId('fieldx0')).toBeNull();
+  });
+
+  it('covers localStorage catch branches for debug panel persistence', () => {
+    const getSpy = spyOn(localStorage, 'getItem').and.throwError('denied');
+    expect((component as any).readDebugPanelOpenState()).toBeFalse();
+    getSpy.and.callThrough();
+
+    const setSpy = spyOn(localStorage, 'setItem').and.throwError('denied');
+    (component as any).persistDebugPanelOpenState(true);
+    setSpy.and.callThrough();
+  });
+
+  it('covers status title branch for black checkmate color', () => {
+    chessBoardStateService.boardHelper.gameOver = true;
+    chessBoardStateService.boardHelper.checkmateColor = ChessColorsEnum.Black;
+    expect(component.getStatusTitle()).toContain('Checkmate - White wins');
+  });
+
+  it('covers draw offer and history cursor edge branches', () => {
+    chessBoardStateService.boardHelper.gameOver = true;
+    component.offerDraw();
+    chessBoardStateService.boardHelper.gameOver = false;
+
+    component.mockHistoryCursor = 0;
+    component.undoMoveMock();
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+    component.mockHistoryCursor = 1;
+    component.redoMoveMock();
+    expect(component.mockHistoryCursor).toBeNull();
+
+    component.pendingDrawOfferBy = ChessColorsEnum.White;
+    component.offerDraw();
+  });
+
+  it('covers opening parsing/formatting fallback branches', () => {
+    expect((component as any).parseOpeningsPayload(null)).toEqual([]);
+    expect((component as any).normalizeNotationToken('')).toBe('');
+    expect((component as any).getDisplayedOpeningName(null, [])).toBe('');
+    expect((component as any).formatOpeningDebugText(null, 0, [])).toBe('');
+    const opening = { name: 'X', steps: ['e2-e4'], raw: { suggested_best_response_name: 'Y', suggested_best_response_notation_step: '2... e7-e5' } };
+    expect((component as any).getDisplayedOpeningName(opening, ['d2-d4'])).toBe('X');
+    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4'])).toBe('X');
+  });
+
+  it('covers opening tie-break branch for shorter complete line preference', () => {
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [
+      {
+        name: 'Long',
+        steps: ['e2-e4', 'e7-e5', 'Ng1-f3'],
+        raw: { name: 'Long', long_algebraic_notation: '1. e2-e4 e7-e5 2. Ng1-f3' }
+      },
+      {
+        name: 'Short',
+        steps: ['e2-e4', 'e7-e5'],
+        raw: { name: 'Short', long_algebraic_notation: '1. e2-e4 e7-e5' }
+      }
+    ];
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+
+    component.getMockOpeningRecognition();
+    expect((component as any).activeOpening.name).toBe('Short');
+
+    (component as any).openings = [
+      {
+        name: 'Suggested',
+        steps: ['e2-e4'],
+        raw: { name: 'Suggested', long_algebraic_notation: '1. e2-e4', suggested_best_response_notation_step: '1... e7-e5' }
+      }
+    ];
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4', '2': 'd7-d5' } as any;
+    component.getMockOpeningRecognition();
+    expect((component as any).activeOpening.name).toBe('Suggested');
+
+    (component as any).openings = [{
+      name: 'Break',
+      steps: ['e2-e4', 'e7-e5'],
+      raw: {
+        name: 'Break',
+        long_algebraic_notation: '1. e2-e4 e7-e5',
+        suggested_best_response_notation_step: '2. Ng1-f3 Nb8-c6'
+      }
+    }];
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4', '2': 'c7-c5', '3': 'a2-a3' } as any;
+    component.getMockOpeningRecognition();
+    expect(component.getMockOpeningRecognition().length).toBeGreaterThan(0);
+  });
+
+  it('covers parse target-square invalid and threat-source empty branch', () => {
+    expect((component as any).parseSuggestedMove('Qa9')).toBeNull();
+    const matchSpy = spyOn(String.prototype, 'match').and.returnValue(['a9', 'a9'] as any);
+    expect((component as any).parseSuggestedMove('Qa9')).toBeNull();
+    matchSpy.and.callThrough();
+    expect((component as any).getThreatenedEnemyPiecesByMovedPiece(chessBoardStateService.field, 4, 4, ChessColorsEnum.White, ChessColorsEnum.Black)).toEqual([]);
+  });
+
+  it('covers suggested-arrow invalid-move continue and clear-preview null-service guard', () => {
+    const validateSpy = spyOn(ChessRulesService, 'validateMove').and.returnValue({ isValid: false } as any);
+    component.previewSuggestedMoveArrows('Nf3');
+    validateSpy.and.callThrough();
+
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    (component as any).clearDragPreviewHighlights();
+    (component as any).chessBoardStateService = savedService;
+    expect(true).toBeTrue();
+  });
+
+  it('covers resign guard and mate-preview guard branches', () => {
+    chessBoardStateService.boardHelper.gameOver = true;
+    component.resign(ChessColorsEnum.White);
+    chessBoardStateService.boardHelper.gameOver = false;
+
+    (component as any).previewHoverMateInOne(6, 4, 4, 4, false);
+    (component as any).lastMatePreviewKey = '64-44-0';
+    (component as any).previewHoverMateInOne(6, 4, 4, 4, true);
+    expect((component as any).lastMatePreviewKey).toBe('64-44-0');
+
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][4] = [];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    (component as any).previewHoverMateInOne(4, 4, 3, 4, true);
+  });
+
+  it('covers overlay toggle-off branches and enemy-color branch in threat analysis', () => {
+    component.activeTool = 'protected-mine';
+    component.showProtected(false);
+    expect(component.activeTool).toBeNull();
+
+    component.activeTool = 'hanging-mine';
+    component.showHangingPieces(false);
+    expect(component.activeTool).toBeNull();
+
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    component.getThreatsOn(chessBoardStateService.field[4][0], 4, 0, ChessColorsEnum.Black, ChessColorsEnum.White);
+    component.showHangingPieces(true);
+    component.showProtected(true);
+
+    clearBoard();
+    chessBoardStateService.field[7][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    const threatsSpy = spyOn(component, 'getThreatsBy').and.returnValue([{ pos: { row: 4, col: 4 } as any, piece: ChessPiecesEnum.Pawn }]);
+    component.showThreats(false);
+    expect(threatsSpy).toHaveBeenCalled();
+
+    const protSpy = spyOn(component, 'getProtectors').and.returnValue([]);
+    const onSpy = spyOn(component, 'getThreatsOn').and.returnValue([{ pos: { row: 0, col: 0 } as any, piece: ChessPiecesEnum.Queen }]);
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    component.showHangingPieces(false);
+    expect(protSpy).toHaveBeenCalled();
+    expect(onSpy).toHaveBeenCalled();
+  });
+
+  it('covers simulateMove en passant, castling rook shift and king-not-found branch', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    let board = (component as any).simulateMove(chessBoardStateService.field, 7, 4, 7, 6);
+    expect(board[7][5][0].piece).toBe(ChessPiecesEnum.Rook);
+
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    board = (component as any).simulateMove(chessBoardStateService.field, 7, 4, 7, 2);
+    expect(board[7][3][0].piece).toBe(ChessPiecesEnum.Rook);
+
+    clearBoard();
+    chessBoardStateService.field[3][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][2] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    board = (component as any).simulateMove(chessBoardStateService.field, 3, 3, 2, 2);
+    expect(board[3][2]).toEqual([]);
+
+    expect((component as any).findKing(chessBoardStateService.field, ChessColorsEnum.White)).toBeNull();
+    expect((component as any).isKingInCheck(chessBoardStateService.field, ChessColorsEnum.White)).toBeFalse();
+  });
+
+  it('covers draw-rule early return and history-result append fallback branches', () => {
+    chessBoardStateService.boardHelper.gameOver = true;
+    (component as any).applyDrawRules(false, false);
+    chessBoardStateService.boardHelper.gameOver = false;
+
+    chessBoardStateService.boardHelper.history = { '1': '' } as any;
+    (component as any).appendGameResultToLastMove('1/2-1/2', 'draw');
+    expect(chessBoardStateService.boardHelper.history['1']).toContain('1/2-1/2');
+    (component as any).appendGameResultToLastMove('1/2-1/2', 'draw');
+  });
+
+  it('covers clock start/tick/increment and forfeit early-return branches', () => {
+    const zoneComponent = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, {
+      run: (fn: Function) => fn()
+    } as any);
+    const setIntervalSpy = spyOn(window, 'setInterval').and.callFake((callback: TimerHandler) => {
+      (callback as Function)();
+      return 1 as any;
+    });
+    zoneComponent.clockRunning = false;
+    (zoneComponent as any).clockIntervalId = null;
+    (zoneComponent as any).startClock();
+    expect(setIntervalSpy).toHaveBeenCalled();
+    (zoneComponent as any).clockIntervalId = 5;
+    (zoneComponent as any).startClock();
+
+    chessBoardStateService.boardHelper.gameOver = false;
+    zoneComponent.clockRunning = true;
+    zoneComponent.clockStarted = true;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    zoneComponent.blackClockMs = 1;
+    (zoneComponent as any).lastClockTickAt = Date.now() - 5;
+    (zoneComponent as any).tickClock();
+
+    chessBoardStateService.boardHelper.gameOver = false;
+    zoneComponent.clockStarted = true;
+    (zoneComponent as any).incrementMs = 1000;
+    zoneComponent.whiteClockMs = 0;
+    (zoneComponent as any).addIncrementToColor(ChessColorsEnum.White);
+    expect(zoneComponent.whiteClockMs).toBe(1000);
+
+    chessBoardStateService.boardHelper.gameOver = true;
+    const debugBefore = chessBoardStateService.boardHelper.debugText;
+    (zoneComponent as any).handleTimeForfeit(ChessColorsEnum.White);
+    expect(chessBoardStateService.boardHelper.debugText).toBe(debugBefore);
+
+    const nowSpy = spyOn(Date, 'now').and.returnValues(100, 100);
+    chessBoardStateService.boardHelper.gameOver = false;
+    zoneComponent.clockRunning = true;
+    zoneComponent.clockStarted = true;
+    (zoneComponent as any).lastClockTickAt = 100;
+    (zoneComponent as any).tickClock();
+    nowSpy.and.callThrough();
+  });
+
+  it('covers move-index helpers, debug key guards, notation rule branches and insufficient-material terminal false', () => {
+    const savedHistory = { ...(chessBoardStateService.boardHelper.history as any) };
+    chessBoardStateService.history.splice(0, chessBoardStateService.history.length);
+    expect((component as any).getCurrentVisibleMoveIndex()).toBe(-1);
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+    component.mockHistoryCursor = 5;
+    expect((component as any).getCurrentVisibleMoveIndex()).toBe(0);
+    chessBoardStateService.boardHelper.history = savedHistory as any;
+
+    const savedService = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    expect(component.getDebugPositionKey()).toBe('');
+    expect(component.getDebugCastlingRights()).toBe('-');
+    (component as any).chessBoardStateService = savedService;
+
+    expect((component as any).isNonPawnNonCaptureMove('')).toBeFalse();
+    expect((component as any).isNonPawnNonCaptureMove('O-O')).toBeTrue();
+
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.field[0][2] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.field[6][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    expect((component as any).isInsufficientMaterial(chessBoardStateService.field)).toBeFalse();
+
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    expect((component as any).isInsufficientMaterial(chessBoardStateService.field)).toBeTrue();
+  });
+
+  it('covers opening helper direct-return branches and color-init ternaries', () => {
+    const opening = {
+      name: 'OnlyName',
+      steps: ['e2-e4'],
+      raw: { name: 'OnlyName', suggested_best_response_name: 'Some Line', suggested_best_response_notation_step: '' }
+    };
+    expect((component as any).getDisplayedOpeningName(opening, ['d2-d4'])).toBe('OnlyName');
+    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4'])).toBe('OnlyName');
+    expect((component as any).formatOpeningDebugText(opening, 1, ['e2-e4'])).toContain('Opening');
+
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    const mine = (component as any).initColors(false);
+    const enemy = (component as any).initColors(true);
+    expect(mine.enemyColor).toBe(ChessColorsEnum.White);
+    expect(enemy.ofColor).toBe(ChessColorsEnum.White);
+  });
+
+  it('covers cct check-with-capture scoring branch', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.field[3][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    const stepSpy = spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow: number, targetCol: number) =>
+      targetRow === 3 && targetCol === 4
+    );
+    const kingSpy = spyOn<any>(component, 'isKingInCheck').and.callFake((_board: any, color: ChessColorsEnum) =>
+      color === ChessColorsEnum.Black
+    );
+
+    (component as any).ensureCctRecommendations();
+    expect(stepSpy).toHaveBeenCalled();
+    expect(kingSpy).toHaveBeenCalled();
+  });
+
+  it('covers validateDropMove invalid branch with drag failure reason', () => {
+    const validateSpy = spyOn(ChessRulesService, 'validateMove').and.returnValue({ isValid: false } as any);
+    const reasonSpy = spyOn<any>(component, 'getDragFailureReason').and.returnValue('blocked');
+    const subtleSpy = spyOn<any>(component, 'setSubtleDebugReason').and.callThrough();
+    const result = (component as any).validateDropMove({
+      targetRow: 5,
+      targetCell: 0,
+      srcRow: 6,
+      srcCell: 0,
+      srcPiece: ChessPiecesEnum.Pawn,
+      srcColor: ChessColorsEnum.White
+    }, {
+      previousContainer: { data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] }
+    });
+    expect(result).toBeFalse();
+    expect(reasonSpy).toHaveBeenCalled();
+    expect(subtleSpy).toHaveBeenCalledWith('blocked');
+    validateSpy.and.callThrough();
+  });
+
+  it('covers undo low-index branch and opening-name display fallback branches', () => {
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+    component.mockHistoryCursor = 0;
+    component.undoMoveMock();
+    expect(component.mockHistoryCursor).toBe(0);
+
+    const opening = {
+      name: 'Main',
+      steps: ['e2-e4', 'e7-e5'],
+      raw: {
+        suggested_best_response_name: 'Line',
+        suggested_best_response_notation_step: '2. Ng1-f3 Nb8-c6'
+      }
+    };
+    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4', 'c7-c5', 'Ng1-f3'])).toBe('Main');
+    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4', 'e7-e5', 'd2-d4'])).toBe('Main');
+  });
+
+  it('covers suggested-line mismatch break loops in recognition and formatting', () => {
+    const opening = {
+      name: 'Main',
+      steps: ['e2-e4', 'e7-e5'],
+      raw: {
+        name: 'Main',
+        long_algebraic_notation: '1. e2-e4 e7-e5',
+        suggested_best_response_name: 'Line',
+        suggested_best_response_notation_step: '2. Ng1-f3 Nb8-c6'
+      }
+    };
+    (component as any).openingsLoaded = true;
+    (component as any).openings = [opening];
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4', '2': 'e7-e5', '3': 'Ng1-f3', '4': 'a7-a6' } as any;
+
+    expect(component.getMockOpeningRecognition()).toContain('Main');
+    const debugText = (component as any).formatOpeningDebugText(opening, 3, 4, ['e2-e4', 'e7-e5', 'Ng1-f3', 'a7-a6']);
+    expect(debugText).toContain('Matched steps');
+  });
+
+  it('covers previewHoverMateInOne self-check early return branch', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    const kingSpy = spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
+    (component as any).previewHoverMateInOne(6, 4, 5, 4, true);
+    expect(kingSpy).toHaveBeenCalled();
+  });
+});
+

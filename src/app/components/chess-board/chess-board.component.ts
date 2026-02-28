@@ -2035,7 +2035,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     nextBoard[srcRow][srcCol] = [];
-    nextBoard[targetRow][targetCol] = movingPiece ? [movingPiece] : [];
+    nextBoard[targetRow][targetCol] = [movingPiece];
 
     if (movingPiece.piece === ChessPiecesEnum.King && srcRow === targetRow && Math.abs(targetCol - srcCol) === 2) {
       const isKingSideCastle = targetCol > srcCol;
