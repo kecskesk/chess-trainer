@@ -1,6 +1,6 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem, DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, DragDropModule } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -275,8 +275,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.applyPromotionAvailability(moveContext);
 
     const moveFlags = this.applyPreTransferBoardState(event, moveContext);
-    transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
+    this.movePieceBetweenCells(event.previousContainer.data, event.container.data);
     this.finalizeDropState(moveContext, moveFlags);
+  }
+
+  private movePieceBetweenCells(sourceCell: ChessPieceDto[], targetCell: ChessPieceDto[]): void {
+    if (!sourceCell || !targetCell || !sourceCell[0]) {
+      return;
+    }
+    const movingPiece = sourceCell[0];
+    sourceCell.splice(0, sourceCell.length);
+    targetCell.splice(0, targetCell.length);
+    targetCell.push(movingPiece);
   }
 
   private canProcessDropEvent(event: CdkDragDrop<ChessPieceDto[]>): boolean {

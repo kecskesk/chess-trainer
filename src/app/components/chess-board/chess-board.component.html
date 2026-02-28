@@ -38,6 +38,7 @@
                 <div class="square"
                      cdkDropList
                      cdkDropListOrientation="horizontal"
+                     [cdkDropListSortingDisabled]="true"
                       [cdkDropListEnterPredicate]="canDropPredicate"
                      id="field{{idxX}}{{idxY}}"
                      [ngClass]="getSquareHighlightClass(idxX, idxY)"

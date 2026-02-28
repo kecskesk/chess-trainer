@@ -177,6 +177,36 @@ describe('ChessBoardComponent opening recognition', () => {
   });
 });
 
+describe('ChessBoardComponent capture transfer consistency', () => {
+  it('keeps only the capturing piece on target square for both colors', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[3][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    expect(canDropLike(4, 3, 3, 4)).toBeTrue();
+    component.onDrop(createDropLike(4, 3, 3, 4));
+    expect(chessBoardStateService.field[4][3].length).toBe(0);
+    expect(chessBoardStateService.field[3][4].length).toBe(1);
+    expect(chessBoardStateService.field[3][4][0].color).toBe(ChessColorsEnum.White);
+
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[3][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[4][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+
+    expect(canDropLike(3, 4, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(3, 4, 4, 3));
+    expect(chessBoardStateService.field[3][4].length).toBe(0);
+    expect(chessBoardStateService.field[4][3].length).toBe(1);
+    expect(chessBoardStateService.field[4][3][0].color).toBe(ChessColorsEnum.Black);
+  });
+});
+
 describe('ChessBoardComponent opening recognition - variation scenarios', () => {
 
   it('extends Dutch line with first variation move and labels the opening as Dutch Defense: Classical Variation', () => {
