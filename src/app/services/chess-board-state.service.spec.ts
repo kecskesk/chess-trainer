@@ -46,14 +46,13 @@ describe('ChessBoardStateService notation helpers', () => {
     expect(notation).toBe('e2-e4');
   });
 });
-
 describe('ChessBoardStateService state helpers', () => {
-  let globals: ChessBoardStateService;
+  let chessBoardStateService: ChessBoardStateService;
   let originalBoardHelper: ChessBoardHelperDto;
   let originalField: any;
 
   beforeEach(() => {
-    globals = new ChessBoardStateService();
+    chessBoardStateService = new ChessBoardStateService();
     originalBoardHelper = ChessBoardStateService.BOARD_HELPER;
     originalField = ChessBoardStateService.CHESS_FIELD;
   });
@@ -64,16 +63,16 @@ describe('ChessBoardStateService state helpers', () => {
   });
 
   it('exposes highlights and history getters', () => {
-    globals.boardHelper.possibles['11'] = { row: 1, col: 1 } as any;
-    globals.boardHelper.hits['22'] = { row: 2, col: 2 } as any;
-    globals.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
-    globals.boardHelper.history['1'] = 'e2-e4';
+    chessBoardStateService.boardHelper.possibles['11'] = { row: 1, col: 1 } as any;
+    chessBoardStateService.boardHelper.hits['22'] = { row: 2, col: 2 } as any;
+    chessBoardStateService.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
+    chessBoardStateService.boardHelper.history['1'] = 'e2-e4';
 
-    expect(globals.possibles.length).toBe(1);
-    expect(globals.hits.length).toBe(1);
-    expect(globals.checks.length).toBe(1);
-    expect(globals.boardHighlights.length).toBe(3);
-    expect(globals.history).toEqual(['e2-e4']);
+    expect(chessBoardStateService.possibles.length).toBe(1);
+    expect(chessBoardStateService.hits.length).toBe(1);
+    expect(chessBoardStateService.checks.length).toBe(1);
+    expect(chessBoardStateService.boardHighlights.length).toBe(3);
+    expect(chessBoardStateService.history).toEqual(['e2-e4']);
   });
 
   it('adds possible/hit/check via addHighlight switch cases', () => {
@@ -82,9 +81,9 @@ describe('ChessBoardStateService state helpers', () => {
     ChessBoardStateService.addHighlight({ row: 6, col: 6, type: 'check' });
     ChessBoardStateService.addHighlight({ row: 0, col: 0, type: 'unknown' as any });
 
-    expect(globals.boardHelper.possibles['44']).toEqual({ row: 4, col: 4 } as any);
-    expect(globals.boardHelper.hits['55']).toEqual({ row: 5, col: 5 } as any);
-    expect(globals.boardHelper.checks['66']).toEqual({ row: 6, col: 6 } as any);
+    expect(chessBoardStateService.boardHelper.possibles['44']).toEqual({ row: 4, col: 4 } as any);
+    expect(chessBoardStateService.boardHelper.hits['55']).toEqual({ row: 5, col: 5 } as any);
+    expect(chessBoardStateService.boardHelper.checks['66']).toEqual({ row: 6, col: 6 } as any);
   });
 
   it('handles null and missing BOARD_HELPER in add methods', () => {
@@ -115,9 +114,9 @@ describe('ChessBoardStateService state helpers', () => {
       color: 'cyan',
       intensity: 0.4
     } as any);
-    expect(Object.keys(globals.boardHelper.arrows).length).toBe(1);
+    expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBe(1);
 
-    globals.boardHelper.arrows = {};
+    chessBoardStateService.boardHelper.arrows = {};
     ChessBoardStateService.createArrowFromVisualization({
       fromRow: 8,
       fromCol: 1,
@@ -126,13 +125,13 @@ describe('ChessBoardStateService state helpers', () => {
       color: 'magenta',
       intensity: 0.6
     } as any);
-    const createdArrow = Object.values(globals.boardHelper.arrows)[0] as ChessArrowDto;
+    const createdArrow = Object.values(chessBoardStateService.boardHelper.arrows)[0] as ChessArrowDto;
     expect(createdArrow.color).toBe('blue');
   });
 
   it('adds history and supports castle/ep/mate notation suffixes', () => {
     ChessBoardStateService.addHistory('e2-e4');
-    expect(globals.history).toEqual(['e2-e4']);
+    expect(chessBoardStateService.history).toEqual(['e2-e4']);
 
     const castleNotation = ChessBoardStateService.translateNotation(
       7, 6, 7, 4,
@@ -166,17 +165,18 @@ describe('ChessBoardStateService state helpers', () => {
     expect(ChessBoardStateService.pieceIsInWay(1, 1, 0, 0)).toBeFalse();
     expect(errorSpy).toHaveBeenCalled();
 
-    ChessBoardStateService.CHESS_FIELD = globals.field;
+    ChessBoardStateService.CHESS_FIELD = chessBoardStateService.field;
     expect(ChessBoardStateService.pieceIsInWay(4, 4, 4, 4)).toBeFalse();
 
-    globals.field[6][4] = [ { color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any ];
-    globals.field[5][4] = [ { color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any ];
+    chessBoardStateService.field[6][4] = [ { color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any ];
+    chessBoardStateService.field[5][4] = [ { color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any ];
     expect(ChessBoardStateService.pieceIsInWay(4, 4, 6, 4)).toBeTrue();
 
-    globals.field[5][4] = [];
+    chessBoardStateService.field[5][4] = [];
     expect(ChessBoardStateService.pieceIsInWay(4, 4, 6, 4)).toBeFalse();
 
     expect(ChessBoardStateService.pieceIsInWay(-1, 0, 0, 0)).toBeFalse();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });
+

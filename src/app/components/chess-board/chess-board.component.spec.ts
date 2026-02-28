@@ -12,18 +12,18 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('ChessBoardComponent move sequence integration', () => {
-  let globals: ChessBoardStateService;
+  let chessBoardStateService: ChessBoardStateService;
   let component: ChessBoardComponent;
 
   const createDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
     return {
       previousContainer: {
         id: `field${srcRow}${srcCol}`,
-        data: globals.field[srcRow][srcCol]
+        data: chessBoardStateService.field[srcRow][srcCol]
       },
       container: {
         id: `field${targetRow}${targetCol}`,
-        data: globals.field[targetRow][targetCol]
+        data: chessBoardStateService.field[targetRow][targetCol]
       },
       previousIndex: 0,
       currentIndex: 0
@@ -35,12 +35,12 @@ describe('ChessBoardComponent move sequence integration', () => {
       {
         dropContainer: {
           id: `field${srcRow}${srcCol}`,
-          data: globals.field[srcRow][srcCol]
+          data: chessBoardStateService.field[srcRow][srcCol]
         }
       } as any,
       {
         id: `field${targetRow}${targetCol}`,
-        data: globals.field[targetRow][targetCol]
+        data: chessBoardStateService.field[targetRow][targetCol]
       } as any
     );
   };
@@ -61,17 +61,17 @@ describe('ChessBoardComponent move sequence integration', () => {
   const clearBoard = (): void => {
     for (let row = 0; row <= 7; row++) {
       for (let col = 0; col <= 7; col++) {
-        globals.field[row][col] = [];
+        chessBoardStateService.field[row][col] = [];
       }
     }
   };
 
   beforeEach(() => {
-    globals = new ChessBoardStateService();
-    component = new ChessBoardComponent(globals, {
+    chessBoardStateService = new ChessBoardStateService();
+    component = new ChessBoardComponent(chessBoardStateService, {
       get: () => of([])
     } as any);
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
   it('updates opening recognition on first half-move when opening line has one step', () => {
@@ -119,7 +119,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.onDrop(createDropLike(6, 3, 4, 3));
 
     expect(component.getMockOpeningRecognition()).toBe('Queen\'s Pawn Opening');
-    expect(globals.boardHelper.debugText).toContain('Opening: Queen\'s Pawn Opening');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Queen\'s Pawn Opening');
   });
 
   it('shows matched sequence and next expected move for partial opening match', () => {
@@ -144,9 +144,9 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.onDrop(createDropLike(1, 3, 3, 3));
 
     expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit');
-    expect(globals.boardHelper.debugText).toContain('Matched steps: 2/3');
-    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): c2-c4');
-    expect(globals.boardHelper.debugText).toContain('Book recommendation (Black after): Queen\'s Gambit Declined (2... e7-e6)');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 2/3');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): c2-c4');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (Black after): Queen\'s Gambit Declined (2... e7-e6)');
   });
 
   it('does not repeat suggested response after it has been played', () => {
@@ -175,9 +175,9 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.onDrop(createDropLike(1, 4, 2, 4));
 
     expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit Declined');
-    expect(globals.boardHelper.debugText).toContain('Opening: Queen\'s Gambit Declined');
-    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): —');
-    expect(globals.boardHelper.debugText).not.toContain('Book recommendation (Black now): Queen\'s Gambit Declined (2... e7-e6)');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Queen\'s Gambit Declined');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): —');
+    expect(chessBoardStateService.boardHelper.debugText).not.toContain('Book recommendation (Black now): Queen\'s Gambit Declined (2... e7-e6)');
   });
 
   it('extends Dutch line with first variation move and labels the opening as Dutch Defense: Classical Variation', () => {
@@ -204,9 +204,9 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.onDrop(createDropLike(6, 2, 4, 2));
 
     expect(component.getMockOpeningRecognition()).toBe('Dutch Defense: Classical Variation');
-    expect(globals.boardHelper.debugText).toContain('Opening: Dutch Defense: Classical Variation');
-    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/5');
-    expect(globals.boardHelper.debugText).toContain('Line: 1. d2-d4 f7-f5 2. c2-c4 Ng8-f6 3. g2-g3');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Dutch Defense: Classical Variation');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. d2-d4 f7-f5 2. c2-c4 Ng8-f6 3. g2-g3');
   });
 
   it('labels Alekhine line as Alekhine\'s Defense: Four Pawns Attack when the suggested move is played', () => {
@@ -233,9 +233,9 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.onDrop(createDropLike(4, 4, 3, 4));
 
     expect(component.getMockOpeningRecognition()).toBe('Alekhine\'s Defense: Four Pawns Attack');
-    expect(globals.boardHelper.debugText).toContain('Opening: Alekhine\'s Defense: Four Pawns Attack');
-    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/7');
-    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 Ng8-f6 2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Alekhine\'s Defense: Four Pawns Attack');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/7');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 Ng8-f6 2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4');
   });
 
   it('shows prefixed response name in recommendation text for Alekhine\'s Defense', () => {
@@ -261,7 +261,7 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     component.getMockOpeningRecognition();
 
-    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): e4-e5');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): e4-e5');
   });
 
   it('does not repeat Scandinavian main line recommendation after the projected line is fully played', () => {
@@ -291,10 +291,10 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     component.getMockOpeningRecognition();
 
-    expect(globals.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
-    expect(globals.boardHelper.debugText).toContain('Matched steps: 4/4');
-    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 d7-d5 2. e4xd5 Qd8xd5');
-    expect(globals.boardHelper.debugText).toContain('Book recommendation (White now): —');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 4/4');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 d7-d5 2. e4xd5 Qd8xd5');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): —');
   });
 
   it('does not show redundant white-after recommendation while projecting Scandinavian main line', () => {
@@ -322,10 +322,10 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     component.getMockOpeningRecognition();
 
-    expect(globals.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
-    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/4');
-    expect(globals.boardHelper.debugText).toContain('Book recommendation (Black now): Qd8xd5');
-    expect(globals.boardHelper.debugText).not.toContain('Book recommendation (White after):');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/4');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (Black now): Qd8xd5');
+    expect(chessBoardStateService.boardHelper.debugText).not.toContain('Book recommendation (White after):');
   });
 
   it('keeps Caro-Kann as Classical Variation before e5 is played', () => {
@@ -363,42 +363,42 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.onDrop(createDropLike(6, 3, 4, 3));
 
     expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
-    expect(globals.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
-    expect(globals.boardHelper.debugText).toContain('Matched steps: 3/5');
-    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
 
     expect(canDropLike(1, 3, 3, 3)).toBeTrue();
     component.onDrop(createDropLike(1, 3, 3, 3));
 
     expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
-    expect(globals.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
-    expect(globals.boardHelper.debugText).toContain('Matched steps: 4/5');
-    expect(globals.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 4/5');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
   });
 
   it('supports d2d4, e7e5, and d4xe5 with capture highlight', () => {
     expect(canDropLike(6, 3, 4, 3)).toBeTrue();
     component.onDrop(createDropLike(6, 3, 4, 3));
 
-    expect(globals.boardHelper.colorTurn).toBe(ChessColorsEnum.Black);
-    expect(globals.field[4][3][0].piece).toBe(ChessPiecesEnum.Pawn);
-    expect(globals.field[4][3][0].color).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.boardHelper.colorTurn).toBe(ChessColorsEnum.Black);
+    expect(chessBoardStateService.field[4][3][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(chessBoardStateService.field[4][3][0].color).toBe(ChessColorsEnum.White);
 
     expect(canDropLike(1, 4, 3, 4)).toBeTrue();
     component.onDrop(createDropLike(1, 4, 3, 4));
 
-    expect(globals.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
-    expect(globals.field[3][4][0].piece).toBe(ChessPiecesEnum.Pawn);
-    expect(globals.field[3][4][0].color).toBe(ChessColorsEnum.Black);
+    expect(chessBoardStateService.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.field[3][4][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(chessBoardStateService.field[3][4][0].color).toBe(ChessColorsEnum.Black);
 
     expect(canDropLike(4, 3, 3, 4)).toBeTrue();
     expect(component.isHit(3, 4)).toBeTrue();
 
     component.onDrop(createDropLike(4, 3, 3, 4));
 
-    expect(globals.field[4][3].length).toBe(0);
-    expect(globals.field[3][4][0].piece).toBe(ChessPiecesEnum.Pawn);
-    expect(globals.field[3][4][0].color).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.field[4][3].length).toBe(0);
+    expect(chessBoardStateService.field[3][4][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(chessBoardStateService.field[3][4][0].color).toBe(ChessColorsEnum.White);
   });
 
   it('detects Fool\'s Mate and ends the game', () => {
@@ -414,22 +414,22 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(canDropLike(0, 3, 4, 7)).toBeTrue();
     component.onDrop(createDropLike(0, 3, 4, 7));
 
-    const history = globals.history;
+    const history = chessBoardStateService.history;
     const lastMove = history[history.length - 1];
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBe(ChessColorsEnum.White);
     expect(lastMove).toContain('#');
     expect(component.canDropPredicate(
       {
         dropContainer: {
           id: 'field60',
-          data: globals.field[6][0]
+          data: chessBoardStateService.field[6][0]
         }
       } as any,
       {
         id: 'field50',
-        data: globals.field[5][0]
+        data: chessBoardStateService.field[5][0]
       } as any
     )).toBeFalse();
   });
@@ -449,62 +449,62 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     expect(canDropLike(3, 3, 2, 2)).toBeTrue();
     component.onDrop(createDropLike(3, 3, 2, 2));
-    expect(globals.field[3][2].length).toBe(0);
-    expect(globals.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
-    expect(globals.field[2][2][0].color).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.field[3][2].length).toBe(0);
+    expect(chessBoardStateService.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(chessBoardStateService.field[2][2][0].color).toBe(ChessColorsEnum.White);
 
     expect(canDropLike(1, 3, 2, 2)).toBeTrue();
     component.onDrop(createDropLike(1, 3, 2, 2));
 
-    expect(globals.field[1][3].length).toBe(0);
-    expect(globals.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
-    expect(globals.field[2][2][0].color).toBe(ChessColorsEnum.Black);
+    expect(chessBoardStateService.field[1][3].length).toBe(0);
+    expect(chessBoardStateService.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
+    expect(chessBoardStateService.field[2][2][0].color).toBe(ChessColorsEnum.Black);
   });
 
   it('triggers and applies white promotion on back rank', () => {
-    globals.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[0][0] = [];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[0][0] = [];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     expect(canDropLike(1, 0, 0, 0)).toBeTrue();
     component.onDrop(createDropLike(1, 0, 0, 0));
 
-    expect(globals.boardHelper.canPromote).toBe(0);
+    expect(chessBoardStateService.boardHelper.canPromote).toBe(0);
     component.promotePiece(ChessPiecesEnum.Queen);
-    expect(globals.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
-    expect(globals.boardHelper.canPromote).toBeNull();
-    expect(globals.history[globals.history.length - 1]).toContain('=Q');
+    expect(chessBoardStateService.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
+    expect(chessBoardStateService.boardHelper.canPromote).toBeNull();
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
   });
 
   it('triggers and applies black promotion on back rank', () => {
-    globals.field[6][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[7][7] = [];
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.field[6][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[7][7] = [];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
 
     expect(canDropLike(6, 7, 7, 7)).toBeTrue();
     component.onDrop(createDropLike(6, 7, 7, 7));
 
-    expect(globals.boardHelper.canPromote).toBe(7);
+    expect(chessBoardStateService.boardHelper.canPromote).toBe(7);
     component.promotePiece(ChessPiecesEnum.Queen);
-    expect(globals.field[7][7][0].piece).toBe(ChessPiecesEnum.Queen);
-    expect(globals.boardHelper.canPromote).toBeNull();
-    expect(globals.history[globals.history.length - 1]).toContain('=Q');
+    expect(chessBoardStateService.field[7][7][0].piece).toBe(ChessPiecesEnum.Queen);
+    expect(chessBoardStateService.boardHelper.canPromote).toBeNull();
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
   });
 
   it('declares draw by stalemate when side to move has no legal moves and is not in check', () => {
     clearBoard();
-    globals.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[1][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
-    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[1][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     expect(canDropLike(1, 3, 1, 2)).toBeTrue();
     component.onDrop(createDropLike(1, 3, 1, 2));
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by stalemate.');
-    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by stalemate}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by stalemate.');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw by stalemate}');
   });
 
   it('declares draw by threefold repetition', () => {
@@ -524,135 +524,135 @@ describe('ChessBoardComponent move sequence integration', () => {
       component.onDrop(createDropLike(srcRow, srcCol, targetRow, targetCol));
     });
 
-    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.canClaimDraw()).toBeTrue();
 
     component.claimDraw();
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by threefold repetition (claimed).');
-    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by threefold repetition}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by threefold repetition (claimed).');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw by threefold repetition}');
   });
 
   it('declares draw by fivefold repetition', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
-    const knight = globals.field[7][6][0];
-    globals.field[5][5] = [knight];
-    globals.field[7][6] = [];
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    const knight = chessBoardStateService.field[7][6][0];
+    chessBoardStateService.field[5][5] = [knight];
+    chessBoardStateService.field[7][6] = [];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     const targetPositionKey = component.getDebugPositionKey();
-    globals.field[7][6] = [knight];
-    globals.field[5][5] = [];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][6] = [knight];
+    chessBoardStateService.field[5][5] = [];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     (component as any).repetitionCounts = { [targetPositionKey]: 4 };
-    (component as any).trackedHistoryLength = globals.history.length;
+    (component as any).trackedHistoryLength = chessBoardStateService.history.length;
 
     expect(canDropLike(7, 6, 5, 5)).toBeTrue();
     component.onDrop(createDropLike(7, 6, 5, 5));
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by fivefold repetition.');
-    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by fivefold repetition}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by fivefold repetition.');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw by fivefold repetition}');
   });
 
   it('declares draw by 50-move rule after 100 non-pawn non-capture half-moves', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
-    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
-    globals.boardHelper.history = {};
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.history = {};
     for (let i = 1; i <= 99; i++) {
-      globals.boardHelper.history[`${i}`] = 'Ng1-f3';
+      chessBoardStateService.boardHelper.history[`${i}`] = 'Ng1-f3';
     }
 
     expect(canDropLike(0, 1, 2, 0)).toBeTrue();
     component.onDrop(createDropLike(0, 1, 2, 0));
 
-    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.canClaimDraw()).toBeTrue();
 
     component.claimDraw();
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by fifty-move rule (claimed).');
-    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by fifty-move rule}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by fifty-move rule (claimed).');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw by fifty-move rule}');
   });
 
   it('declares draw by 75-move rule after 150 non-pawn non-capture half-moves', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
-    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
-    globals.boardHelper.history = {};
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.history = {};
     for (let i = 1; i <= 149; i++) {
-      globals.boardHelper.history[`${i}`] = 'Ng1-f3';
+      chessBoardStateService.boardHelper.history[`${i}`] = 'Ng1-f3';
     }
 
     expect(canDropLike(0, 1, 2, 0)).toBeTrue();
     component.onDrop(createDropLike(0, 1, 2, 0));
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by seventy-five-move rule.');
-    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw by seventy-five-move rule}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by seventy-five-move rule.');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw by seventy-five-move rule}');
   });
 
   [
     {
       name: 'K+N vs K',
       setup: () => {
-        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-        globals.field[7][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[7][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
       },
       move: [7, 1, 5, 0] as [number, number, number, number]
     },
     {
       name: 'K+N vs K+N',
       setup: () => {
-        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-        globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-        globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+        chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
       },
       move: [7, 6, 5, 5] as [number, number, number, number]
     },
     {
       name: 'K+B vs K+N',
       setup: () => {
-        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-        globals.field[7][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
-        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-        globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+        chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[7][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
+        chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
       },
       move: [7, 2, 6, 3] as [number, number, number, number]
     },
     {
       name: 'K+2N vs K',
       setup: () => {
-        globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-        globals.field[7][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-        globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-        globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+        chessBoardStateService.field[7][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+        chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
       },
       move: [7, 1, 5, 0] as [number, number, number, number]
     }
@@ -660,24 +660,24 @@ describe('ChessBoardComponent move sequence integration', () => {
     it(`declares draw by insufficient material for ${testCase.name}`, () => {
       clearBoard();
       testCase.setup();
-      globals.boardHelper.colorTurn = ChessColorsEnum.White;
+      chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
       const [srcRow, srcCol, targetRow, targetCol] = testCase.move;
       expect(canDropLike(srcRow, srcCol, targetRow, targetCol)).toBeTrue();
       component.onDrop(createDropLike(srcRow, srcCol, targetRow, targetCol));
 
-      expect(globals.boardHelper.gameOver).toBeTrue();
-      expect(globals.boardHelper.checkmateColor).toBeNull();
-      expect(globals.boardHelper.debugText).toBe('Draw by insufficient material.');
+      expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+      expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+      expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by insufficient material.');
     });
   });
 
   it('creates a pending draw offer instead of ending game immediately', () => {
-    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
 
     component.offerDraw();
 
-    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
     expect(component.canRespondToDrawOffer()).toBeTrue();
   });
@@ -688,10 +688,10 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     component.acceptDrawOffer();
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Draw by agreement.');
-    expect(globals.history[globals.history.length - 1]).toContain('1/2-1/2 {Draw agreed}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by agreement.');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw agreed}');
     expect(component.pendingDrawOfferBy).toBeNull();
   });
 
@@ -701,26 +701,26 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     component.declineDrawOffer();
 
-    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.pendingDrawOfferBy).toBeNull();
   });
 
   it('records white resignation as 0-1 with long result notation', () => {
     component.resign(ChessColorsEnum.White);
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('White resigns.');
-    expect(globals.history[globals.history.length - 1]).toContain('0-1 {White resigns}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('White resigns.');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('0-1 {White resigns}');
   });
 
   it('records black resignation as 1-0 with long result notation', () => {
     component.resign(ChessColorsEnum.Black);
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBeNull();
-    expect(globals.boardHelper.debugText).toBe('Black resigns.');
-    expect(globals.history[globals.history.length - 1]).toContain('1-0 {Black resigns}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Black resigns.');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1-0 {Black resigns}');
   });
 
   it('auto-declines pending draw offer when responder makes a move', () => {
@@ -730,15 +730,15 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(canDropLike(6, 4, 4, 4)).toBeTrue();
     component.onDrop(createDropLike(6, 4, 4, 4));
 
-    expect(globals.boardHelper.gameOver).toBeFalse();
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.pendingDrawOfferBy).toBeNull();
   });
 
   it('returns ambient background theme by turn and pending draw state', () => {
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     expect(component.getAmbientThemeClass()).toBe('ambient-math--white-turn');
 
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     expect(component.getAmbientThemeClass()).toBe('ambient-math--black-turn');
 
     component.offerDraw();
@@ -747,59 +747,59 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('ignores onDrop when move would leave own king in check', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.onDrop(createDropLike(6, 4, 6, 5));
 
-    expect(globals.field[6][4][0].piece).toBe(ChessPiecesEnum.Rook);
-    expect(globals.field[6][4][0].color).toBe(ChessColorsEnum.White);
-    expect(globals.field[6][5].length).toBe(0);
-    expect(globals.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
-    expect(globals.history.length).toBe(0);
+    expect(chessBoardStateService.field[6][4][0].piece).toBe(ChessPiecesEnum.Rook);
+    expect(chessBoardStateService.field[6][4][0].color).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.field[6][5].length).toBe(0);
+    expect(chessBoardStateService.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.history.length).toBe(0);
   });
 
   it('writes debug reason when drag target is invalid', () => {
     const canDrop = canDropLike(6, 0, 5, 1);
 
     expect(canDrop).toBeFalse();
-    expect(globals.boardHelper.debugText).toBe('');
+    expect(chessBoardStateService.boardHelper.debugText).toBe('');
   });
 
   it('writes zero-target reason when dragged piece has no legal targets', () => {
     clearBoard();
-    globals.field[0][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[1][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[7][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[1][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.onDragStarted({
       source: {
         dropContainer: {
           id: 'field00',
-          data: globals.field[0][0]
+          data: chessBoardStateService.field[0][0]
         }
       }
     } as any);
 
-    expect(globals.boardHelper.debugText).toBe('· No legal targets for this king.');
+    expect(chessBoardStateService.boardHelper.debugText).toBe('· No legal targets for this king.');
   });
 
   it('shows protection arrows for defended targets in threat view', () => {
     clearBoard();
-    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[2][2] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[2][2] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.showThreats(false);
 
-    const arrows = Object.values(globals.boardHelper.arrows);
+    const arrows = Object.values(chessBoardStateService.boardHelper.arrows);
     const hasThreatArrow = arrows.some(arrow => arrow.color === 'blue');
     const hasProtectionArrow = arrows.some(arrow => arrow.color === 'gold');
 
@@ -809,13 +809,13 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('shows cyan threat arrows for unprotected targets in threat view', () => {
     clearBoard();
-    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.showThreats(false);
 
-    const arrows = Object.values(globals.boardHelper.arrows);
+    const arrows = Object.values(chessBoardStateService.boardHelper.arrows);
     const hasCyanThreatArrow = arrows.some(arrow => arrow.color === 'cyan');
     const hasProtectionArrow = arrows.some(arrow => arrow.color === 'gold');
 
@@ -825,14 +825,14 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('shows red threat arrows when the target is the king (check)', () => {
     clearBoard();
-    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.showThreats(false);
 
-    const arrows = Object.values(globals.boardHelper.arrows);
+    const arrows = Object.values(chessBoardStateService.boardHelper.arrows);
     const hasRedCheckArrow = arrows.some(arrow => arrow.color === 'red');
 
     expect(hasRedCheckArrow).toBeTrue();
@@ -840,14 +840,14 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('drag-enter preview marks dangerous move that allows mate in one', () => {
     clearBoard();
-    globals.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[6][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[6][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[5][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Queen } as any];
-    globals.field[3][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[6][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[5][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.field[3][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.onDropListEntered(createEnterLike(7, 0, 6, 0));
     expect(component.isMateInOneBlunderTarget(6, 0)).toBeTrue();
@@ -855,10 +855,10 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('drag-enter preview highlights mate-in-one winning target', () => {
     clearBoard();
-    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.onDropListEntered(createEnterLike(2, 1, 1, 1));
     expect(component.isMateInOneTarget(1, 1)).toBeTrue();
@@ -866,10 +866,10 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('canDrop legality check does not mutate mate preview state', () => {
     clearBoard();
-    globals.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     expect(canDropLike(6, 4, 5, 4)).toBeTrue();
     expect(component.isMateInOneTarget(5, 4)).toBeFalse();
@@ -878,8 +878,8 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('returns highlight class with mate danger priority over other layers', () => {
     clearBoard();
-    globals.boardHelper.possibles['44'] = { row: 4, col: 4 } as any;
-    globals.boardHelper.hits['44'] = { row: 4, col: 4 } as any;
+    chessBoardStateService.boardHelper.possibles['44'] = { row: 4, col: 4 } as any;
+    chessBoardStateService.boardHelper.hits['44'] = { row: 4, col: 4 } as any;
     component.mateInOneTargets['44'] = true;
     component.mateInOneBlunderTargets['44'] = true;
 
@@ -888,22 +888,22 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.getSquareHighlightClass(4, 4)).toBe('mate-one');
     delete component.mateInOneTargets['44'];
     expect(component.getSquareHighlightClass(4, 4)).toBe('killer');
-    delete globals.boardHelper.hits['44'];
+    delete chessBoardStateService.boardHelper.hits['44'];
     expect(component.getSquareHighlightClass(4, 4)).toBe('shaded');
   });
 
   it('writes pointer-down debug reasons for game over, empty square, and wrong turn', () => {
-    globals.boardHelper.gameOver = true;
+    chessBoardStateService.boardHelper.gameOver = true;
     component.onSquarePointerDown([] as any);
-    expect(globals.boardHelper.debugText).toBe('· Game is over. Start a new game to move pieces.');
+    expect(chessBoardStateService.boardHelper.debugText).toBe('· Game is over. Start a new game to move pieces.');
 
-    globals.boardHelper.gameOver = false;
+    chessBoardStateService.boardHelper.gameOver = false;
     component.onSquarePointerDown([] as any);
-    expect(globals.boardHelper.debugText).toBe('· No piece on this square.');
+    expect(chessBoardStateService.boardHelper.debugText).toBe('· No piece on this square.');
 
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     component.onSquarePointerDown([{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any]);
-    expect(globals.boardHelper.debugText).toBe('· It is white\'s move.');
+    expect(chessBoardStateService.boardHelper.debugText).toBe('· It is white\'s move.');
   });
 
   it('resets drag preview state when drag ends', () => {
@@ -924,13 +924,13 @@ describe('ChessBoardComponent move sequence integration', () => {
     const startClockSpy = spyOn<any>(component, 'startClock').and.callFake(() => undefined);
     const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
 
-    globals.boardHelper.gameOver = true;
+    chessBoardStateService.boardHelper.gameOver = true;
     component.clockRunning = false;
     component.startOrPauseClock();
     expect(startClockSpy).not.toHaveBeenCalled();
     expect(stopClockSpy).not.toHaveBeenCalled();
 
-    globals.boardHelper.gameOver = false;
+    chessBoardStateService.boardHelper.gameOver = false;
     component.clockRunning = true;
     component.startOrPauseClock();
     expect(stopClockSpy).toHaveBeenCalled();
@@ -960,12 +960,12 @@ describe('ChessBoardComponent move sequence integration', () => {
     const forfeitSpy = spyOn<any>(component, 'handleTimeForfeit').and.callFake(() => undefined);
     spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
 
-    globals.boardHelper.gameOver = false;
+    chessBoardStateService.boardHelper.gameOver = false;
     component.clockRunning = true;
     component.clockStarted = true;
     (component as any).lastClockTickAt = 1000;
 
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     component.whiteClockMs = 100;
     (component as any).tickClock();
     expect(component.whiteClockMs).toBe(0);
@@ -974,7 +974,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     forfeitSpy.calls.reset();
     dateNowSpy.and.returnValue(1300);
     (component as any).lastClockTickAt = 1200;
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     component.blackClockMs = 500;
     (component as any).tickClock();
     expect(component.blackClockMs).toBe(400);
@@ -986,7 +986,7 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     component.clockRunning = false;
     component.clockStarted = true;
-    globals.boardHelper.gameOver = false;
+    chessBoardStateService.boardHelper.gameOver = false;
 
     (component as any).tickClock();
     expect(stopClockSpy).toHaveBeenCalled();
@@ -1007,7 +1007,7 @@ describe('ChessBoardComponent move sequence integration', () => {
   });
 
   it('reads check highlight through isCheck helper', () => {
-    globals.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
+    chessBoardStateService.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
     expect(component.isCheck(3, 3)).toBeTrue();
     expect(component.isCheck(2, 2)).toBeFalse();
   });
@@ -1031,7 +1031,7 @@ describe('ChessBoardComponent move sequence integration', () => {
   });
 
   it('supports undo and redo mock navigation over visible history', () => {
-    globals.boardHelper.history = {
+    chessBoardStateService.boardHelper.history = {
       '1': 'e2-e4',
       '2': 'e7-e5',
       '3': 'Ng1-f3'
@@ -1075,10 +1075,10 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.mockExportMessage).toContain('Mock export: FEN copied');
 
     component.showForkIdeasMock();
-    expect(globals.boardHelper.debugText).toContain('Mock: Fork ideas highlighted');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Mock: Fork ideas highlighted');
 
     component.showPinIdeasMock();
-    expect(globals.boardHelper.debugText).toContain('Mock: Pin opportunities highlighted');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Mock: Pin opportunities highlighted');
   });
 
   it('returns move class based on suggested move notation', () => {
@@ -1095,30 +1095,30 @@ describe('ChessBoardComponent move sequence integration', () => {
   });
 
   it('evaluates board via showPossibleMoves and clears overlays', () => {
-    globals.boardHelper.possibles['44'] = { row: 4, col: 4 } as any;
-    globals.boardHelper.hits['44'] = { row: 4, col: 4 } as any;
-    globals.boardHelper.checks['44'] = { row: 4, col: 4 } as any;
-    globals.boardHelper.arrows['a'] = { left: '1px' } as any;
+    chessBoardStateService.boardHelper.possibles['44'] = { row: 4, col: 4 } as any;
+    chessBoardStateService.boardHelper.hits['44'] = { row: 4, col: 4 } as any;
+    chessBoardStateService.boardHelper.checks['44'] = { row: 4, col: 4 } as any;
+    chessBoardStateService.boardHelper.arrows['a'] = { left: '1px' } as any;
 
     const canStepSpy = spyOn(ChessRulesService, 'canStepThere').and.returnValue(false);
     component.showPossibleMoves(ChessColorsEnum.White);
 
     expect(canStepSpy).toHaveBeenCalled();
-    expect(globals.boardHelper.possibles).toEqual({});
-    expect(globals.boardHelper.hits).toEqual({});
-    expect(globals.boardHelper.checks).toEqual({});
-    expect(globals.boardHelper.arrows).toEqual({});
+    expect(chessBoardStateService.boardHelper.possibles).toEqual({});
+    expect(chessBoardStateService.boardHelper.hits).toEqual({});
+    expect(chessBoardStateService.boardHelper.checks).toEqual({});
+    expect(chessBoardStateService.boardHelper.arrows).toEqual({});
   });
 
   it('parses suggested moves through preview and creates then clears arrows', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.previewSuggestedMoveArrows('Nf3');
-    expect(Object.keys(globals.boardHelper.arrows).length).toBeGreaterThan(0);
+    expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBeGreaterThan(0);
 
     component.clearSuggestedMoveArrows();
     expect((component as any).suggestedMoveArrowSnapshot).toBeNull();
@@ -1126,15 +1126,15 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('returns threats on a square and visualizes protected/hanging pieces', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[4][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[4][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     const threatsOn = component.getThreatsOn(
-      globals.field[4][4],
+      chessBoardStateService.field[4][4],
       4,
       4,
       ChessColorsEnum.White,
@@ -1143,10 +1143,10 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(Array.isArray(threatsOn)).toBeTrue();
 
     component.showProtected(false);
-    expect(globals.boardHelper.arrows).toBeDefined();
+    expect(chessBoardStateService.boardHelper.arrows).toBeDefined();
 
     component.showHangingPieces(false);
-    expect(globals.boardHelper.arrows).toBeDefined();
+    expect(chessBoardStateService.boardHelper.arrows).toBeDefined();
   });
 
   it('resets transient and board state through internal helpers', () => {
@@ -1166,57 +1166,57 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.mateInOneTargets).toEqual({});
     expect(component.mateInOneBlunderTargets).toEqual({});
 
-    globals.boardHelper.history = { '1': 'e2-e4' } as any;
-    globals.boardHelper.gameOver = true;
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+    chessBoardStateService.boardHelper.gameOver = true;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     (component as any).resetBoardState();
-    expect(globals.boardHelper.gameOver).toBeFalse();
-    expect(globals.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
-    expect(globals.history.length).toBe(0);
-    expect(globals.field[7][4][0].piece).toBe(ChessPiecesEnum.King);
+    expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
+    expect(chessBoardStateService.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
+    expect(chessBoardStateService.history.length).toBe(0);
+    expect(chessBoardStateService.field[7][4][0].piece).toBe(ChessPiecesEnum.King);
   });
 
   it('handles time forfeit and records result suffix', () => {
-    globals.boardHelper.gameOver = false;
-    globals.boardHelper.history = { '1': 'e2-e4' } as any;
+    chessBoardStateService.boardHelper.gameOver = false;
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     component.clockRunning = true;
 
     (component as any).handleTimeForfeit(ChessColorsEnum.Black);
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.debugText).toContain('Black forfeits on time');
-    expect(globals.history[globals.history.length - 1]).toContain('1-0 {Black forfeits on time}');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Black forfeits on time');
+    expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1-0 {Black forfeits on time}');
   });
 
   it('handles black-side en passant branch', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[4][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[4][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
-    globals.boardHelper.history = { '1': 'c2-c4' } as any;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[4][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.history = { '1': 'c2-c4' } as any;
 
     expect(canDropLike(4, 3, 5, 2)).toBeTrue();
     component.onDrop(createDropLike(4, 3, 5, 2));
 
-    expect(globals.field[4][2].length).toBe(0);
-    expect(globals.field[5][2][0].color).toBe(ChessColorsEnum.Black);
+    expect(chessBoardStateService.field[4][2].length).toBe(0);
+    expect(chessBoardStateService.field[5][2][0].color).toBe(ChessColorsEnum.Black);
   });
 
   it('records white checkmate winner text branch', () => {
     clearBoard();
-    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     expect(canDropLike(2, 1, 1, 1)).toBeTrue();
     component.onDrop(createDropLike(2, 1, 1, 1));
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.checkmateColor).toBe(ChessColorsEnum.Black);
-    expect(globals.boardHelper.debugText).toContain('Checkmate! White wins.');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.checkmateColor).toBe(ChessColorsEnum.Black);
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Checkmate! White wins.');
   });
 
   it('runs startNewGame and startClock callback branches', () => {
@@ -1243,7 +1243,7 @@ describe('ChessBoardComponent move sequence integration', () => {
   });
 
   it('covers openings payload mapping and loadOpenings error callback', () => {
-    const openingAwareComponent = new ChessBoardComponent(globals, {
+    const openingAwareComponent = new ChessBoardComponent(chessBoardStateService, {
       get: () => of([
         { name: 'Valid Opening', long_algebraic_notation: '1. e2-e4 e7-e5' },
         { name: 'Invalid Opening', long_algebraic_notation: '' } as any
@@ -1253,7 +1253,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect((openingAwareComponent as any).openingsLoaded).toBeTrue();
     expect((openingAwareComponent as any).openings.length).toBeGreaterThan(0);
 
-    const errorComponent = new ChessBoardComponent(globals, {
+    const errorComponent = new ChessBoardComponent(chessBoardStateService, {
       get: () => throwError(() => new Error('failed to load'))
     } as any);
 
@@ -1262,41 +1262,40 @@ describe('ChessBoardComponent move sequence integration', () => {
 
   it('shows hanging-piece arrows when an unprotected piece is threatened', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.showHangingPieces(false);
-    expect(Object.keys(globals.boardHelper.arrows).length).toBeGreaterThan(0);
+    expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBeGreaterThan(0);
   });
 
   it('declares insufficient-material draw for black two knights vs king branch', () => {
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
-    globals.field[0][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[0][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
 
     expect(canDropLike(0, 1, 2, 2)).toBeTrue();
     component.onDrop(createDropLike(0, 1, 2, 2));
 
-    expect(globals.boardHelper.gameOver).toBeTrue();
-    expect(globals.boardHelper.debugText).toBe('Draw by insufficient material.');
+    expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
+    expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by insufficient material.');
   });
 });
-
 describe('ChessBoardComponent template drag-enter integration', () => {
   let fixture: ComponentFixture<ChessBoardComponent>;
   let component: ChessBoardComponent;
-  let globals: ChessBoardStateService;
+  let chessBoardStateService: ChessBoardStateService;
 
   const clearBoard = (): void => {
     for (let row = 0; row <= 7; row++) {
       for (let col = 0; col <= 7; col++) {
-        globals.field[row][col] = [];
+        chessBoardStateService.field[row][col] = [];
       }
     }
   };
@@ -1311,20 +1310,20 @@ describe('ChessBoardComponent template drag-enter integration', () => {
 
     fixture = TestBed.createComponent(ChessBoardComponent);
     component = fixture.componentInstance;
-    globals = TestBed.inject(ChessBoardStateService);
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService = TestBed.inject(ChessBoardStateService);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
   it('applies mate-one-danger class on target square when cdkDropListEntered fires for a blunder move', () => {
     clearBoard();
-    globals.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[6][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[6][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
-    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[5][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Queen } as any];
-    globals.field[3][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[6][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[5][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.field[3][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     fixture.detectChanges();
 
@@ -1341,10 +1340,10 @@ describe('ChessBoardComponent template drag-enter integration', () => {
 
   it('applies mate-one class on target square when cdkDropListEntered fires for a winning mate move', () => {
     clearBoard();
-    globals.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[2][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     fixture.detectChanges();
 
@@ -1367,14 +1366,14 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     expect(claimButton).toBeUndefined();
 
     clearBoard();
-    globals.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
-    globals.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
-    globals.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    globals.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
-    globals.boardHelper.colorTurn = ChessColorsEnum.White;
-    globals.boardHelper.history = {};
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.history = {};
     for (let i = 1; i <= 100; i++) {
-      globals.boardHelper.history[`${i}`] = 'Ng1-f3';
+      chessBoardStateService.boardHelper.history[`${i}`] = 'Ng1-f3';
     }
 
     fixture.detectChanges();
@@ -1416,7 +1415,7 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     let ambient = fixture.debugElement.query(By.css('.ambient-math')).nativeElement as HTMLElement;
     expect(ambient.classList.contains('ambient-math--white-turn')).toBeTrue();
 
-    globals.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     fixture.detectChanges();
     ambient = fixture.debugElement.query(By.css('.ambient-math')).nativeElement as HTMLElement;
     expect(ambient.classList.contains('ambient-math--black-turn')).toBeTrue();
@@ -1432,3 +1431,4 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     expect(ambient.classList.contains('ambient-math--draw-pending')).toBeTrue();
   });
 });
+
