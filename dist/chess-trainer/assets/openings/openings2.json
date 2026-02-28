@@ -1,0 +1,149 @@
+[
+  {
+    "name": "Vienna Game",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Nb1-c3",
+    "suggested_best_response_name": "Vienna Gambit Accepted",
+    "suggested_best_response_notation_step": "2... Ng8-f6",
+    "short_description": "A flexible and aggressive alternative to 2.Nf3, often leading to f4 pawn storms and sharp tactical play."
+  },
+  {
+    "name": "King's Gambit",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. f2-f4",
+    "suggested_best_response_name": "King's Gambit Accepted",
+    "suggested_best_response_notation_step": "2... e5xf4",
+    "short_description": "A romantic-era attacking opening where White sacrifices a pawn for rapid development and kingside initiative."
+  },
+  {
+    "name": "Scotch Game",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. d2-d4",
+    "suggested_best_response_name": "Scotch Main Line",
+    "suggested_best_response_notation_step": "3... e5xd4",
+    "short_description": "An open and direct central confrontation leading to early piece activity and simplified structures."
+  },
+  {
+    "name": "Philidor Defense",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 d7-d6",
+    "suggested_best_response_name": "Modern Variation",
+    "suggested_best_response_notation_step": "3. d2-d4 Ng8-f6",
+    "short_description": "A solid but somewhat passive defense aiming for a strong pawn center and counterplay later."
+  },
+  {
+    "name": "Petrov Defense (Russian Game)",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Ng8-f6",
+    "suggested_best_response_name": "Classical Attack",
+    "suggested_best_response_notation_step": "3. Nf3xe5 d7-d6",
+    "short_description": "A symmetrical and highly solid defense known for balanced and drawish tendencies at top level."
+  },
+  {
+    "name": "Evans Gambit",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-c4 Bf8-c5 4. b2-b4",
+    "suggested_best_response_name": "Evans Gambit Accepted",
+    "suggested_best_response_notation_step": "4... Bc5xb4",
+    "short_description": "A sharp attacking gambit where White sacrifices a pawn for rapid development and initiative."
+  },
+  {
+    "name": "London System",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. Bc1-f4",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "2... Ng8-f6",
+    "short_description": "A reliable and easy-to-learn setup focused on solid structure and gradual kingside pressure."
+  },
+  {
+    "name": "Slav Defense",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 c7-c6",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "3. Ng1-f3 Ng8-f6",
+    "short_description": "A very solid defense supporting the d5 pawn while allowing active light-square bishop development."
+  },
+  {
+    "name": "Semi-Slav Defense",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 c7-c6 3. Ng1-f3 Ng8-f6 4. Nb1-c3 e7-e6",
+    "suggested_best_response_name": "Meran Variation",
+    "suggested_best_response_notation_step": "5. e2-e3 Nb8-d7",
+    "short_description": "A highly complex and theoretical system combining Slav solidity with Queen's Gambit structures."
+  },
+  {
+    "name": "Benoni Defense",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 c7-c5 3. d4-d5 e7-e6",
+    "suggested_best_response_name": "Modern Benoni Main Line",
+    "suggested_best_response_notation_step": "4. Nb1-c3 e6xd5",
+    "short_description": "A dynamic and imbalanced defense where Black accepts a spatial disadvantage for active counterplay."
+  },
+  {
+    "name": "Benko Gambit",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 c7-c5 3. d4-d5 b7-b5",
+    "suggested_best_response_name": "Benko Gambit Accepted",
+    "suggested_best_response_notation_step": "4. c4xb5 a7-a6",
+    "short_description": "A long-term positional gambit where Black sacrifices a pawn for queenside pressure and open files."
+  },
+  {
+    "name": "Catalan Opening",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. g2-g3 d7-d5 4. Bf1-g2",
+    "suggested_best_response_name": "Open Catalan",
+    "suggested_best_response_notation_step": "4... d5xc4",
+    "short_description": "A refined positional opening combining Queen’s Gambit structure with kingside fianchetto pressure."
+  },
+  {
+    "name": "Trompowsky Attack",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. Bc1-g5",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "2... e7-e6",
+    "short_description": "An offbeat system where White immediately challenges the knight and aims for structural imbalances."
+  },
+  {
+    "name": "Bird's Opening",
+    "long_algebraic_notation": "1. f2-f4",
+    "suggested_best_response_name": "From's Gambit",
+    "suggested_best_response_notation_step": "1... e7-e5",
+    "short_description": "A flank opening aiming for kingside attacks, somewhat resembling a reversed Dutch Defense."
+  },
+  {
+    "name": "Réti Opening: Symmetrical Variation",
+    "long_algebraic_notation": "1. Ng1-f3 d7-d5 2. c2-c4",
+    "suggested_best_response_name": "Symmetrical Variation",
+    "suggested_best_response_notation_step": "2... c7-c6",
+    "short_description": "A hypermodern opening emphasizing flexible development and indirect central control."
+  },
+  {
+    "name": "Sicilian Defense: Sveshnikov Variation",
+    "long_algebraic_notation": "1. e2-e4 c7-c5 2. Ng1-f3 Nb8-c6 3. d2-d4 c5xd4 4. Nf3xd4 Ng8-f6 5. Nb1-c3 e7-e5",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "6. Nd4-b5",
+    "short_description": "A dynamic Sicilian line with central tension and structural imbalances around d5 and the weak d5 square."
+  },
+  {
+    "name": "French Defense: Tarrasch Variation",
+    "long_algebraic_notation": "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. Nb1-d2",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "3... c7-c5",
+    "short_description": "A classical anti-Winawer approach emphasizing solid development and flexible central play."
+  },
+  {
+    "name": "French Defense: Exchange Variation",
+    "long_algebraic_notation": "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. e4xd5 e6xd5",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4. Bf1-d3",
+    "short_description": "A simplified French structure with symmetrical pawns but rich strategic maneuvering."
+  },
+  {
+    "name": "Caro-Kann Defense: Panov Attack",
+    "long_algebraic_notation": "1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. e4xd5 c6xd5 4. c2-c4",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4... Ng8-f6",
+    "short_description": "A dynamic IQP-oriented setup where White prioritizes activity and central initiative."
+  },
+  {
+    "name": "Queen's Gambit Declined: Exchange Variation",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 e7-e6 3. c4xd5 e6xd5",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4. Nb1-c3",
+    "short_description": "A strategic structure with minority-attack themes and long-term pawn-structure plans."
+  },
+  {
+    "name": "Italian Game: Two Knights Defense",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-c4 Ng8-f6",
+    "suggested_best_response_name": "Main Line",
+    "suggested_best_response_notation_step": "4. d2-d3",
+    "short_description": "An active response to the Italian where Black develops quickly and invites tactical possibilities."
+  }
+]

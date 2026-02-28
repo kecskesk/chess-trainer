@@ -1003,20 +1003,20 @@
   .board-panel {
     width: 100%;
     display: block;
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 2px;
   }
 
   .board-stack {
-    --mobile-board-size: min(calc(100vw - 40px), 420px);
-    display: grid;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    justify-items: center;
-    margin: 0;
+    --mobile-board-size: min(calc(100vw - 20px), 420px);
+    display: inline-grid;
+    width: max-content;
+    min-width: max-content;
+    max-width: none;
+    justify-items: initial;
+    margin: 0 auto;
   }
 
   .piece-box {
