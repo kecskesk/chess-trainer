@@ -123,13 +123,11 @@ const UiTextDefaults = {
     flip: '',
     exportPgnTitle: '',
     exportPgnAriaLabel: '',
-    pgn: '',
     exportImageTitle: '',
     exportImageAriaLabel: '',
     image: '',
     exportFenTitle: '',
-    exportFenAriaLabel: '',
-    fen: ''
+    exportFenAriaLabel: ''
   },
   recognition: {
     sectionTitle: '',
@@ -150,11 +148,9 @@ const UiTextDefaults = {
     undo: '',
     redoTitle: '',
     redoAriaLabel: '',
-    redo: '',
-    sfPrefix: ''
+    redo: ''
   },
   cct: {
-    sectionTitle: '',
     capturesRowTitle: '',
     capturesIconTitle: '',
     noCapturesTitle: '',
@@ -196,15 +192,12 @@ const UiTextDefaults = {
     mockExportFenCopied: '',
     mockForkIdeas: '',
     mockPinIdeas: '',
-    subtlePrefix: '',
-    na: '',
     openingPrefix: '',
     matchedStepsPrefix: '',
     linePrefix: '',
     bookRecommendationPrefix: '',
     bookRecommendationNowSuffix: '',
     bookRecommendationAfterSuffix: '',
-    noMovePlaceholder: '',
     notesPrefix: ''
   }
 };

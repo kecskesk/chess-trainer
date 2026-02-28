@@ -68,12 +68,6 @@ function bootstrapEnglishUiTextForTests(): void {
   });
 
   mergeUiText(root);
-  mergeUiText({
-    message: {
-      subtlePrefix: '· ',
-      noMovePlaceholder: '—'
-    }
-  } as Record<string, unknown>);
 }
 
 bootstrapEnglishUiTextForTests();
@@ -83,3 +77,4 @@ getTestBed().initTestEnvironment(
   BrowserDynamicTestingModule,
   platformBrowserDynamicTesting()
 );
+

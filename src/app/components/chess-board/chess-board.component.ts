@@ -31,8 +31,8 @@ import { UiTextLoaderService } from '../../services/ui-text-loader.service';
   imports: [CommonModule, DragDropModule, ChessPieceComponent]
 })
 export class ChessBoardComponent implements AfterViewInit, OnDestroy {
+  private static readonly NA_PLACEHOLDER = 'n/a';
   readonly uiText = UiText;
-  readonly supportedLocales = UiTextLoaderService.SUPPORTED_LOCALES;
   @ViewChild('chessField') chessField: ElementRef;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
@@ -489,7 +489,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !reason) {
       return;
     }
-    const subtleReason = `${this.uiText.message.subtlePrefix}${reason}`;
+    const subtleReason = `· ${reason}`;
     if (this.chessBoardStateService.boardHelper.debugText === subtleReason) {
       return;
     }
@@ -699,15 +699,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.windowRef.location.reload();
   }
 
-  onLocaleSelect(event: Event): void {
-    const locale = event && event.target ? (event.target as HTMLSelectElement).value : '';
-    if (!locale) {
-      return;
-    }
-    void this.switchLocale(locale);
-  }
-
-  private async switchLocale(locale: string): Promise<void> {
+  async switchLocale(locale: string): Promise<void> {
     if (!this.uiTextLoaderService || locale === this.selectedLocale) {
       return;
     }
@@ -1210,17 +1202,17 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return '';
     }
 
-    const openingLine = opening.raw.long_algebraic_notation || this.uiText.message.na;
-    const suggestedName = opening.raw.suggested_best_response_name || this.uiText.message.na;
+    const openingLine = opening.raw.long_algebraic_notation || ChessBoardComponent.NA_PLACEHOLDER;
+    const suggestedName = opening.raw.suggested_best_response_name || ChessBoardComponent.NA_PLACEHOLDER;
     const suggestedDisplayName =
-      suggestedName !== this.uiText.message.na && this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
+      suggestedName !== ChessBoardComponent.NA_PLACEHOLDER && this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
         ? `${opening.name}: ${suggestedName}`
         : suggestedName;
-    const suggestedStep = opening.raw.suggested_best_response_notation_step || this.uiText.message.na;
-    const description = opening.raw.short_description || this.uiText.message.na;
+    const suggestedStep = opening.raw.suggested_best_response_notation_step || ChessBoardComponent.NA_PLACEHOLDER;
+    const description = opening.raw.short_description || ChessBoardComponent.NA_PLACEHOLDER;
     const displayedOpeningName = this.getDisplayedOpeningName(opening, historySteps);
     const suggestedSequence = this.extractNotationSteps(suggestedStep);
-    const suggestedResponseMove = suggestedSequence[0] || this.uiText.message.na;
+    const suggestedResponseMove = suggestedSequence[0] || ChessBoardComponent.NA_PLACEHOLDER;
     const hasStartedSuggestedLine =
       suggestedSequence.length > 0 &&
       historySteps.length > opening.steps.length &&
@@ -1247,11 +1239,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     const effectiveLineDepth = fullProjectedLineSteps.length;
     const openingLineWithExtension =
-      shouldProjectSuggestedLine && suggestedStep !== this.uiText.message.na
+      shouldProjectSuggestedLine && suggestedStep !== ChessBoardComponent.NA_PLACEHOLDER
         ? `${openingLine} ${suggestedStep}`
         : openingLine;
 
-    const noMovePlaceholder = this.uiText.message.noMovePlaceholder || this.uiText.message.na;
+    const noMovePlaceholder = '—';
     const lineContinuation = effectiveMatchedDepth < effectiveLineDepth
       ? fullProjectedLineSteps[effectiveMatchedDepth]
       : noMovePlaceholder;
@@ -1260,7 +1252,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     let bookRecommendationNow = noMovePlaceholder;
     if (lineContinuation !== noMovePlaceholder) {
       bookRecommendationNow = lineContinuation;
-    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== this.uiText.message.na) {
+    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== ChessBoardComponent.NA_PLACEHOLDER) {
       bookRecommendationNow = suggestedResponseMove;
     }
 
@@ -1271,7 +1263,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       `${this.uiText.message.bookRecommendationPrefix} (${nextSide} ${this.uiText.message.bookRecommendationNowSuffix}): ${bookRecommendationNow}`
     ];
 
-    if (lineContinuation !== noMovePlaceholder && suggestedStep !== this.uiText.message.na && !shouldProjectSuggestedLine) {
+    if (lineContinuation !== noMovePlaceholder && suggestedStep !== ChessBoardComponent.NA_PLACEHOLDER && !shouldProjectSuggestedLine) {
       debugLines.push(
         `${this.uiText.message.bookRecommendationPrefix} (${responseSide} ${this.uiText.message.bookRecommendationAfterSuffix}): ${suggestedDisplayName} (${suggestedStep})`
       );

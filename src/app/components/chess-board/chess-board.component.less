@@ -13,11 +13,100 @@
   box-sizing: border-box;
 }
 
-.info-hover {
+.top-right-tools {
   position: fixed;
   top: 10px;
   right: 10px;
   z-index: 20;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.language-flags {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.language-flag-btn {
+  width: 38px;
+  height: 26px;
+  border: 1px solid rgba(189, 206, 255, 0.45);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.12s ease, transform 0.12s ease;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    filter: grayscale(0.45);
+  }
+}
+
+.language-flag-btn--active {
+  border-color: rgba(255, 238, 167, 0.95);
+  box-shadow: 0 0 0 1px rgba(255, 238, 167, 0.35), inset 0 0 0 1px rgba(255, 238, 167, 0.22);
+}
+
+.flag {
+  width: 30px;
+  height: 18px;
+  border-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  display: inline-block;
+}
+
+.flag--us {
+  background:
+    linear-gradient(180deg,
+      #b22234 0 8%,
+      #ffffff 8% 16%,
+      #b22234 16% 24%,
+      #ffffff 24% 32%,
+      #b22234 32% 40%,
+      #ffffff 40% 48%,
+      #b22234 48% 56%,
+      #ffffff 56% 64%,
+      #b22234 64% 72%,
+      #ffffff 72% 80%,
+      #b22234 80% 88%,
+      #ffffff 88% 96%,
+      #b22234 96% 100%
+    );
+  position: relative;
+}
+
+.flag--us::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 42%;
+  height: 54%;
+  background: #3c3b6e;
+}
+
+.flag--hu {
+  background: linear-gradient(#ce2b37 0 33%, #ffffff 33% 66%, #2e8b57 66% 100%);
+}
+
+.info-hover {
+  position: relative;
 }
 
 .info-hover__trigger {
@@ -75,9 +164,19 @@
 }
 
 @media (max-width: 620px) {
-  .info-hover {
+  .top-right-tools {
     top: 8px;
     right: 8px;
+  }
+
+  .language-flag-btn {
+    width: 42px;
+    height: 30px;
+  }
+
+  .flag {
+    width: 32px;
+    height: 20px;
   }
 
   .info-hover__trigger {
@@ -432,37 +531,6 @@
   margin: 0;
 }
 
-.clock-header-tools {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: auto;
-}
-
-.language-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #dce5ff;
-}
-
-.language-picker__label {
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.language-picker__select {
-  min-width: 96px;
-  border-radius: 6px;
-  border: 1px solid rgba(189, 206, 255, 0.55);
-  background: rgba(18, 26, 46, 0.92);
-  color: #f7f9ff;
-  padding: 4px 6px;
-  font-size: 12px;
-}
-
 .clock-brand {
   display: inline-flex;
   align-items: center;
@@ -559,12 +627,6 @@
   .clock-card-header {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .clock-header-tools {
-    margin-left: 0;
-    width: 100%;
-    justify-content: space-between;
   }
 
   .clock-brand {

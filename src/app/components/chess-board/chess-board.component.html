@@ -1,14 +1,30 @@
 <div class="trainer-layout">
-  <div class="info-hover" [attr.aria-label]="uiText.infoOverlay.ariaLabel" [class.info-hover--open]="isInfoOverlayOpen">
-    <button class="info-hover__trigger"
-            type="button"
-            [attr.aria-label]="uiText.infoOverlay.triggerAriaLabel"
-            [attr.aria-expanded]="isInfoOverlayOpen">ⓘ</button>
-    <div class="info-hover__panel" role="note">
-      <div class="info-hover__title">{{uiText.infoOverlay.title}}</div>
-      <ul>
-        <li *ngFor="let item of uiText.infoOverlay.items">{{item}}</li>
-      </ul>
+  <div class="top-right-tools">
+    <div class="language-flags" [attr.aria-label]="uiText.language.ariaLabel">
+      <button class="language-flag-btn"
+              type="button"
+              [class.language-flag-btn--active]="selectedLocale === 'en_US'"
+              [disabled]="isLanguageSwitching"
+              [attr.aria-label]="uiText.language.english"
+              (click)="switchLocale('en_US')"><span class="flag flag--us" aria-hidden="true"></span></button>
+      <button class="language-flag-btn"
+              type="button"
+              [class.language-flag-btn--active]="selectedLocale === 'hu_HU'"
+              [disabled]="isLanguageSwitching"
+              [attr.aria-label]="uiText.language.hungarian"
+              (click)="switchLocale('hu_HU')"><span class="flag flag--hu" aria-hidden="true"></span></button>
+    </div>
+    <div class="info-hover" [attr.aria-label]="uiText.infoOverlay.ariaLabel" [class.info-hover--open]="isInfoOverlayOpen">
+      <button class="info-hover__trigger"
+              type="button"
+              [attr.aria-label]="uiText.infoOverlay.triggerAriaLabel"
+              [attr.aria-expanded]="isInfoOverlayOpen">i</button>
+      <div class="info-hover__panel" role="note">
+        <div class="info-hover__title">{{uiText.infoOverlay.title}}</div>
+        <ul>
+          <li *ngFor="let item of uiText.infoOverlay.items">{{item}}</li>
+        </ul>
+      </div>
     </div>
   </div>
   <div class="ambient-math" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
@@ -72,21 +88,9 @@
     <div class="clock-card panel-card panel-card--wide">
       <div class="clock-card-header">
         <h3 class="section-title">{{uiText.clock.sectionTitle}}</h3>
-        <div class="clock-header-tools">
-          <label class="language-picker" [attr.aria-label]="uiText.language.ariaLabel">
-            <span class="language-picker__label">{{uiText.language.label}}</span>
-            <select class="language-picker__select"
-                    [value]="selectedLocale"
-                    [disabled]="isLanguageSwitching"
-                    (change)="onLocaleSelect($event)">
-              <option [value]="supportedLocales[0]">{{uiText.language.english}}</option>
-              <option [value]="supportedLocales[1]">{{uiText.language.hungarian}}</option>
-            </select>
-          </label>
-          <div class="clock-brand" [attr.aria-label]="uiText.clock.brandAriaLabel">
-            <img class="clock-brand__logo" src="horse.svg" [attr.alt]="uiText.clock.logoAlt" />
-            <span class="clock-brand__title">{{uiText.app.brandTitle}}</span>
-          </div>
+        <div class="clock-brand" [attr.aria-label]="uiText.clock.brandAriaLabel">
+          <img class="clock-brand__logo" src="horse.svg" [attr.alt]="uiText.clock.logoAlt" />
+          <span class="clock-brand__title">{{uiText.app.brandTitle}}</span>
         </div>
       </div>
       <div class="clock-layout">
@@ -319,7 +323,7 @@
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportPgnMock()" [attr.title]="uiText.gameTools.exportPgnTitle" [attr.aria-label]="uiText.gameTools.exportPgnAriaLabel">
           <span class="icon-action-btn__icon">⭳</span>
-          <span class="icon-action-btn__text">{{uiText.gameTools.pgn}}</span>
+          <span class="icon-action-btn__text">PGN</span>
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportBoardImageMock()" [attr.title]="uiText.gameTools.exportImageTitle" [attr.aria-label]="uiText.gameTools.exportImageAriaLabel">
           <span class="icon-action-btn__icon">🖼</span>
@@ -327,7 +331,7 @@
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportFenMock()" [attr.title]="uiText.gameTools.exportFenTitle" [attr.aria-label]="uiText.gameTools.exportFenAriaLabel">
           <span class="icon-action-btn__icon">⌘</span>
-          <span class="icon-action-btn__text">{{uiText.gameTools.fen}}</span>
+          <span class="icon-action-btn__text">FEN</span>
         </button>
       </div>
       <div class="mock-export-text" *ngIf="mockExportMessage">{{mockExportMessage}}</div>
@@ -368,13 +372,13 @@
             <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
             {{histItem}}
           </span>
-          <span class="history-eval">{{uiText.history.sfPrefix}} {{getMockEvaluationForMove(histIdx)}}</span>
+          <span class="history-eval">SF {{getMockEvaluationForMove(histIdx)}}</span>
         </div>
       </div>
     </div>
 
     <div class="tool-card panel-card cct-card">
-      <h3 class="section-title">{{uiText.cct.sectionTitle}}</h3>
+      <h3 class="section-title">CCT</h3>
       <div class="cct-row cct-row--capture" [attr.title]="uiText.cct.capturesRowTitle">
         <span class="cct-row__icon" [attr.title]="uiText.cct.capturesIconTitle">✕</span>
         <ng-container *ngIf="getCctRecommendations(cctCategory.Captures) as captureRecs">
@@ -412,6 +416,9 @@
 
   </section>
 </div>
+
+
+
 
 
 
