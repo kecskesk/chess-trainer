@@ -52,6 +52,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   areMockControlsDisabled = true;
   isDebugPanelOpen = false;
   isInfoOverlayOpen = false;
+
+  /**
+   * Used by the UI to indicate which visualization toggle is currently active.
+   * null means nothing is active.
+   */
+  activeTool: string | null = null;
+
   cctCategory = CctCategoryEnum;
   private readonly debugPanelStorageKey = ChessBoardUiConstants.DEBUG_PANEL_STORAGE_KEY;
   private readonly windowRef: Pick<Window, 'location'> = window;
@@ -498,10 +505,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.persistDebugPanelOpenState(this.isDebugPanelOpen);
   }
 
-  toggleInfoOverlay(): void {
-    this.isInfoOverlayOpen = !this.isInfoOverlayOpen;
-  }
-
   getStatusTitle(): string {
     const boardHelper = this.chessBoardStateService.boardHelper;
     if (!boardHelper) {
@@ -558,7 +561,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showPossibleMoves(ofColor: ChessColorsEnum): void {
-    // Clear
+    // de-activate any visualization tool and clear overlay arrows
+    this.clearOverlay();
+
+    // Clear existing move/highlight state
     this.chessBoardStateService.boardHelper.possibles = {};
     this.chessBoardStateService.boardHelper.hits = {};
     this.chessBoardStateService.boardHelper.checks = {};
@@ -807,6 +813,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   toggleBoardFlip(): void {
+    // flipping should also turn off any active visualization overlay
+    this.clearOverlay();
     this.isBoardFlipped = !this.isBoardFlipped;
   }
 
@@ -1207,10 +1215,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showForkIdeasMock(): void {
+    this.clearOverlay();
     this.chessBoardStateService.boardHelper.debugText = 'Mock: Fork ideas highlighted (coming soon).';
   }
 
   showPinIdeasMock(): void {
+    this.clearOverlay();
     this.chessBoardStateService.boardHelper.debugText = 'Mock: Pin opportunities highlighted (coming soon).';
   }
 
@@ -1605,8 +1615,27 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  showThreats(ofEnemy = false): void {
+  /**
+   * Remove any active visualization arrows and reset the active tool flag.
+   * This is used internally by the various "show*" helpers and also when the
+   * flip button is pressed so that only one overlay is visible at a time.
+   */
+  clearOverlay(): void {
     this.chessBoardStateService.boardHelper.arrows = {};
+    this.activeTool = null;
+  }
+
+  showThreats(ofEnemy = false): void {
+    const key = ofEnemy ? 'threats-enemy' : 'threats-mine';
+    if (this.activeTool === key) {
+      // toggle off
+      this.clearOverlay();
+      return;
+    }
+
+    // clicking a new tool should clear whatever was there previously
+    this.clearOverlay();
+
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
     if (ofColor) {
       this.chessBoardStateService.field.forEach((row, rowIdx) => {
@@ -1659,6 +1688,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         });
       });
     }
+    this.activeTool = key;
   }
 
   getThreatsBy(
@@ -1719,6 +1749,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showProtected(ofEnemy = false): void {
+    const key = ofEnemy ? 'protected-enemy' : 'protected-mine';
+    if (this.activeTool === key) {
+      this.clearOverlay();
+      return;
+    }
+
+    this.clearOverlay();
     this.chessBoardStateService.boardHelper.arrows = {};
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
     if (ofColor) {
@@ -1738,6 +1775,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         });
       });
     }
+    this.activeTool = key;
   }
 
   getProtectors(
@@ -1770,6 +1808,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showHangingPieces(ofEnemy = false): void {
+    const key = ofEnemy ? 'hanging-enemy' : 'hanging-mine';
+    if (this.activeTool === key) {
+      this.clearOverlay();
+      return;
+    }
+
+    this.clearOverlay();
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
     this.chessBoardStateService.boardHelper.arrows = {};
     if (ofColor) {
@@ -1802,6 +1847,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         });
       });
     }
+    this.activeTool = key;
   }
 
   private initColors(ofEnemy: boolean): { ofColor: ChessColorsEnum, enemyColor: ChessColorsEnum} {

@@ -3,8 +3,7 @@
     <button class="info-hover__trigger"
             type="button"
             aria-label="Show roadmap TODOs"
-            [attr.aria-expanded]="isInfoOverlayOpen"
-            (click)="toggleInfoOverlay()">ⓘ</button>
+            [attr.aria-expanded]="isInfoOverlayOpen">ⓘ</button>
     <div class="info-hover__panel" role="note">
       <div class="info-hover__title">TODO Roadmap</div>
       <ul>
@@ -43,7 +42,6 @@
                                      *ngIf="cellY && cellY[0]"
                                      cdkDrag
                                      [cdkDragData]="cellY[0]"
-                                     [cdkDragPreviewClass]="isBoardFlipped ? 'drag-preview-flipped' : ''"
                                      [cdkDragDisabled]="chessBoardStateService.boardHelper.gameOver || !cellY || !cellY[0] || cellY[0].color !== chessBoardStateService.boardHelper.colorTurn"
                                      (cdkDragStarted)="onDragStarted()"
                                      (cdkDragEnded)="onDragEnded()"></app-chess-piece>
@@ -245,19 +243,27 @@
     <div class="tool-card panel-card">
       <h3 class="section-title">Magic Toolkit</h3>
       <div class="icon-actions-row">
-        <button class="icon-action-btn" (click)="showThreats()" title="My threats" aria-label="My threats">
+        <button class="icon-action-btn"
+                [class.time-btn--selected]="activeTool==='threats-mine'"
+                (click)="showThreats()" title="My threats" aria-label="My threats">
           <span class="icon-action-btn__icon">⚔</span>
           <span class="icon-action-btn__text">Mine</span>
         </button>
-        <button class="icon-action-btn" (click)="showProtected()" title="My protected" aria-label="My protected">
+        <button class="icon-action-btn"
+                [class.time-btn--selected]="activeTool==='protected-mine'"
+                (click)="showProtected()" title="My protected" aria-label="My protected">
           <span class="icon-action-btn__icon">🛡</span>
           <span class="icon-action-btn__text">Safe</span>
         </button>
-        <button class="icon-action-btn" (click)="showThreats(true)" title="Enemy threats" aria-label="Enemy threats">
+        <button class="icon-action-btn"
+                [class.time-btn--selected]="activeTool==='threats-enemy'"
+                (click)="showThreats(true)" title="Enemy threats" aria-label="Enemy threats">
           <span class="icon-action-btn__icon">☠</span>
           <span class="icon-action-btn__text">Enemy</span>
         </button>
-        <button class="icon-action-btn" (click)="showProtected(true)" title="Enemy protected" aria-label="Enemy protected">
+        <button class="icon-action-btn"
+                [class.time-btn--selected]="activeTool==='protected-enemy'"
+                (click)="showProtected(true)" title="Enemy protected" aria-label="Enemy protected">
           <span class="icon-action-btn__icon">⛨</span>
           <span class="icon-action-btn__text">Guarded</span>
         </button>
@@ -267,11 +273,15 @@
     <div class="tool-card panel-card">
       <h3 class="section-title">Magicer Toolkit</h3>
       <div class="icon-actions-row icon-actions-row--compact">
-        <button class="icon-action-btn" (click)="showHangingPieces()" title="My hanging pieces (blundered)" aria-label="My hanging pieces">
+        <button class="icon-action-btn"
+                [class.time-btn--selected]="activeTool==='hanging-mine'"
+                (click)="showHangingPieces()" title="My hanging pieces (blundered)" aria-label="My hanging pieces">
           <span class="icon-action-btn__icon">⚠</span>
           <span class="icon-action-btn__text">Blunder</span>
         </button>
-        <button class="icon-action-btn" (click)="showHangingPieces(true)" title="Hanging enemy pieces (hittable)" aria-label="Hanging enemy pieces">
+        <button class="icon-action-btn"
+                [class.time-btn--selected]="activeTool==='hanging-enemy'"
+                (click)="showHangingPieces(true)" title="Hanging enemy pieces (hittable)" aria-label="Hanging enemy pieces">
           <span class="icon-action-btn__icon">🎯</span>
           <span class="icon-action-btn__text">Target</span>
         </button>
@@ -289,7 +299,9 @@
     <div class="tool-card panel-card">
       <h3 class="section-title">Game Tools</h3>
       <div class="icon-actions-row icon-actions-row--compact">
-        <button class="icon-action-btn" (click)="toggleBoardFlip()" title="Flip board" aria-label="Flip board">
+        <button class="icon-action-btn" (click)="toggleBoardFlip()"
+                [class.time-btn--selected]="isBoardFlipped"
+                title="Flip board" aria-label="Flip board">
           <span class="icon-action-btn__icon">⇅</span>
           <span class="icon-action-btn__text">Flip</span>
         </button>

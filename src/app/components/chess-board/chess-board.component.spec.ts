@@ -838,6 +838,53 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(hasRedCheckArrow).toBeTrue();
   });
 
+  it('toggles threat overlay off when invoked twice and tracks activeTool', () => {
+    clearBoard();
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.showThreats(false);
+    expect(component.activeTool).toBe('threats-mine');
+    expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBeGreaterThan(0);
+
+    component.showThreats(false);
+    expect(component.activeTool).toBeNull();
+    expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBe(0);
+  });
+
+  it('clears previous overlay when a different tool is selected', () => {
+    clearBoard();
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.showThreats(false);
+    expect(component.activeTool).toBe('threats-mine');
+
+    component.showProtected(false);
+    expect(component.activeTool).toBe('protected-mine');
+    // arrows should now correspond to protection (gold) rather than threat
+    const colors = Object.values(chessBoardStateService.boardHelper.arrows).map(a => a.color);
+    expect(colors).toContain('gold');
+  });
+
+  it('flip action clears any active overlay and toggles selected state', () => {
+    clearBoard();
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.showThreats(false);
+    expect(component.activeTool).toBe('threats-mine');
+    component.toggleBoardFlip();
+    expect(component.activeTool).toBeNull();
+    expect(chessBoardStateService.boardHelper.arrows).toEqual({});
+    expect(component.isBoardFlipped).toBeTrue();
+  });
+
+
+
   it('drag-enter preview marks dangerous move that allows mate in one', () => {
     clearBoard();
     chessBoardStateService.field[7][7] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
@@ -1000,10 +1047,6 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.isDebugPanelOpen).toBeFalse();
 
     expect(component.isInfoOverlayOpen).toBeFalse();
-    component.toggleInfoOverlay();
-    expect(component.isInfoOverlayOpen).toBeTrue();
-    component.toggleInfoOverlay();
-    expect(component.isInfoOverlayOpen).toBeFalse();
   });
 
   it('reads check highlight through isCheck helper', () => {
@@ -1076,9 +1119,13 @@ describe('ChessBoardComponent move sequence integration', () => {
 
     component.showForkIdeasMock();
     expect(chessBoardStateService.boardHelper.debugText).toContain('Mock: Fork ideas highlighted');
+    expect(component.activeTool).toBeNull();
+    expect(chessBoardStateService.boardHelper.arrows).toEqual({});
 
     component.showPinIdeasMock();
     expect(chessBoardStateService.boardHelper.debugText).toContain('Mock: Pin opportunities highlighted');
+    expect(component.activeTool).toBeNull();
+    expect(chessBoardStateService.boardHelper.arrows).toEqual({});
   });
 
   it('returns move class based on suggested move notation', () => {
@@ -1108,6 +1155,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(chessBoardStateService.boardHelper.hits).toEqual({});
     expect(chessBoardStateService.boardHelper.checks).toEqual({});
     expect(chessBoardStateService.boardHelper.arrows).toEqual({});
+    expect(component.activeTool).toBeNull();
   });
 
   it('parses suggested moves through preview and creates then clears arrows', () => {
@@ -1336,6 +1384,25 @@ describe('ChessBoardComponent template drag-enter integration', () => {
 
     expect(component.isMateInOneBlunderTarget(6, 0)).toBeTrue();
     expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one-danger')).toBeTrue();
+  });
+
+  it('buttons receive time-btn--selected class based on activeTool and flip state (integration)', () => {
+    // this spec runs inside the fixture-enabled describe
+    fixture.detectChanges();
+    const threatsBtn: HTMLElement = fixture.nativeElement.querySelector('button[aria-label="My threats"]');
+    const flipBtn: HTMLElement = fixture.nativeElement.querySelector('button[aria-label="Flip board"]');
+
+    component.showThreats(false);
+    fixture.detectChanges();
+    expect(threatsBtn.classList).toContain('time-btn--selected');
+
+    component.showProtected(false);
+    fixture.detectChanges();
+    expect(threatsBtn.classList).not.toContain('time-btn--selected');
+
+    component.toggleBoardFlip();
+    fixture.detectChanges();
+    expect(flipBtn.classList).toContain('time-btn--selected');
   });
 
   it('applies mate-one class on target square when cdkDropListEntered fires for a winning mate move', () => {
