@@ -2,6 +2,8 @@ import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDest
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem, DragDropModule } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ChessArrowDto } from 'src/app/model/chess-arrow.dto';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
@@ -86,6 +88,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private openings: IParsedOpening[] = [];
   private activeOpening: IParsedOpening | null = null;
   private activeOpeningHistoryKey = '';
+  private openingsLoadId = 0;
   private suggestedMoveArrowSnapshot: Record<string, ChessArrowDto> | null = null;
   ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
@@ -104,7 +107,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (this.uiTextLoaderService) {
       this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
     }
-    this.loadOpeningsFromAssets();
+    void this.loadOpeningsFromAssets(this.selectedLocale);
   }
 
   ngOnDestroy(): void {
@@ -713,6 +716,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     try {
       await this.uiTextLoaderService.setActiveLocale(locale);
       this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
+      void this.loadOpeningsFromAssets(this.selectedLocale);
       this.requestClockRender();
     } finally {
       this.isLanguageSwitching = false;
@@ -1009,28 +1013,58 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return !(normalizedSuggestion.includes(normalizedBase) || normalizedBase.includes(normalizedSuggestion));
   }
 
-  private loadOpeningsFromAssets(): void {
-    const openingFiles = [
-      'assets/openings/openings1.json',
-      'assets/openings/openings2.json',
-      'assets/openings/openings3.json'
-    ];
+  private loadOpeningsFromAssets(locale: string): void {
+    const loadId = ++this.openingsLoadId;
+    const openingFiles = ['openings1.json', 'openings2.json', 'openings3.json'];
+    const effectiveLocale = locale || UiTextLoaderService.DEFAULT_LOCALE;
+    let remainingFiles = openingFiles.length;
 
-    openingFiles.forEach(filePath => {
-      this.http.get<IOpeningAssetItem[]>(filePath).subscribe({
+    this.openingsLoaded = false;
+    this.openings = [];
+    this.activeOpening = null;
+    this.activeOpeningHistoryKey = '';
+
+    openingFiles.forEach((fileName) => {
+      this.getOpeningAsset$(fileName, effectiveLocale).subscribe({
         next: (items) => {
+          if (loadId !== this.openingsLoadId) {
+            return;
+          }
           const parsedItems = this.parseOpeningsPayload(items);
           if (parsedItems.length > 0) {
             this.openings = [...this.openings, ...parsedItems];
           }
+        },
+        complete: () => {
+          if (loadId !== this.openingsLoadId) {
+            return;
+          }
+          remainingFiles -= 1;
+          if (remainingFiles > 0) {
+            return;
+          }
           this.openingsLoaded = true;
           this.updateRecognizedOpeningForCurrentHistory();
-        },
-        error: () => {
-          this.openingsLoaded = true;
+          this.requestClockRender();
         }
       });
     });
+  }
+
+  private getOpeningAsset$(fileName: string, locale: string): Observable<IOpeningAssetItem[]> {
+    const fallbackPath = `assets/openings/${fileName}`;
+    if (locale === UiTextLoaderService.DEFAULT_LOCALE) {
+      return this.http.get<IOpeningAssetItem[]>(fallbackPath).pipe(
+        catchError(() => of([]))
+      );
+    }
+
+    const localizedPath = `assets/openings/${locale}/${fileName}`;
+    return this.http.get<IOpeningAssetItem[]>(localizedPath).pipe(
+      catchError(() => this.http.get<IOpeningAssetItem[]>(fallbackPath).pipe(
+        catchError(() => of([]))
+      ))
+    );
   }
 
   private parseOpeningsPayload(items: IOpeningAssetItem[]): IParsedOpening[] {
@@ -1217,13 +1251,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         ? `${openingLine} ${suggestedStep}`
         : openingLine;
 
+    const noMovePlaceholder = this.uiText.message.noMovePlaceholder || this.uiText.message.na;
     const lineContinuation = effectiveMatchedDepth < effectiveLineDepth
       ? fullProjectedLineSteps[effectiveMatchedDepth]
-      : '—';
+      : noMovePlaceholder;
     const nextSide = historyDepth % 2 === 0 ? this.uiText.status.white : this.uiText.status.black;
     const responseSide = nextSide === this.uiText.status.white ? this.uiText.status.black : this.uiText.status.white;
-    let bookRecommendationNow = '—';
-    if (lineContinuation !== '—') {
+    let bookRecommendationNow = noMovePlaceholder;
+    if (lineContinuation !== noMovePlaceholder) {
       bookRecommendationNow = lineContinuation;
     } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== this.uiText.message.na) {
       bookRecommendationNow = suggestedResponseMove;
@@ -1233,11 +1268,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       `${this.uiText.message.openingPrefix}: ${displayedOpeningName}`,
       `${this.uiText.message.matchedStepsPrefix}: ${effectiveMatchedDepth}/${Math.max(effectiveLineDepth, historyDepth)}`,
       `${this.uiText.message.linePrefix}: ${openingLineWithExtension}`,
-      `${this.uiText.message.bookRecommendationPrefix} (${nextSide} now): ${bookRecommendationNow}`
+      `${this.uiText.message.bookRecommendationPrefix} (${nextSide} ${this.uiText.message.bookRecommendationNowSuffix}): ${bookRecommendationNow}`
     ];
 
-    if (lineContinuation !== '—' && suggestedStep !== 'n/a' && !shouldProjectSuggestedLine) {
-      debugLines.push(`${this.uiText.message.bookRecommendationPrefix} (${responseSide} after): ${suggestedDisplayName} (${suggestedStep})`);
+    if (lineContinuation !== noMovePlaceholder && suggestedStep !== this.uiText.message.na && !shouldProjectSuggestedLine) {
+      debugLines.push(
+        `${this.uiText.message.bookRecommendationPrefix} (${responseSide} ${this.uiText.message.bookRecommendationAfterSuffix}): ${suggestedDisplayName} (${suggestedStep})`
+      );
     }
 
     debugLines.push(`${this.uiText.message.notesPrefix}: ${description}`);
@@ -2652,4 +2689,3 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return false;
   }
 }
-

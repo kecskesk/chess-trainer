@@ -202,6 +202,9 @@ const UiTextDefaults = {
     matchedStepsPrefix: '',
     linePrefix: '',
     bookRecommendationPrefix: '',
+    bookRecommendationNowSuffix: '',
+    bookRecommendationAfterSuffix: '',
+    noMovePlaceholder: '',
     notesPrefix: ''
   }
 };
