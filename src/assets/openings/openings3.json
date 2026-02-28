@@ -1,219 +1,219 @@
 [
   {
-    "name": "King's Pawn Opening",
-    "long_algebraic_notation": "1. e2-e4",
-    "suggested_best_response_name": "Sicilian Defense",
-    "suggested_best_response_notation_step": "1... c7-c5",
-    "short_description": "The most popular opening move, immediately claiming central space and opening lines for the queen and bishop."
+        "name": "King's Pawn Opening",
+        "long_algebraic_notation": "1. e2-e4",
+        "suggested_best_response_name": "Sicilian Defense",
+        "suggested_best_response_notation_step": "1... c7-c5",
+        "short_description": "The most popular opening move, immediately claiming central space and opening lines for the queen and bishop."
   },
   {
-    "name": "Queen's Pawn Opening",
-    "long_algebraic_notation": "1. d2-d4",
-    "suggested_best_response_name": "King's Indian Defense",
-    "suggested_best_response_notation_step": "1... Ng8-f6",
-    "short_description": "A classical central advance leading to strategic and positional battles."
+        "name": "Queen's Pawn Opening",
+        "long_algebraic_notation": "1. d2-d4",
+        "suggested_best_response_name": "King's Indian Defense",
+        "suggested_best_response_notation_step": "1... Ng8-f6",
+        "short_description": "A classical central advance leading to strategic and positional battles."
   },
   {
-    "name": "Réti Opening",
-    "long_algebraic_notation": "1. Ng1-f3",
-    "suggested_best_response_name": "Classical Center",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A hypermodern move emphasizing flexible development and indirect central control."
+        "name": "Réti Opening",
+        "long_algebraic_notation": "1. Ng1-f3",
+        "suggested_best_response_name": "Classical Center",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A hypermodern move emphasizing flexible development and indirect central control."
   },
   {
-    "name": "King's Fianchetto Opening",
-    "long_algebraic_notation": "1. g2-g3",
-    "suggested_best_response_name": "Classical Center",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "Prepares to fianchetto the bishop on g2 for long diagonal control."
+        "name": "King's Fianchetto Opening",
+        "long_algebraic_notation": "1. g2-g3",
+        "suggested_best_response_name": "Classical Center",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "Prepares to fianchetto the bishop on g2 for long diagonal control."
   },
   {
-    "name": "Larsen's Opening",
-    "long_algebraic_notation": "1. b2-b3",
-    "suggested_best_response_name": "Classical Center",
-    "suggested_best_response_notation_step": "1... e7-e5",
-    "short_description": "Prepares Bb2 and indirect pressure on the center."
+        "name": "Larsen's Opening",
+        "long_algebraic_notation": "1. b2-b3",
+        "suggested_best_response_name": "Classical Center",
+        "suggested_best_response_notation_step": "1... e7-e5",
+        "short_description": "Prepares Bb2 and indirect pressure on the center."
   },
   {
-    "name": "Saragossa Opening",
-    "long_algebraic_notation": "1. c2-c3",
-    "suggested_best_response_name": "Classical Center",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A quiet move preparing d4 and flexible pawn structures."
+        "name": "Saragossa Opening",
+        "long_algebraic_notation": "1. c2-c3",
+        "suggested_best_response_name": "Classical Center",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A quiet move preparing d4 and flexible pawn structures."
   },
   {
-    "name": "Van't Kruijs Opening",
-    "long_algebraic_notation": "1. e2-e3",
-    "suggested_best_response_name": "Classical Center",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A modest central preparation move leading to flexible development."
+        "name": "Van't Kruijs Opening",
+        "long_algebraic_notation": "1. e2-e3",
+        "suggested_best_response_name": "Classical Center",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A modest central preparation move leading to flexible development."
   },
   {
-    "name": "Amar Opening",
-    "long_algebraic_notation": "1. Ng1-h3",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A rare knight move aiming for surprise and unconventional play."
+        "name": "Amar Opening",
+        "long_algebraic_notation": "1. Ng1-h3",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A rare knight move aiming for surprise and unconventional play."
   },
   {
-    "name": "Dunst Opening",
-    "long_algebraic_notation": "1. Nb1-c3",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A flexible knight development that can transpose into many mainstream openings."
+        "name": "Dunst Opening",
+        "long_algebraic_notation": "1. Nb1-c3",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A flexible knight development that can transpose into many mainstream openings."
   },
   {
-    "name": "Knight to the Rim (Na3)",
-    "long_algebraic_notation": "1. Nb1-a3",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "An uncommon knight move to the edge, generally considered suboptimal but playable."
+        "name": "Knight to the Rim (Na3)",
+        "long_algebraic_notation": "1. Nb1-a3",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "An uncommon knight move to the edge, generally considered suboptimal but playable."
   },
   {
-    "name": "Polish Opening (Sokolsky)",
-    "long_algebraic_notation": "1. b2-b4",
-    "suggested_best_response_name": "Central Counter",
-    "suggested_best_response_notation_step": "1... e7-e5",
-    "short_description": "An aggressive flank pawn thrust aiming to control c5 and disrupt central plans."
+        "name": "Polish Opening (Sokolsky)",
+        "long_algebraic_notation": "1. b2-b4",
+        "suggested_best_response_name": "Central Counter",
+        "suggested_best_response_notation_step": "1... e7-e5",
+        "short_description": "An aggressive flank pawn thrust aiming to control c5 and disrupt central plans."
   },
   {
-    "name": "Grob Opening",
-    "long_algebraic_notation": "1. g2-g4",
-    "suggested_best_response_name": "Central Strike",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A highly unorthodox and risky opening weakening the kingside."
+        "name": "Grob Opening",
+        "long_algebraic_notation": "1. g2-g4",
+        "suggested_best_response_name": "Central Strike",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A highly unorthodox and risky opening weakening the kingside."
   },
   {
-    "name": "Clemenz Opening",
-    "long_algebraic_notation": "1. h2-h3",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A waiting move that prevents Bg4 and prepares potential g4 expansion."
+        "name": "Clemenz Opening",
+        "long_algebraic_notation": "1. h2-h3",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A waiting move that prevents Bg4 and prepares potential g4 expansion."
   },
   {
-    "name": "Desprez Opening",
-    "long_algebraic_notation": "1. h2-h4",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A flank pawn thrust aiming for early kingside space."
+        "name": "Desprez Opening",
+        "long_algebraic_notation": "1. h2-h4",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A flank pawn thrust aiming for early kingside space."
   },
   {
-    "name": "Barnes Opening",
-    "long_algebraic_notation": "1. f2-f3",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... e7-e5",
-    "short_description": "A very rare and weakening move that prepares e4 but exposes the king."
+        "name": "Barnes Opening",
+        "long_algebraic_notation": "1. f2-f3",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... e7-e5",
+        "short_description": "A very rare and weakening move that prepares e4 but exposes the king."
   },
   {
-    "name": "Ware Opening",
-    "long_algebraic_notation": "1. a2-a4",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A flank pawn push aimed at queenside expansion."
+        "name": "Ware Opening",
+        "long_algebraic_notation": "1. a2-a4",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A flank pawn push aimed at queenside expansion."
   },
   {
-    "name": "Anderssen's Opening",
-    "long_algebraic_notation": "1. a2-a3",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A slow waiting move preparing b4 and limiting opponent piece activity."
+        "name": "Anderssen's Opening",
+        "long_algebraic_notation": "1. a2-a3",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A slow waiting move preparing b4 and limiting opponent piece activity."
   },
   {
-    "name": "Queen's Pawn One Step",
-    "long_algebraic_notation": "1. d2-d3",
-    "suggested_best_response_name": "Classical Center",
-    "suggested_best_response_notation_step": "1... d7-d5",
-    "short_description": "A restrained central move keeping options flexible."
+        "name": "Queen's Pawn One Step",
+        "long_algebraic_notation": "1. d2-d3",
+        "suggested_best_response_name": "Classical Center",
+        "suggested_best_response_notation_step": "1... d7-d5",
+        "short_description": "A restrained central move keeping options flexible."
   },
   {
-    "name": "Sicilian Defense: Alapin Variation",
-    "long_algebraic_notation": "1. e2-e4 c7-c5 2. c2-c3",
-    "suggested_best_response_name": "Main Line",
-    "suggested_best_response_notation_step": "2... Ng8-f6",
-    "short_description": "A practical anti-Sicilian where White builds a broad center and avoids heavy open-Sicilian theory."
+        "name": "Sicilian Defense: Alapin Variation",
+        "long_algebraic_notation": "1. e2-e4 c7-c5 2. c2-c3",
+        "suggested_best_response_name": "Main Line",
+        "suggested_best_response_notation_step": "2... Ng8-f6",
+        "short_description": "A practical anti-Sicilian where White builds a broad center and avoids heavy open-Sicilian theory."
   },
   {
-    "name": "Queen's Indian Defense",
-    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. Ng1-f3 b7-b6",
-    "suggested_best_response_name": "Main Line",
-    "suggested_best_response_notation_step": "4. g2-g3",
-    "short_description": "A flexible Indian setup where Black controls central dark squares and develops harmoniously."
+        "name": "Queen's Indian Defense",
+        "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. Ng1-f3 b7-b6",
+        "suggested_best_response_name": "Main Line",
+        "suggested_best_response_notation_step": "4. g2-g3",
+        "short_description": "A flexible Indian setup where Black controls central dark squares and develops harmoniously."
   },
   {
-    "name": "Bogo-Indian Defense",
-    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. Ng1-f3 Bf8-b4+",
-    "suggested_best_response_name": "Main Line",
-    "suggested_best_response_notation_step": "4. Bc1-d2",
-    "short_description": "A practical Indian defense using an early check to shape White's setup and reduce theory load."
+        "name": "Bogo-Indian Defense",
+        "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. Ng1-f3 Bf8-b4+",
+        "suggested_best_response_name": "Main Line",
+        "suggested_best_response_notation_step": "4. Bc1-d2",
+        "short_description": "A practical Indian defense using an early check to shape White's setup and reduce theory load."
   },
   {
-    "name": "Four Knights Game",
-    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Nb1-c3 Ng8-f6",
-    "suggested_best_response_name": "Scotch Four Knights",
-    "suggested_best_response_notation_step": "4. d2-d4",
-    "short_description": "A natural development opening that can stay positional or transpose into sharper central lines."
+        "name": "Four Knights Game",
+        "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Nb1-c3 Ng8-f6",
+        "suggested_best_response_name": "Scotch Four Knights",
+        "suggested_best_response_notation_step": "4. d2-d4",
+        "short_description": "A natural development opening that can stay positional or transpose into sharper central lines."
   },
   {
-    "name": "Queen's Gambit Declined: Orthodox Defense",
-    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 e7-e6 3. Nb1-c3 Ng8-f6 4. Bc1-g5 Bf8-e7",
-    "suggested_best_response_name": "Main Line",
-    "suggested_best_response_notation_step": "5. e2-e3",
-    "short_description": "A classical QGD framework centered on robust development and strategic central tension."
+        "name": "Queen's Gambit Declined: Orthodox Defense",
+        "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 e7-e6 3. Nb1-c3 Ng8-f6 4. Bc1-g5 Bf8-e7",
+        "suggested_best_response_name": "Main Line",
+        "suggested_best_response_notation_step": "5. e2-e3",
+        "short_description": "A classical QGD framework centered on robust development and strategic central tension."
   },
   {
-    "name": "Ruy Lopez: Closed Defense",
-    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-b5 a7-a6 4. Bb5-a4 Ng8-f6 5. O-O Bf8-e7",
-    "suggested_best_response_name": "Main Line",
-    "suggested_best_response_notation_step": "6. Rf1-e1",
-    "short_description": "A cornerstone of classical opening theory featuring rich maneuvering and long strategic plans."
+        "name": "Ruy Lopez: Closed Defense",
+        "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-b5 a7-a6 4. Bb5-a4 Ng8-f6 5. O-O Bf8-e7",
+        "suggested_best_response_name": "Main Line",
+        "suggested_best_response_notation_step": "6. Rf1-e1",
+        "short_description": "A cornerstone of classical opening theory featuring rich maneuvering and long strategic plans."
   },
   {
-    "name": "Bongcloud Attack",
-    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ke1-e2",
-    "suggested_best_response_name": "Classical Development",
-    "suggested_best_response_notation_step": "2... Ng8-f6",
-    "short_description": "A famous meme opening where White plays an early king move, sacrificing castling rights for surprise value."
+        "name": "Bongcloud Attack",
+        "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ke1-e2",
+        "suggested_best_response_name": "Classical Development",
+        "suggested_best_response_notation_step": "2... Ng8-f6",
+        "short_description": "A famous meme opening where White plays an early king move, sacrificing castling rights for surprise value."
   },
   {
-    "name": "Bongcloud Attack: Double Bongcloud",
-    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ke1-e2 Ke8-e7",
-    "suggested_best_response_name": "Main Line",
-    "suggested_best_response_notation_step": "3. Ng1-f3",
-    "short_description": "A symmetrical meme line where both sides bring the king out early, leading to chaotic and unserious play."
+        "name": "Bongcloud Attack: Double Bongcloud",
+        "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ke1-e2 Ke8-e7",
+        "suggested_best_response_name": "Main Line",
+        "suggested_best_response_notation_step": "3. Ng1-f3",
+        "short_description": "A symmetrical meme line where both sides bring the king out early, leading to chaotic and unserious play."
   },
   {
-    "name": "Crab Opening",
-    "long_algebraic_notation": "1. a2-a4 e7-e5 2. h2-h4",
-    "suggested_best_response_name": "Central Occupation",
-    "suggested_best_response_notation_step": "2... d7-d5",
-    "short_description": "A flank-first meme setup where White expands both rook pawns while Black claims the center."
+        "name": "Crab Opening",
+        "long_algebraic_notation": "1. a2-a4 e7-e5 2. h2-h4",
+        "suggested_best_response_name": "Central Occupation",
+        "suggested_best_response_notation_step": "2... d7-d5",
+        "short_description": "A flank-first meme setup where White expands both rook pawns while Black claims the center."
   },
   {
-    "name": "Halloween Gambit",
-    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Nb1-c3 Ng8-f6 4. Nf3xe5",
-    "suggested_best_response_name": "Main Line",
-    "suggested_best_response_notation_step": "4... Nc6xe5",
-    "short_description": "A spooky and dubious online favorite where White sacs a knight for rapid pawn expansion and initiative."
+        "name": "Halloween Gambit",
+        "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Nb1-c3 Ng8-f6 4. Nf3xe5",
+        "suggested_best_response_name": "Main Line",
+        "suggested_best_response_notation_step": "4... Nc6xe5",
+        "short_description": "A spooky and dubious online favorite where White sacs a knight for rapid pawn expansion and initiative."
   },
   {
-    "name": "Tennison Gambit",
-    "long_algebraic_notation": "1. Ng1-f3 d7-d5 2. e2-e4",
-    "suggested_best_response_name": "Tennison Gambit - Accepted",
-    "suggested_best_response_notation_step": "2... d5xe4",
-    "short_description": "A tricky gambit often used in blitz and meme content to lure early tactical mistakes from Black."
+        "name": "Tennison Gambit",
+        "long_algebraic_notation": "1. Ng1-f3 d7-d5 2. e2-e4",
+        "suggested_best_response_name": "Tennison Gambit - Accepted",
+        "suggested_best_response_notation_step": "2... d5xe4",
+        "short_description": "A tricky gambit often used in blitz and meme content to lure early tactical mistakes from Black."
   },
   {
-    "name": "Botez Gambit",
-    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Qd1-h5 Nb8-c6 3. Qh5xe5+",
-    "suggested_best_response_name": "Queen Trap",
-    "suggested_best_response_notation_step": "3... Nc6xe5",
-    "short_description": "A meme line where White grabs e5 too early and can lose the queen immediately."
+        "name": "Botez Gambit",
+        "long_algebraic_notation": "1. e2-e4 e7-e5 2. Qd1-h5 Nb8-c6 3. Qh5xe5+",
+        "suggested_best_response_name": "Queen Trap",
+        "suggested_best_response_notation_step": "3... Nc6xe5",
+        "short_description": "A meme line where White grabs e5 too early and can lose the queen immediately."
   },
   {
-    "name": "Cramling Cow Opening",
-    "long_algebraic_notation": "1. d2-d3 d7-d5 2. e2-e3 e7-e6 3. Nb1-d2 Ng8-f6 4. Ng1-e2 Nb8-c6 5. Nd2-b3 Bf8-d6",
-    "suggested_best_response_name": "Complete Cow Setup",
-    "suggested_best_response_notation_step": "6. Ne2-g3",
-    "short_description": "The Cow is a low-theory setup system where White aims for pawns on d3/e3 and knights on b3/g3 before challenging the center. It is easy to play and practical, but objectively concedes a slight advantage and costs extra tempi."
+        "name": "Cramling Cow Opening",
+        "long_algebraic_notation": "1. d2-d3 d7-d5 2. e2-e3 e7-e6 3. Nb1-d2 Ng8-f6 4. Ng1-e2 Nb8-c6 5. Nd2-b3 Bf8-d6",
+        "suggested_best_response_name": "Complete Cow Setup",
+        "suggested_best_response_notation_step": "6. Ne2-g3",
+        "short_description": "The Cow is a low-theory setup system where White aims for pawns on d3/e3 and knights on b3/g3 before challenging the center. It is easy to play and practical, but objectively concedes a slight advantage and costs extra tempi."
   }
 ]

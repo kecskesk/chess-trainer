@@ -1,149 +1,149 @@
 ﻿[
-    {
-        "name":  "Vienna Jatek",
-        "long_algebraic_notation":  "1. e2-e4 e7-e5 2. Nb1-c3",
-        "suggested_best_response_name":  "Vienna Gambit Elfogadva",
-        "suggested_best_response_notation_step":  "2... Ng8-f6",
-        "short_description":  "A rugalmas and agressziv alternative to 2.Nf3, often leading to f4 gyalog storms and sharp taktikai play."
-    },
-    {
-        "name":  "Kiralynoi Gambit",
-        "long_algebraic_notation":  "1. e2-e4 e7-e5 2. f2-f4",
-        "suggested_best_response_name":  "Kiralynoi Gambit Elfogadva",
-        "suggested_best_response_notation_step":  "2... e5xf4",
-        "short_description":  "A romantic-era attacking opening where White sacrifices a gyalog for rapid fejlodes and kiralyszarny kezdemenyezes."
-    },
-    {
-        "name":  "Scotch Jatek",
-        "long_algebraic_notation":  "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. d2-d4",
-        "suggested_best_response_name":  "Scotch Fovonal",
-        "suggested_best_response_notation_step":  "3... e5xd4",
-        "short_description":  "An open and direct central confrontation leading to early piece activity and simplified structures."
-    },
-    {
-        "name":  "Philidor Vedelem",
-        "long_algebraic_notation":  "1. e2-e4 e7-e5 2. Ng1-f3 d7-d6",
-        "suggested_best_response_name":  "Modern Valtozat",
-        "suggested_best_response_notation_step":  "3. d2-d4 Ng8-f6",
-        "short_description":  "A szilard but somewhat passive defense aiming for a strong gyalog center and ellenjatek later."
-    },
-    {
-        "name":  "Petrov Vedelem (Russian Jatek)",
-        "long_algebraic_notation":  "1. e2-e4 e7-e5 2. Ng1-f3 Ng8-f6",
-        "suggested_best_response_name":  "Klasszikus tamadas",
-        "suggested_best_response_notation_step":  "3. Nf3xe5 d7-d6",
-        "short_description":  "A szimmetrikus and highly szilard defense known for balanced and drawish tendencies at top level."
-    },
-    {
-        "name":  "Evans Gambit",
-        "long_algebraic_notation":  "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-c4 Bf8-c5 4. b2-b4",
-        "suggested_best_response_name":  "Evans Gambit Elfogadva",
-        "suggested_best_response_notation_step":  "4... Bc5xb4",
-        "short_description":  "A sharp attacking gambit where White sacrifices a gyalog for rapid fejlodes and kezdemenyezes."
-    },
-    {
-        "name":  "London Rendszer",
-        "long_algebraic_notation":  "1. d2-d4 d7-d5 2. Bc1-f4",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "2... Ng8-f6",
-        "short_description":  "A reliable and easy-to-learn setup focused on szilard structure and gradual kiralyszarny nyomas."
-    },
-    {
-        "name":  "Slav Vedelem",
-        "long_algebraic_notation":  "1. d2-d4 d7-d5 2. c2-c4 c7-c6",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "3. Ng1-f3 Ng8-f6",
-        "short_description":  "A very szilard defense supporting the d5 gyalog while allowing active light-square futo fejlodes."
-    },
-    {
-        "name":  "Semi-Slav Vedelem",
-        "long_algebraic_notation":  "1. d2-d4 d7-d5 2. c2-c4 c7-c6 3. Ng1-f3 Ng8-f6 4. Nb1-c3 e7-e6",
-        "suggested_best_response_name":  "Meran Valtozat",
-        "suggested_best_response_notation_step":  "5. e2-e3 Nb8-d7",
-        "short_description":  "A highly complex and theoretical system combining Slav solidity with Vezeri Gambit structures."
-    },
-    {
-        "name":  "Benoni Vedelem",
-        "long_algebraic_notation":  "1. d2-d4 Ng8-f6 2. c2-c4 c7-c5 3. d4-d5 e7-e6",
-        "suggested_best_response_name":  "Modern Benoni Fovonal",
-        "suggested_best_response_notation_step":  "4. Nb1-c3 e6xd5",
-        "short_description":  "A dynamic and imbalanced defense where Black accepts a spatial disadvantage for active ellenjatek."
-    },
-    {
-        "name":  "Benko Gambit",
-        "long_algebraic_notation":  "1. d2-d4 Ng8-f6 2. c2-c4 c7-c5 3. d4-d5 b7-b5",
-        "suggested_best_response_name":  "Benko Gambit Elfogadva",
-        "suggested_best_response_notation_step":  "4. c4xb5 a7-a6",
-        "short_description":  "A long-term positional gambit where Black sacrifices a gyalog for vezeroldal nyomas and open files."
-    },
-    {
-        "name":  "Catalan Megnyitas",
-        "long_algebraic_notation":  "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. g2-g3 d7-d5 4. Bf1-g2",
-        "suggested_best_response_name":  "Open Catalan",
-        "suggested_best_response_notation_step":  "4... d5xc4",
-        "short_description":  "A refined positional opening combining Queenâ€™s Gambit structure with kiralyszarny fianchetto nyomas."
-    },
-    {
-        "name":  "Trompowsky Tamadas",
-        "long_algebraic_notation":  "1. d2-d4 Ng8-f6 2. Bc1-g5",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "2... e7-e6",
-        "short_description":  "An offbeat system where White immediately challenges the knight and aims for structural egyensulytalansagok."
-    },
-    {
-        "name":  "Bird\u0027s Megnyitas",
-        "long_algebraic_notation":  "1. f2-f4",
-        "suggested_best_response_name":  "From\u0027s Gambit",
-        "suggested_best_response_notation_step":  "1... e7-e5",
-        "short_description":  "A flank opening aiming for kiralyszarny attacks, somewhat resembling a reversed Dutch Vedelem."
-    },
-    {
-        "name":  "RĂ©ti Megnyitas: Symmetrical Valtozat",
-        "long_algebraic_notation":  "1. Ng1-f3 d7-d5 2. c2-c4",
-        "suggested_best_response_name":  "Symmetrical Valtozat",
-        "suggested_best_response_notation_step":  "2... c7-c6",
-        "short_description":  "A hypermodern opening emphasizing rugalmas fejlodes and indirect central kontroll."
-    },
-    {
-        "name":  "Sicilian Vedelem: Sveshnikov Valtozat",
-        "long_algebraic_notation":  "1. e2-e4 c7-c5 2. Ng1-f3 Nb8-c6 3. d2-d4 c5xd4 4. Nf3xd4 Ng8-f6 5. Nb1-c3 e7-e5",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "6. Nd4-b5",
-        "short_description":  "A dynamic Sicilian line with central tension and structural egyensulytalansagok around d5 and the weak d5 square."
-    },
-    {
-        "name":  "French Vedelem: Tarrasch Valtozat",
-        "long_algebraic_notation":  "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. Nb1-d2",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "3... c7-c5",
-        "short_description":  "A classical anti-Winawer approach emphasizing szilard fejlodes and rugalmas central play."
-    },
-    {
-        "name":  "French Vedelem: Exchange Valtozat",
-        "long_algebraic_notation":  "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. e4xd5 e6xd5",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "4. Bf1-d3",
-        "short_description":  "A simplified French structure with szimmetrikus pawns but rich strategiai maneuvering."
-    },
-    {
-        "name":  "Caro-Kann Vedelem: Panov Tamadas",
-        "long_algebraic_notation":  "1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. e4xd5 c6xd5 4. c2-c4",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "4... Ng8-f6",
-        "short_description":  "A dynamic IQP-oriented setup where White prioritizes activity and central kezdemenyezes."
-    },
-    {
-        "name":  "Vezeri Gambit Elutasitva: Exchange Valtozat",
-        "long_algebraic_notation":  "1. d2-d4 d7-d5 2. c2-c4 e7-e6 3. c4xd5 e6xd5",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "4. Nb1-c3",
-        "short_description":  "A strategiai structure with minority-attack themes and long-term gyalog-structure plans."
-    },
-    {
-        "name":  "Italian Jatek: Two Knights Vedelem",
-        "long_algebraic_notation":  "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-c4 Ng8-f6",
-        "suggested_best_response_name":  "Fovonal",
-        "suggested_best_response_notation_step":  "4. d2-d3",
-        "short_description":  "An active response to the Italian where Black develops quickly and invites taktikai possibilities."
-    }
+  {
+    "name": "Bécsi játék",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Nb1-c3",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "2... Ng8-f6",
+    "short_description": "Rugalmas és agresszív alternatíva a 2.Nf3 helyett; gyakran vezet át a Bécsi gambitba 3.f4 után."
+  },
+  {
+    "name": "Királygambit",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. f2-f4",
+    "suggested_best_response_name": "Királygambit elfogadva",
+    "suggested_best_response_notation_step": "2... e5xf4",
+    "short_description": "Romantikus támadó megnyitás, ahol Fehér gyalogot áldoz a gyors fejlődésért és királyszárnyi kezdeményezésért."
+  },
+  {
+    "name": "Skót játék",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. d2-d4",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "3... e5xd4",
+    "short_description": "Nyílt és közvetlen központi összecsapás, amely korai tisztaktivitáshoz és egyszerűsödő struktúrákhoz vezet."
+  },
+  {
+    "name": "Philidor védelem",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 d7-d6",
+    "suggested_best_response_name": "Modern változat",
+    "suggested_best_response_notation_step": "3. d2-d4 Ng8-f6",
+    "short_description": "Szilárd, de kissé passzív védelem: Fekete stabil gyalogcentrumra törekszik, és későbbi ellenjátékra készül."
+  },
+  {
+    "name": "Petrov védelem (Orosz játék)",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Ng8-f6",
+    "suggested_best_response_name": "Klasszikus támadás",
+    "suggested_best_response_notation_step": "3. Nf3xe5 d7-d6",
+    "short_description": "Szimmetrikus és rendkívül szilárd védelem, amely felső szinten kiegyensúlyozott, gyakran döntetlenhez közeli állásokat eredményez."
+  },
+  {
+    "name": "Evans-gambit",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-c4 Bf8-c5 4. b2-b4",
+    "suggested_best_response_name": "Evans-gambit elfogadva",
+    "suggested_best_response_notation_step": "4... Bc5xb4",
+    "short_description": "Éles támadó gambit: Fehér gyalogot áldoz a gyors fejlődésért és kezdeményezésért."
+  },
+  {
+    "name": "London-rendszer",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. Bc1-f4",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "2... Ng8-f6",
+    "short_description": "Megbízható és könnyen tanulható felállás, szilárd szerkezettel és fokozatos királyszárnyi nyomással."
+  },
+  {
+    "name": "Szláv védelem",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 c7-c6",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "3. Ng1-f3 Ng8-f6",
+    "short_description": "Nagyon szilárd védelem: támogatja a d5 gyalogot, miközben lehetővé teszi a világos mezős futó aktív fejlődését."
+  },
+  {
+    "name": "Félszláv védelem",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 c7-c6 3. Ng1-f3 Ng8-f6 4. Nb1-c3 e7-e6",
+    "suggested_best_response_name": "Meráni változat",
+    "suggested_best_response_notation_step": "5. e2-e3 Nb8-d7",
+    "short_description": "Rendkívül összetett és elméleti rendszer, amely a szláv szilárdságot vezércsel-struktúrával ötvözi."
+  },
+  {
+    "name": "Benoni védelem",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 c7-c5 3. d4-d5 e7-e6",
+    "suggested_best_response_name": "Modern benoni fővonal",
+    "suggested_best_response_notation_step": "4. Nb1-c3 e6xd5",
+    "short_description": "Dinamikus és kiegyensúlyozatlan védelem: Fekete térhátrányt vállal az aktív ellenjátékért."
+  },
+  {
+    "name": "Benko-gambit",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 c7-c5 3. d4-d5 b7-b5",
+    "suggested_best_response_name": "Benko-gambit elfogadva",
+    "suggested_best_response_notation_step": "4. c4xb5 a7-a6",
+    "short_description": "Hosszú távú pozíciós gambit: Fekete gyalogot áldoz a vezérszárnyi nyomásért és a nyílt vonalakért."
+  },
+  {
+    "name": "Katalán megnyitás",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. c2-c4 e7-e6 3. g2-g3 d7-d5 4. Bf1-g2",
+    "suggested_best_response_name": "Nyílt katalán",
+    "suggested_best_response_notation_step": "4... d5xc4",
+    "short_description": "Finom pozíciós megnyitás, amely a vezércsel-struktúrát királyszárnyi fianchettóval és tartós nyomással kombinálja."
+  },
+  {
+    "name": "Trompowsky-támadás",
+    "long_algebraic_notation": "1. d2-d4 Ng8-f6 2. Bc1-g5",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "2... e7-e6",
+    "short_description": "Ritkább rendszer: Fehér azonnal kihívja a huszárt, és szerkezeti egyensúlytalanságokra törekszik."
+  },
+  {
+    "name": "Bird-megnyitás",
+    "long_algebraic_notation": "1. f2-f4",
+    "suggested_best_response_name": "From-gambit",
+    "suggested_best_response_notation_step": "1... e7-e5",
+    "short_description": "Szárnymegnyitás királyszárnyi támadási tervekkel; bizonyos értelemben a holland védelem fordítottja."
+  },
+  {
+    "name": "Réti-megnyitás: Szimmetrikus változat",
+    "long_algebraic_notation": "1. Ng1-f3 d7-d5 2. c2-c4",
+    "suggested_best_response_name": "Szimmetrikus változat",
+    "suggested_best_response_notation_step": "2... c7-c6",
+    "short_description": "Hipermodern megnyitás rugalmas fejlődéssel és közvetett centrumkontrollal."
+  },
+  {
+    "name": "Szicíliai védelem: Szvesnyikov-változat",
+    "long_algebraic_notation": "1. e2-e4 c7-c5 2. Ng1-f3 Nb8-c6 3. d2-d4 c5xd4 4. Nf3xd4 Ng8-f6 5. Nb1-c3 e7-e5",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "6. Nd4-b5",
+    "short_description": "Dinamikus szicíliai változat központi feszültséggel és szerkezeti egyensúlytalanságokkal; a d5 mező kulcsszerepet játszik."
+  },
+  {
+    "name": "Francia védelem: Tarrasch-változat",
+    "long_algebraic_notation": "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. Nb1-d2",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "3... c7-c5",
+    "short_description": "Klasszikus Winawer-ellenes megközelítés, amely szilárd fejlődésre és rugalmas központi játékra épít."
+  },
+  {
+    "name": "Francia védelem: Csereváltozat",
+    "long_algebraic_notation": "1. e2-e4 e7-e6 2. d2-d4 d7-d5 3. e4xd5 e6xd5",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "4. Bf1-d3",
+    "short_description": "Egyszerűsített francia szerkezet szimmetrikus gyalogokkal, de gazdag stratégiai manőverezési lehetőségekkel."
+  },
+  {
+    "name": "Caro–Kann védelem: Panov-támadás",
+    "long_algebraic_notation": "1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. e4xd5 c6xd5 4. c2-c4",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "4... Ng8-f6",
+    "short_description": "Dinamikus, izolált vezérgyalogos felállás, ahol Fehér az aktivitást és a központi kezdeményezést hangsúlyozza."
+  },
+  {
+    "name": "Vezércsel elutasítva: Csereváltozat",
+    "long_algebraic_notation": "1. d2-d4 d7-d5 2. c2-c4 e7-e6 3. c4xd5 e6xd5",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "4. Nb1-c3",
+    "short_description": "Stratégiai szerkezet kisebbségi támadásos tervekkel és hosszú távú gyalogstruktúra-koncepciókkal."
+  },
+  {
+    "name": "Olasz megnyitás: Két huszár védelem",
+    "long_algebraic_notation": "1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 3. Bf1-c4 Ng8-f6",
+    "suggested_best_response_name": "Fővonal",
+    "suggested_best_response_notation_step": "4. d2-d3",
+    "short_description": "Aktív válasz az olasz megnyitásra: Fekete gyors fejlődést választ, és taktikai lehetőségeket kínál."
+  }
 ]
