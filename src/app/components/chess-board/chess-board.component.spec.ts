@@ -3,13 +3,7 @@ import { ChessBoardStateService } from '../../services/chess-board-state.service
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { DragDropModule } from '@angular/cdk/drag-drop';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { of, throwError } from 'rxjs';
-import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -74,7 +68,6 @@ beforeEach(() => {
   chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 });
 
-// eslint-disable-next-line max-lines-per-function
 describe('ChessBoardComponent opening recognition', () => {
 
   it('updates opening recognition on first half-move when opening line has one step', () => {
@@ -184,7 +177,6 @@ describe('ChessBoardComponent opening recognition', () => {
   });
 });
 
-// eslint-disable-next-line max-lines-per-function
 describe('ChessBoardComponent opening recognition - variation scenarios', () => {
 
   it('extends Dutch line with first variation move and labels the opening as Dutch Defense: Classical Variation', () => {
@@ -387,7 +379,6 @@ describe('ChessBoardComponent opening recognition - Caro-Kann scenario', () => {
   });
 });
 
-// eslint-disable-next-line max-lines-per-function
 describe('ChessBoardComponent gameplay moves and rules', () => {
   it('supports d2d4, e7e5, and d4xe5 with capture highlight', () => {
     expect(canDropLike(6, 3, 4, 3)).toBeTrue();
@@ -864,8 +855,6 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     component.showThreats(false);
     expect(component.activeTool).toBeNull();
     expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBe(0);
-  });
-
   });
 
   it('flip action clears any active overlay and toggles selected state', () => {
@@ -1532,5 +1521,4 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by insufficient material.');
   });
 });
-
 

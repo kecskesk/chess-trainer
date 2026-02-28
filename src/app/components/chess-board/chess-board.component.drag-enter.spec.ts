@@ -9,8 +9,7 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-// eslint-disable-next-line max-lines-per-function
-describe('ChessBoardComponent template drag-enter integration', () => {
+describe('ChessBoardComponent template drag-enter integration - mate detection', () => {
   let fixture: ComponentFixture<ChessBoardComponent>;
   let component: ChessBoardComponent;
   let chessBoardStateService: ChessBoardStateService;
@@ -60,17 +59,6 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one-danger')).toBeTrue();
   });
 
-  it('buttons receive time-btn--selected class based on activeTool and flip state (integration)', () => {
-    component.showThreats(false);
-    expect(component.activeTool).toBe('threats-mine');
-
-    component.showProtected(false);
-    expect(component.activeTool).toBe('protected-mine');
-
-    component.toggleBoardFlip();
-    expect(component.isBoardFlipped).toBeTrue();
-  });
-
   it('applies mate-one class on target square when cdkDropListEntered fires for a winning mate move', () => {
     clearBoard();
     chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
@@ -90,11 +78,40 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     expect(component.isMateInOneTarget(1, 1)).toBeTrue();
     expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one')).toBeTrue();
   });
+});
+
+describe('ChessBoardComponent template drag-enter integration - UI buttons', () => {
+  let fixture: ComponentFixture<ChessBoardComponent>;
+  let component: ChessBoardComponent;
+  let chessBoardStateService: ChessBoardStateService;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChessBoardComponent, DragDropModule],
+      providers: [ChessBoardStateService, provideHttpClient(), provideHttpClientTesting()],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChessBoardComponent);
+    component = fixture.componentInstance;
+    chessBoardStateService = TestBed.inject(ChessBoardStateService);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+  });
+
+  it('buttons receive time-btn--selected class based on activeTool and flip state (integration)', () => {
+    component.showThreats(false);
+    expect(component.activeTool).toBe('threats-mine');
+
+    component.showProtected(false);
+    expect(component.activeTool).toBe('protected-mine');
+
+    component.toggleBoardFlip();
+    expect(component.isBoardFlipped).toBeTrue();
+  });
 
   it('shows claim draw button only when draw can be claimed', () => {
     expect(component.canClaimDraw()).toBeFalse();
 
-    clearBoard();
     chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
     chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
     chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
@@ -132,6 +149,25 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     expect(offerDrawButton).toBeUndefined();
     expect(acceptDrawButton).toBeDefined();
     expect(declineDrawButton).toBeDefined();
+  });
+});
+
+describe('ChessBoardComponent template drag-enter integration - theming', () => {
+  let fixture: ComponentFixture<ChessBoardComponent>;
+  let component: ChessBoardComponent;
+  let chessBoardStateService: ChessBoardStateService;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChessBoardComponent, DragDropModule],
+      providers: [ChessBoardStateService, provideHttpClient(), provideHttpClientTesting()],
+      schemas: [NO_ERRORS_SCHEMA]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChessBoardComponent);
+    component = fixture.componentInstance;
+    chessBoardStateService = TestBed.inject(ChessBoardStateService);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
   it('applies animated ambient class for white, black, and pending draw states', () => {
