@@ -182,16 +182,16 @@ export class ChessBoardStateService {
   static createArrowFromVisualization(visualizationArrow: IVisualizationArrow): void {
     const halfSquareOffset = 0.5;
     const boardCenterOffset = 8.5;
-    const midX = (((visualizationArrow.fromCol + visualizationArrow.toCol) / 2) - halfSquareOffset) * VisualizationConstants.BOX_SIZE_PX;
-    const midY = (boardCenterOffset - ((visualizationArrow.fromRow + visualizationArrow.toRow) / 2)) * VisualizationConstants.BOX_SIZE_PX;
+    const boardSquares = ChessConstants.BOARD_SIZE;
+    const midXPercent = ((((visualizationArrow.fromCol + visualizationArrow.toCol) / 2) - halfSquareOffset) / boardSquares) * 100;
+    const midYPercent = ((boardCenterOffset - ((visualizationArrow.fromRow + visualizationArrow.toRow) / 2)) / boardSquares) * 100;
 
     const stepRow = visualizationArrow.fromRow - visualizationArrow.toRow;
     const stepCol = visualizationArrow.toCol - visualizationArrow.fromCol;
     const deg = Math.atan2(stepRow, stepCol) * (180 / Math.PI);
-    const distancePx = Math.sqrt(
-      (stepCol * VisualizationConstants.BOX_SIZE_PX) * (stepCol * VisualizationConstants.BOX_SIZE_PX) +
-      (stepRow * VisualizationConstants.BOX_SIZE_PX) * (stepRow * VisualizationConstants.BOX_SIZE_PX)
-    );
+    const distanceSquares = Math.sqrt((stepCol * stepCol) + (stepRow * stepRow));
+    const minLengthPercent = (VisualizationConstants.ARROW_MIN_LENGTH_SQUARES / boardSquares) * 100;
+    const distancePercent = (distanceSquares / boardSquares) * 100;
     const thicknessPx = Math.max(
       VisualizationConstants.ARROW_MIN_THICKNESS,
       Math.min(
@@ -200,10 +200,10 @@ export class ChessBoardStateService {
       )
     );
 
-    const arTop = `${midY}px`;
-    const arLeft = `${midX}px`;
+    const arTop = `${midYPercent}%`;
+    const arLeft = `${midXPercent}%`;
     const arRot = `${deg}deg`;
-    const arLength = `${Math.max(VisualizationConstants.ARROW_MIN_LENGTH, distancePx)}px`;
+    const arLength = `${Math.max(minLengthPercent, distancePercent)}%`;
     const arThickness = `${thicknessPx}px`;
     const newArrow = new ChessArrowDto(
       arTop,

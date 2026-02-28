@@ -72,14 +72,12 @@ export class ChessConstants {
  * Rendering and geometry constants for board arrows/visualization overlays.
  */
 export class VisualizationConstants {
-  /** Pixel size of one board square in current UI rendering. */
-  static readonly BOX_SIZE_PX = 76;
   /** Minimum arrow thickness in pixels. */
   static readonly ARROW_MIN_THICKNESS = 2;
   /** Maximum arrow thickness in pixels. */
   static readonly ARROW_MAX_THICKNESS = 8;
-  /** Minimum rendered arrow length in pixels. */
-  static readonly ARROW_MIN_LENGTH = 20;
+  /** Minimum rendered arrow length measured in board squares. */
+  static readonly ARROW_MIN_LENGTH_SQUARES = 0.26;
   /** Loop safety cap when stepping through paths. */
   static readonly MAX_PATH_ITERATIONS = 8;
   /** Allowed arrow color tokens from visualization API. */
