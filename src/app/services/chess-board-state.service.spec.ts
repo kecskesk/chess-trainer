@@ -46,20 +46,32 @@ describe('ChessBoardStateService notation helpers', () => {
     expect(notation).toBe('e2-e4');
   });
 });
-describe('ChessBoardStateService state helpers', () => {
+const setupStateServiceTestContext = () => {
+  const chessBoardStateService = new ChessBoardStateService();
+  const originalBoardHelper = ChessBoardStateService.BOARD_HELPER;
+  const originalField = ChessBoardStateService.CHESS_FIELD;
+
+  return {
+    chessBoardStateService,
+    restore: () => {
+      ChessBoardStateService.BOARD_HELPER = originalBoardHelper;
+      ChessBoardStateService.CHESS_FIELD = originalField;
+    }
+  };
+};
+
+describe('ChessBoardStateService state helpers (highlights/arrows)', () => {
   let chessBoardStateService: ChessBoardStateService;
-  let originalBoardHelper: ChessBoardHelperDto;
-  let originalField: any;
+  let restoreContext: () => void;
 
   beforeEach(() => {
-    chessBoardStateService = new ChessBoardStateService();
-    originalBoardHelper = ChessBoardStateService.BOARD_HELPER;
-    originalField = ChessBoardStateService.CHESS_FIELD;
+    const context = setupStateServiceTestContext();
+    chessBoardStateService = context.chessBoardStateService;
+    restoreContext = context.restore;
   });
 
   afterEach(() => {
-    ChessBoardStateService.BOARD_HELPER = originalBoardHelper;
-    ChessBoardStateService.CHESS_FIELD = originalField;
+    restoreContext();
   });
 
   it('exposes highlights and history getters', () => {
@@ -128,6 +140,21 @@ describe('ChessBoardStateService state helpers', () => {
     const createdArrow = Object.values(chessBoardStateService.boardHelper.arrows)[0] as ChessArrowDto;
     expect(createdArrow.color).toBe('blue');
   });
+});
+
+describe('ChessBoardStateService state helpers (notation/path)', () => {
+  let chessBoardStateService: ChessBoardStateService;
+  let restoreContext: () => void;
+
+  beforeEach(() => {
+    const context = setupStateServiceTestContext();
+    chessBoardStateService = context.chessBoardStateService;
+    restoreContext = context.restore;
+  });
+
+  afterEach(() => {
+    restoreContext();
+  });
 
   it('adds history and supports castle/ep/mate notation suffixes', () => {
     ChessBoardStateService.addHistory('e2-e4');
@@ -168,8 +195,8 @@ describe('ChessBoardStateService state helpers', () => {
     ChessBoardStateService.CHESS_FIELD = chessBoardStateService.field;
     expect(ChessBoardStateService.pieceIsInWay(4, 4, 4, 4)).toBeFalse();
 
-    chessBoardStateService.field[6][4] = [ { color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any ];
-    chessBoardStateService.field[5][4] = [ { color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any ];
+    chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[5][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
     expect(ChessBoardStateService.pieceIsInWay(4, 4, 6, 4)).toBeTrue();
 
     chessBoardStateService.field[5][4] = [];

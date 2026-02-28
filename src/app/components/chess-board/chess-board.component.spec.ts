@@ -11,6 +11,7 @@ import { of, throwError } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
+// eslint-disable-next-line max-lines-per-function
 describe('ChessBoardComponent move sequence integration', () => {
   let chessBoardStateService: ChessBoardStateService;
   let component: ChessBoardComponent;
@@ -1534,6 +1535,7 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by insufficient material.');
   });
 });
+// eslint-disable-next-line max-lines-per-function
 describe('ChessBoardComponent template drag-enter integration', () => {
   let fixture: ComponentFixture<ChessBoardComponent>;
   let component: ChessBoardComponent;

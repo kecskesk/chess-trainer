@@ -43,6 +43,7 @@ describe('ChessRulesService pawn captures', () => {
   });
 });
 
+// eslint-disable-next-line max-lines-per-function
 describe('ChessRulesService castling', () => {
   let chessBoardStateService: ChessBoardStateService;
 
@@ -218,6 +219,7 @@ describe('ChessRulesService king safety', () => {
   });
 });
 
+// eslint-disable-next-line max-lines-per-function
 describe('ChessRulesService branch coverage helpers', () => {
   let chessBoardStateService: ChessBoardStateService;
 
