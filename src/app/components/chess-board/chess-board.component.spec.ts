@@ -958,6 +958,9 @@ describe('ChessBoardComponent move sequence integration', () => {
     component.mateInOneTargets = { '11': true };
     component.mateInOneBlunderTargets = { '22': true };
     (component as any).lastMatePreviewKey = '12-34';
+    chessBoardStateService.boardHelper.possibles = { '33': { row: 3, col: 3 } as any };
+    chessBoardStateService.boardHelper.hits = { '44': { row: 4, col: 4 } as any };
+    chessBoardStateService.boardHelper.checks = { '55': { row: 5, col: 5 } as any };
 
     component.onDragEnded();
 
@@ -965,6 +968,9 @@ describe('ChessBoardComponent move sequence integration', () => {
     expect(component.mateInOneTargets).toEqual({});
     expect(component.mateInOneBlunderTargets).toEqual({});
     expect((component as any).lastMatePreviewKey).toBe('');
+    expect(chessBoardStateService.boardHelper.possibles).toEqual({});
+    expect(chessBoardStateService.boardHelper.hits).toEqual({});
+    expect(chessBoardStateService.boardHelper.checks).toEqual({});
   });
 
   it('startOrPauseClock handles game-over, pause, and start branches', () => {

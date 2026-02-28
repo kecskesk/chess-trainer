@@ -226,9 +226,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   onDragEnded(): void {
     this.isDragPreviewActive = false;
-    this.mateInOneTargets = {};
-    this.mateInOneBlunderTargets = {};
-    this.lastMatePreviewKey = '';
+    this.clearDragPreviewHighlights();
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
@@ -1613,6 +1611,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (Object.keys(enemyMateInOneTargets).length > 0) {
       this.mateInOneBlunderTargets[`${targetRow}${targetCol}`] = true;
     }
+  }
+
+  private clearDragPreviewHighlights(): void {
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+    this.lastMatePreviewKey = '';
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+      return;
+    }
+    this.chessBoardStateService.boardHelper.possibles = {};
+    this.chessBoardStateService.boardHelper.hits = {};
+    this.chessBoardStateService.boardHelper.checks = {};
   }
 
   /**
