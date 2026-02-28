@@ -33,6 +33,7 @@ import { UiTextLoaderService } from '../../services/ui-text-loader.service';
 export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private static readonly NA_PLACEHOLDER = 'n/a';
   readonly uiText = UiText;
+  readonly boardIndices: number[] = Array.from({ length: ChessConstants.BOARD_SIZE }, (_, idx) => idx);
   @ViewChild('chessField') chessField: ElementRef;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
@@ -113,6 +114,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.isDestroyed = true;
     this.stopClock();
+    this.syncFlippedDragClass();
   }
 
   ngAfterViewInit(): void {
@@ -200,6 +202,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   onDragStarted(event?: CdkDragStart<ChessPieceDto>): void {
     this.isDragPreviewActive = true;
+    this.syncFlippedDragClass();
     if (!event || !event.source || !event.source.dropContainer || !event.source.dropContainer.data) {
       return;
     }
@@ -250,6 +253,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   onDragEnded(): void {
     this.isDragPreviewActive = false;
+    this.syncFlippedDragClass();
     this.clearDragPreviewHighlights();
   }
 
@@ -612,8 +616,55 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   isWhiteSquare(targetRow: number, targetCol: number): boolean {
-    const flipOffset = this.isBoardFlipped ? 1 : 0;
-    return ((targetRow + targetCol + flipOffset) % 2) === 0;
+    return ((targetRow + targetCol) % 2) === 0;
+  }
+
+  getDisplayCell(displayRow: number, displayCol: number): ChessPieceDto[] {
+    const boardRow = this.getBoardIndexForDisplay(displayRow);
+    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    return this.chessBoardStateService.field[boardRow][boardCol];
+  }
+
+  getDisplayPiece(displayRow: number, displayCol: number): ChessPieceDto | null {
+    const cell = this.getDisplayCell(displayRow, displayCol);
+    return (cell && cell[0]) ? cell[0] : null;
+  }
+
+  getDisplayFieldId(displayRow: number, displayCol: number): string {
+    const boardRow = this.getBoardIndexForDisplay(displayRow);
+    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    return `${ChessBoardUiConstants.FIELD_ID_PREFIX}${boardRow}${boardCol}`;
+  }
+
+  getDisplaySquareHighlightClass(displayRow: number, displayCol: number): string {
+    const boardRow = this.getBoardIndexForDisplay(displayRow);
+    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    return this.getSquareHighlightClass(boardRow, boardCol);
+  }
+
+  isDisplaySquareWhite(displayRow: number, displayCol: number): boolean {
+    const boardRow = this.getBoardIndexForDisplay(displayRow);
+    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    return this.isWhiteSquare(boardRow, boardCol);
+  }
+
+  getDisplayNotation(displayRow: number, displayCol: number): string {
+    const boardRow = this.getBoardIndexForDisplay(displayRow);
+    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    return this.translateFieldNames(boardRow, boardCol);
+  }
+
+  getArrowTopForDisplay(arrow: ChessArrowDto): string {
+    return this.mapPercentCoordinateForDisplay(arrow ? arrow.top : '');
+  }
+
+  getArrowLeftForDisplay(arrow: ChessArrowDto): string {
+    return this.mapPercentCoordinateForDisplay(arrow ? arrow.left : '');
+  }
+
+  getArrowTransformForDisplay(arrow: ChessArrowDto): string {
+    const rotate = this.mapRotationForDisplay(arrow ? arrow.rotate : '');
+    return `translate(-50%, -50%) rotate(${rotate})`;
   }
 
   onDebugPanelToggle(event: Event): void {
@@ -956,6 +1007,63 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     // flipping should also turn off any active visualization overlay
     this.clearOverlay();
     this.isBoardFlipped = !this.isBoardFlipped;
+    this.cdr?.detectChanges();
+    this.syncFlippedDragClass();
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => this.syncFlippedDragClass());
+    }
+  }
+
+  private getBoardIndexForDisplay(displayIndex: number): number {
+    if (!this.isBoardFlipped) {
+      return displayIndex;
+    }
+    return ChessConstants.MAX_INDEX - displayIndex;
+  }
+
+  private mapPercentCoordinateForDisplay(value: string): string {
+    if (!this.isBoardFlipped || !value) {
+      return value;
+    }
+    const match = value.trim().match(/^(-?\d+(?:\.\d+)?)%$/);
+    if (!match) {
+      return value;
+    }
+    const parsed = Number(match[1]);
+    if (isNaN(parsed)) {
+      return value;
+    }
+    return `${Number((100 - parsed).toFixed(4))}%`;
+  }
+
+  private mapRotationForDisplay(value: string): string {
+    if (!this.isBoardFlipped || !value) {
+      return value;
+    }
+    const match = value.trim().match(/^(-?\d+(?:\.\d+)?)deg$/);
+    if (!match) {
+      return value;
+    }
+    const parsed = Number(match[1]);
+    if (isNaN(parsed)) {
+      return value;
+    }
+    let rotated = parsed + 180;
+    while (rotated >= 360) {
+      rotated -= 360;
+    }
+    while (rotated < 0) {
+      rotated += 360;
+    }
+    return `${Number(rotated.toFixed(4))}deg`;
+  }
+
+  private syncFlippedDragClass(): void {
+    if (typeof document === 'undefined' || !document.body) {
+      return;
+    }
+    const shouldApply = this.isBoardFlipped && this.isDragPreviewActive;
+    document.body.classList.toggle('board-flipped-drag-active', shouldApply);
   }
 
   getMockOpeningRecognition(): string {

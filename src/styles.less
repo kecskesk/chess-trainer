@@ -27,3 +27,8 @@ body {
 .cdk-drag-preview i.fa {
 	opacity: 0;
 }
+
+body.board-flipped-drag-active .cdk-drag-animating,
+body.board-flipped-drag-active .cdk-drop-list-dragging .cdk-drag {
+	transition: none !important;
+}

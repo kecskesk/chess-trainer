@@ -30,44 +30,44 @@
   <div class="ambient-math" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
   <section class="board-panel">
     <div class="board-stack">
-      <div class="outer-container board-shell" [class.board-shell--flipped]="isBoardFlipped">
+      <div class="outer-container board-shell">
         <div class="container" #chessField>
-          <div #row class="field-row" *ngFor="let rowX of chessBoardStateService.field; index as idxX">
-            <div class="field-cell" *ngFor="let cellY of rowX; index as idxY">
+          <div #row class="field-row" *ngFor="let displayRow of boardIndices">
+            <div class="field-cell" *ngFor="let displayCol of boardIndices">
               <div class="piece-box">
                 <div class="square"
                      cdkDropList
                      cdkDropListOrientation="horizontal"
                      [cdkDropListSortingDisabled]="true"
                       [cdkDropListEnterPredicate]="canDropPredicate"
-                     id="field{{idxX}}{{idxY}}"
-                     [ngClass]="getSquareHighlightClass(idxX, idxY)"
-                     [cdkDropListData]="cellY"
+                     [id]="getDisplayFieldId(displayRow, displayCol)"
+                     [ngClass]="getDisplaySquareHighlightClass(displayRow, displayCol)"
+                     [cdkDropListData]="getDisplayCell(displayRow, displayCol)"
                      [cdkDropListConnectedTo]="dropLists"
                      (cdkDropListEntered)="onDropListEntered($event)"
                      (cdkDropListDropped)="onDrop($event)"
-                     [class.white-square]="isWhiteSquare(idxX, idxY)"
-                     [class.black-square]="!isWhiteSquare(idxX, idxY)">
-                  <div class="drag-box" (mousedown)="onSquarePointerDown(cellY)">
-                    <app-chess-piece [piece]="cellY[0]"
-                                     *ngIf="cellY && cellY[0]"
+                     [class.white-square]="isDisplaySquareWhite(displayRow, displayCol)"
+                     [class.black-square]="!isDisplaySquareWhite(displayRow, displayCol)">
+                  <div class="drag-box" (mousedown)="onSquarePointerDown(getDisplayCell(displayRow, displayCol))">
+                    <app-chess-piece [piece]="piece"
+                                     *ngIf="getDisplayPiece(displayRow, displayCol) as piece"
                                      cdkDrag
-                                     [cdkDragData]="cellY[0]"
-                                     [cdkDragDisabled]="chessBoardStateService.boardHelper.gameOver || !cellY || !cellY[0] || cellY[0].color !== chessBoardStateService.boardHelper.colorTurn"
+                                     [cdkDragData]="piece"
+                                     [cdkDragDisabled]="chessBoardStateService.boardHelper.gameOver || piece.color !== chessBoardStateService.boardHelper.colorTurn"
                                      (cdkDragStarted)="onDragStarted()"
                                      (cdkDragEnded)="onDragEnded()"></app-chess-piece>
                   </div>
-                  <div class="notation">{{translateFieldNames(idxX, idxY)}}</div>
+                  <div class="notation">{{getDisplayNotation(displayRow, displayCol)}}</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
         <div class="arrowPointer" *ngFor="let arrow of chessBoardStateService.arrows; index as arrowIdx"
-             [style.top]="arrow.top" [style.left]="arrow.left" [style.color]="arrow.color"
+             [style.top]="getArrowTopForDisplay(arrow)" [style.left]="getArrowLeftForDisplay(arrow)" [style.color]="arrow.color"
              [style.width]="arrow.length"
              [style.--arrow-thickness]="arrow.thickness"
-             [style.transform]="'translate(-50%, -50%) rotate(' + arrow.rotate + ')'">
+             [style.transform]="getArrowTransformForDisplay(arrow)">
           <span class="arrow-shaft"></span>
           <span class="arrow-head"></span>
         </div>

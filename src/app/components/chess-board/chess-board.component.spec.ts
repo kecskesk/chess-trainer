@@ -1152,6 +1152,20 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     expect(component.isBoardFlipped).toBeFalse();
   });
 
+  it('syncs flipped drag orientation class on body immediately', () => {
+    document.body.classList.remove('board-flipped-drag-active');
+    expect(document.body.classList.contains('board-flipped-drag-active')).toBeFalse();
+
+    component.onDragStarted();
+    expect(document.body.classList.contains('board-flipped-drag-active')).toBeFalse();
+
+    component.toggleBoardFlip();
+    expect(document.body.classList.contains('board-flipped-drag-active')).toBeTrue();
+
+    component.onDragEnded();
+    expect(document.body.classList.contains('board-flipped-drag-active')).toBeFalse();
+  });
+
   it('returns debug castling rights notation', () => {
     const castlingRights = component.getDebugCastlingRights();
     expect(typeof castlingRights).toBe('string');
@@ -1423,7 +1437,7 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
     component.isBoardFlipped = false;
     expect(component.isWhiteSquare(0, 0)).toBeTrue();
     component.isBoardFlipped = true;
-    expect(component.isWhiteSquare(0, 0)).toBeFalse();
+    expect(component.isWhiteSquare(0, 0)).toBeTrue();
   });
 
   it('covers debug-toggle null-target and isClockActive guard branches', () => {
