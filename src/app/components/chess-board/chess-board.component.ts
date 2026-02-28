@@ -1,8 +1,9 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, transferArrayItem } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
+import { ChessArrowDto } from 'src/app/model/chess-arrow.dto';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
-import { ChessBoardStateService, GlobalVariablesService } from '../../services/global-variables.service';
+import { ChessBoardStateService } from '../../services/chess-board-state.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessPositionDto } from '../../model/chess-position.dto';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
@@ -67,12 +68,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private openings: IParsedOpening[] = [];
   private activeOpening: IParsedOpening | null = null;
   private activeOpeningHistoryKey = '';
-  private suggestedMoveArrowSnapshot: {[key: string]: any} | null = null;
+  private suggestedMoveArrowSnapshot: Record<string, ChessArrowDto> | null = null;
   ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
-  constructor(public globalVariablesService: ChessBoardStateService, private readonly http: HttpClient) {
+  constructor(public chessBoardStateService: ChessBoardStateService, private readonly http: HttpClient) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
     this.isDebugPanelOpen = this.readDebugPanelOpenState();
@@ -92,10 +93,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   canDrop(drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_NO_MOVES);
       return false;
     }
@@ -124,8 +125,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!sourcePiece) {
       return false;
     }
-    if (sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
-      this.setSubtleDebugReason(ChessBoardMessageConstants.turnMessage(this.globalVariablesService.boardHelper.colorTurn));
+    if (sourcePiece.color !== this.chessBoardStateService.boardHelper.colorTurn) {
+      this.setSubtleDebugReason(ChessBoardMessageConstants.turnMessage(this.chessBoardStateService.boardHelper.colorTurn));
       return false;
     }
 
@@ -161,7 +162,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const targetRow = targetPosition.row;
     const targetCol = targetPosition.col;
 
-    const targetData = this.globalVariablesService.field[targetRow][targetCol];
+    const targetData = this.chessBoardStateService.field[targetRow][targetCol];
     const isValidMove = ChessRulesService.validateMove(targetRow, targetCol, targetData, sourceRow, sourceCol).isValid;
     this.previewHoverMateInOne(sourceRow, sourceCol, targetRow, targetCol, isValidMove);
   }
@@ -172,12 +173,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return;
     }
 
     const sourcePiece = event.source.dropContainer.data[0];
-    if (!sourcePiece || sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
+    if (!sourcePiece || sourcePiece.color !== this.chessBoardStateService.boardHelper.colorTurn) {
       return;
     }
 
@@ -196,11 +197,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   onSquarePointerDown(cell: ChessPieceDto[]): void {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return;
     }
 
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_START_NEW);
       return;
     }
@@ -211,8 +212,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     const piece = cell[0];
-    if (piece.color !== this.globalVariablesService.boardHelper.colorTurn) {
-      this.setSubtleDebugReason(ChessBoardMessageConstants.turnMessage(this.globalVariablesService.boardHelper.colorTurn));
+    if (piece.color !== this.chessBoardStateService.boardHelper.colorTurn) {
+      this.setSubtleDebugReason(ChessBoardMessageConstants.turnMessage(this.chessBoardStateService.boardHelper.colorTurn));
     }
   }
 
@@ -224,10 +225,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   onDrop(event: CdkDragDrop<ChessPieceDto[]>): void {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return;
     }
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_NO_MOVES);
       return;
     }
@@ -255,7 +256,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       const isValidMove = ChessRulesService.validateMove(
         targetRow,
         targetCell,
-        this.globalVariablesService.field[targetRow][targetCell],
+        this.chessBoardStateService.field[targetRow][targetCell],
         srcRow,
         srcCell
       ).isValid;
@@ -281,18 +282,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       }
 
       // Reset drops and hits
-      this.globalVariablesService.boardHelper.debugText = '';
-      this.globalVariablesService.boardHelper.possibles = {};
-      this.globalVariablesService.boardHelper.hits = {};
-      this.globalVariablesService.boardHelper.checks = {};
-      this.globalVariablesService.boardHelper.arrows = {};
+      this.chessBoardStateService.boardHelper.debugText = '';
+      this.chessBoardStateService.boardHelper.possibles = {};
+      this.chessBoardStateService.boardHelper.hits = {};
+      this.chessBoardStateService.boardHelper.checks = {};
+      this.chessBoardStateService.boardHelper.arrows = {};
       this.mateInOneTargets = {};
       this.mateInOneBlunderTargets = {};
 
       const srcPiece = event.previousContainer.data[0].piece;
       const promotionTargetRow = srcColor === ChessColorsEnum.White ? 0 : 7;
       if (srcPiece === ChessPiecesEnum.Pawn && targetRow === promotionTargetRow) {
-        this.globalVariablesService.boardHelper.canPromote = targetCell;
+        this.chessBoardStateService.boardHelper.canPromote = targetCell;
       }
 
       let isHit = false;
@@ -302,7 +303,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       let castleData = null;
       // Remove target on hit before moving the item in the container
       if (event.container && event.container.data && event.container.data[0]) {
-        this.globalVariablesService.field[targetRow][targetCell].splice(0, 1);
+        this.chessBoardStateService.field[targetRow][targetCell].splice(0, 1);
         isHit = true;
       }
       const isPawnDiagonalToEmpty = srcPiece === ChessPiecesEnum.Pawn
@@ -313,27 +314,27 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       if (isPawnDiagonalToEmpty && (targetRow - srcRow) === targetDirectionStep && targetRow === enemyFirstStep) {
         const epTargetRow = srcColor === ChessColorsEnum.White ? 3 : 4;
         const epSourceRow = srcColor === ChessColorsEnum.White ? 1 : 6;
-        const lastHistory = this.globalVariablesService.history[this.globalVariablesService.history.length - 1];
-        const possibleEP = GlobalVariablesService.translateNotation(
+        const lastHistory = this.chessBoardStateService.history[this.chessBoardStateService.history.length - 1];
+        const possibleEP = ChessBoardStateService.translateNotation(
           epTargetRow, targetCell, epSourceRow, targetCell, ChessPiecesEnum.Pawn, false, false, false, false, null);
-        if (lastHistory === possibleEP && this.globalVariablesService.field[epTargetRow][targetCell].length > 0) {
-          this.globalVariablesService.field[epTargetRow][targetCell].splice(0, 1);
+        if (lastHistory === possibleEP && this.chessBoardStateService.field[epTargetRow][targetCell].length > 0) {
+          this.chessBoardStateService.field[epTargetRow][targetCell].splice(0, 1);
           isHit = true;
           isEP = true;
         }
       }
-      this.globalVariablesService.boardHelper.justDidEnPassant = null;
-      const justDidCastle = this.globalVariablesService.boardHelper.justDidCastle;
+      this.chessBoardStateService.boardHelper.justDidEnPassant = null;
+      const justDidCastle = this.chessBoardStateService.boardHelper.justDidCastle;
       if (justDidCastle) {
         const rookCol = justDidCastle.col === 2 ? 0 : 7;
         const rookDestCol = justDidCastle.col === 2 ? 3 : 5;
-        const castleRook = this.globalVariablesService.field[justDidCastle.row][rookCol];
+        const castleRook = this.chessBoardStateService.field[justDidCastle.row][rookCol];
         if (castleRook && castleRook[0]) {
           const sourceColor = castleRook[0].color as ChessColorsEnum;
-          this.globalVariablesService.field[justDidCastle.row][rookCol].splice(0, 1);
+          this.chessBoardStateService.field[justDidCastle.row][rookCol].splice(0, 1);
           const newCastleRook = new ChessPieceDto(sourceColor, ChessPiecesEnum.Rook);
-          this.globalVariablesService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
-          this.globalVariablesService.boardHelper.justDidCastle = null;
+          this.chessBoardStateService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
+          this.chessBoardStateService.boardHelper.justDidCastle = null;
           castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
         }
       }
@@ -346,24 +347,24 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         event.previousIndex, event.currentIndex);
 
       const enemyColor = srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-      isCheck = this.isKingInCheck(this.globalVariablesService.field, enemyColor);
-      const hasLegalMoves = this.hasAnyLegalMove(this.globalVariablesService.field, enemyColor);
+      isCheck = this.isKingInCheck(this.chessBoardStateService.field, enemyColor);
+      const hasLegalMoves = this.hasAnyLegalMove(this.chessBoardStateService.field, enemyColor);
       if (isCheck) {
         isMatch = !hasLegalMoves;
         if (isMatch) {
-          this.globalVariablesService.boardHelper.gameOver = true;
-          this.globalVariablesService.boardHelper.checkmateColor = enemyColor;
-          this.globalVariablesService.boardHelper.debugText =
+          this.chessBoardStateService.boardHelper.gameOver = true;
+          this.chessBoardStateService.boardHelper.checkmateColor = enemyColor;
+          this.chessBoardStateService.boardHelper.debugText =
             `Checkmate! ${srcColor === ChessColorsEnum.White ? 'White' : 'Black'} wins.`;
         }
       }
 
-      const lastNotation = GlobalVariablesService.translateNotation(
+      const lastNotation = ChessBoardStateService.translateNotation(
         targetRow, targetCell, srcRow, srcCell, srcPiece, isHit, isCheck, isMatch, isEP, castleData);
-      GlobalVariablesService.addHistory(lastNotation);
+      ChessBoardStateService.addHistory(lastNotation);
       this.addIncrementToColor(srcColor);
-      this.globalVariablesService.boardHelper.colorTurn =
-        this.globalVariablesService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+      this.chessBoardStateService.boardHelper.colorTurn =
+        this.chessBoardStateService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
       if (!isMatch) {
         this.applyDrawRules(hasLegalMoves, isCheck);
       }
@@ -371,23 +372,23 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private setSubtleDebugReason(reason: string): void {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !reason) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !reason) {
       return;
     }
     const subtleReason = `· ${reason}`;
-    if (this.globalVariablesService.boardHelper.debugText === subtleReason) {
+    if (this.chessBoardStateService.boardHelper.debugText === subtleReason) {
       return;
     }
-    this.globalVariablesService.boardHelper.debugText = subtleReason;
+    this.chessBoardStateService.boardHelper.debugText = subtleReason;
   }
 
   private getDragFailureReason(sourceRow: number, sourceCol: number, sourcePiece: ChessPieceDto): string | null {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !sourcePiece) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !sourcePiece) {
       return null;
     }
 
-    if (sourcePiece.color !== this.globalVariablesService.boardHelper.colorTurn) {
-      return ChessBoardMessageConstants.turnMessage(this.globalVariablesService.boardHelper.colorTurn);
+    if (sourcePiece.color !== this.chessBoardStateService.boardHelper.colorTurn) {
+      return ChessBoardMessageConstants.turnMessage(this.chessBoardStateService.boardHelper.colorTurn);
     }
 
     if (this.getLegalTargetCount(sourceRow, sourceCol) < 1) {
@@ -398,7 +399,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getLegalTargetCount(sourceRow: number, sourceCol: number): number {
-    if (!this.globalVariablesService || !this.globalVariablesService.field) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.field) {
       return 0;
     }
 
@@ -408,7 +409,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         if (row === sourceRow && col === sourceCol) {
           continue;
         }
-        const targetCell = this.globalVariablesService.field[row][col];
+        const targetCell = this.chessBoardStateService.field[row][col];
         if (ChessRulesService.validateMove(row, col, targetCell, sourceRow, sourceCol).isValid) {
           legalTargetCount += 1;
         }
@@ -502,7 +503,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getStatusTitle(): string {
-    const boardHelper = this.globalVariablesService.boardHelper;
+    const boardHelper = this.chessBoardStateService.boardHelper;
     if (!boardHelper) {
       return '';
     }
@@ -519,7 +520,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (this.pendingDrawOfferBy !== null) {
       return 'ambient-math--draw-pending';
     }
-    return this.globalVariablesService.boardHelper.colorTurn === ChessColorsEnum.White
+    return this.chessBoardStateService.boardHelper.colorTurn === ChessColorsEnum.White
       ? 'ambient-math--white-turn'
       : 'ambient-math--black-turn';
   }
@@ -533,10 +534,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   promotePiece(toPiece: ChessPiecesEnum): void {
-    if (this.globalVariablesService.boardHelper.canPromote !== null) {
-      const targetCol = Number(this.globalVariablesService.boardHelper.canPromote);
-      const whitePromotionSquare = this.globalVariablesService.field[ChessConstants.MIN_INDEX][targetCol];
-      const blackPromotionSquare = this.globalVariablesService.field[ChessConstants.MAX_INDEX][targetCol];
+    if (this.chessBoardStateService.boardHelper.canPromote !== null) {
+      const targetCol = Number(this.chessBoardStateService.boardHelper.canPromote);
+      const whitePromotionSquare = this.chessBoardStateService.field[ChessConstants.MIN_INDEX][targetCol];
+      const blackPromotionSquare = this.chessBoardStateService.field[ChessConstants.MAX_INDEX][targetCol];
       let targetSquare = null;
       if (whitePromotionSquare && whitePromotionSquare[0] && whitePromotionSquare[0].piece === ChessPiecesEnum.Pawn) {
         targetSquare = whitePromotionSquare;
@@ -545,33 +546,33 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       }
       if (targetSquare && targetSquare[0]) {
         targetSquare[0].piece = toPiece;
-        const historyEntries = this.globalVariablesService.boardHelper.history;
+        const historyEntries = this.chessBoardStateService.boardHelper.history;
         const historyLength = Object.keys(historyEntries).length;
         if (historyLength > 0 && historyEntries[`${historyLength}`]) {
           historyEntries[`${historyLength}`] =
-            historyEntries[`${historyLength}`] + '=' + GlobalVariablesService.translatePieceNotation(toPiece);
+            historyEntries[`${historyLength}`] + '=' + ChessBoardStateService.translatePieceNotation(toPiece);
         }
-        this.globalVariablesService.boardHelper.canPromote = null;
+        this.chessBoardStateService.boardHelper.canPromote = null;
       }
     }
   }
 
   showPossibleMoves(ofColor: ChessColorsEnum): void {
     // Clear
-    this.globalVariablesService.boardHelper.possibles = {};
-    this.globalVariablesService.boardHelper.hits = {};
-    this.globalVariablesService.boardHelper.checks = {};
-    this.globalVariablesService.boardHelper.arrows = {};
+    this.chessBoardStateService.boardHelper.possibles = {};
+    this.chessBoardStateService.boardHelper.hits = {};
+    this.chessBoardStateService.boardHelper.checks = {};
+    this.chessBoardStateService.boardHelper.arrows = {};
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
     if (ofColor) {
-      this.globalVariablesService.field.forEach((row, rowIdx) => {
+      this.chessBoardStateService.field.forEach((row, rowIdx) => {
         row.forEach((cell, cellIdx) => {
           // All pieces of the color
           if (cell && cell[0] && cell[0].color === ofColor) {
             for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
               for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-                const data = this.globalVariablesService.field[targetRow][targetCol];
+                const data = this.chessBoardStateService.field[targetRow][targetCol];
                 ChessRulesService.canStepThere(targetRow, targetCol, data, rowIdx, cellIdx);
               }
             }
@@ -586,34 +587,34 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   offerDraw(): void {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return;
     }
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       return;
     }
     if (!this.canOfferDraw()) {
       return;
     }
-    this.pendingDrawOfferBy = this.getOpponentColor(this.globalVariablesService.boardHelper.colorTurn);
+    this.pendingDrawOfferBy = this.getOpponentColor(this.chessBoardStateService.boardHelper.colorTurn);
     this.randomizeAmbientStyle();
   }
 
   canOfferDraw(): boolean {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    return !this.globalVariablesService.boardHelper.gameOver && this.pendingDrawOfferBy === null;
+    return !this.chessBoardStateService.boardHelper.gameOver && this.pendingDrawOfferBy === null;
   }
 
   canRespondToDrawOffer(): boolean {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    if (this.globalVariablesService.boardHelper.gameOver || this.pendingDrawOfferBy === null) {
+    if (this.chessBoardStateService.boardHelper.gameOver || this.pendingDrawOfferBy === null) {
       return false;
     }
-    return this.pendingDrawOfferBy !== this.globalVariablesService.boardHelper.colorTurn;
+    return this.pendingDrawOfferBy !== this.chessBoardStateService.boardHelper.colorTurn;
   }
 
   acceptDrawOffer(): void {
@@ -645,7 +646,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   startOrPauseClock(): void {
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       return;
     }
     if (this.clockRunning) {
@@ -681,10 +682,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   isClockActive(color: ChessColorsEnum): boolean {
-    if (!this.clockRunning || !this.clockStarted || this.globalVariablesService.boardHelper.gameOver) {
+    if (!this.clockRunning || !this.clockStarted || this.chessBoardStateService.boardHelper.gameOver) {
       return false;
     }
-    return this.globalVariablesService.boardHelper.colorTurn === color;
+    return this.chessBoardStateService.boardHelper.colorTurn === color;
   }
 
   isClockLow(color: ChessColorsEnum): boolean {
@@ -693,10 +694,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   canClaimDraw(): boolean {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       return false;
     }
     this.ensureRepetitionTrackingState();
@@ -717,10 +718,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   canResign(color: ChessColorsEnum): boolean {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       return false;
     }
     return color === ChessColorsEnum.White || color === ChessColorsEnum.Black;
@@ -747,7 +748,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getVisibleHistory(): string[] {
-    const history = this.globalVariablesService.history || [];
+    const history = this.chessBoardStateService.history || [];
     if (this.mockHistoryCursor === null) {
       return history;
     }
@@ -1014,7 +1015,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const debugKey = `${historyKey}::${this.activeOpening ? this.activeOpening.name : 'none'}`;
     if (this.activeOpening && debugKey !== this.activeOpeningHistoryKey) {
       this.activeOpeningHistoryKey = debugKey;
-      this.globalVariablesService.boardHelper.debugText = this.formatOpeningDebugText(
+      this.chessBoardStateService.boardHelper.debugText = this.formatOpeningDebugText(
         this.activeOpening,
         bestMatchBaseDepth,
         historySteps.length,
@@ -1114,7 +1115,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getMockSuggestedMoves(): string[] {
-    const turn = this.globalVariablesService.boardHelper.colorTurn;
+    const turn = this.chessBoardStateService.boardHelper.colorTurn;
     if (turn === ChessColorsEnum.White) {
       return ['Qh5+', 'Nxe5', 'd4'];
     }
@@ -1137,23 +1138,23 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   previewSuggestedMoveArrows(move: string): void {
-    if (!move || !this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+    if (!move || !this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
       return;
     }
 
     this.clearSuggestedMoveArrows();
-    this.suggestedMoveArrowSnapshot = { ...this.globalVariablesService.boardHelper.arrows };
+    this.suggestedMoveArrowSnapshot = { ...this.chessBoardStateService.boardHelper.arrows };
 
     const parsedMove = this.parseSuggestedMove(move);
     if (!parsedMove) {
       return;
     }
 
-    const turnColor = this.globalVariablesService.boardHelper.colorTurn;
-    const targetCell = this.globalVariablesService.field[parsedMove.targetRow][parsedMove.targetCol];
+    const turnColor = this.chessBoardStateService.boardHelper.colorTurn;
+    const targetCell = this.chessBoardStateService.field[parsedMove.targetRow][parsedMove.targetCol];
     for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
       for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const sourceCell = this.globalVariablesService.field[srcRow][srcCol];
+        const sourceCell = this.chessBoardStateService.field[srcRow][srcCol];
         if (!(sourceCell && sourceCell[0])) {
           continue;
         }
@@ -1179,16 +1180,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
           'yellow',
           0.45
         );
-        GlobalVariablesService.createArrowFromVisualization(suggestionArrow);
+        ChessBoardStateService.createArrowFromVisualization(suggestionArrow);
       }
     }
   }
 
   clearSuggestedMoveArrows(): void {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || this.suggestedMoveArrowSnapshot === null) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || this.suggestedMoveArrowSnapshot === null) {
       return;
     }
-    this.globalVariablesService.boardHelper.arrows = { ...this.suggestedMoveArrowSnapshot };
+    this.chessBoardStateService.boardHelper.arrows = { ...this.suggestedMoveArrowSnapshot };
     this.suggestedMoveArrowSnapshot = null;
   }
 
@@ -1206,11 +1207,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showForkIdeasMock(): void {
-    this.globalVariablesService.boardHelper.debugText = 'Mock: Fork ideas highlighted (coming soon).';
+    this.chessBoardStateService.boardHelper.debugText = 'Mock: Fork ideas highlighted (coming soon).';
   }
 
   showPinIdeasMock(): void {
-    this.globalVariablesService.boardHelper.debugText = 'Mock: Pin opportunities highlighted (coming soon).';
+    this.chessBoardStateService.boardHelper.debugText = 'Mock: Pin opportunities highlighted (coming soon).';
   }
 
   exportFenMock(): void {
@@ -1218,7 +1219,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private ensureCctRecommendations(): void {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
       this.cctRecommendationsCache = {
         [CctCategoryEnum.Captures]: [],
         [CctCategoryEnum.Checks]: [],
@@ -1228,8 +1229,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const board = this.cloneBoard(this.globalVariablesService.field);
-    const forColor = this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
+    const board = this.cloneBoard(this.chessBoardStateService.field);
+    const forColor = this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
     const positionKey = this.getPositionKey(board, forColor);
     if (positionKey === this.cctRecommendationsCacheKey) {
       return;
@@ -1498,12 +1499,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.resignConfirmColor = null;
     this.stopClock();
     this.pendingDrawOfferBy = null;
-    this.globalVariablesService.boardHelper.gameOver = true;
-    this.globalVariablesService.boardHelper.checkmateColor = null;
+    this.chessBoardStateService.boardHelper.gameOver = true;
+    this.chessBoardStateService.boardHelper.checkmateColor = null;
 
     const loserName = color === ChessColorsEnum.White ? 'White' : 'Black';
     const winnerResult = color === ChessColorsEnum.White ? '0-1' : '1-0';
-    this.globalVariablesService.boardHelper.debugText = `${loserName} resigns.`;
+    this.chessBoardStateService.boardHelper.debugText = `${loserName} resigns.`;
     this.appendGameResultToLastMove(winnerResult, `${loserName} resigns`);
   }
 
@@ -1571,7 +1572,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const historyLength = this.globalVariablesService.history.length;
+    const historyLength = this.chessBoardStateService.history.length;
     const previewKey = `${srcRow}${srcCol}-${targetRow}${targetCol}-${historyLength}`;
     if (this.lastMatePreviewKey === previewKey) {
       return;
@@ -1580,11 +1581,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
 
-    const board = this.cloneBoard(this.globalVariablesService.field);
+    const board = this.cloneBoard(this.chessBoardStateService.field);
     const sourceCell = board[srcRow][srcCol];
     const forColor = sourceCell && sourceCell[0]
       ? sourceCell[0].color
-      : this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
+      : this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
     const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
 
@@ -1605,10 +1606,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showThreats(ofEnemy = false): void {
-    this.globalVariablesService.boardHelper.arrows = {};
+    this.chessBoardStateService.boardHelper.arrows = {};
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
     if (ofColor) {
-      this.globalVariablesService.field.forEach((row, rowIdx) => {
+      this.chessBoardStateService.field.forEach((row, rowIdx) => {
         row.forEach((cell, cellIdx) => {
           // All pieces of the color
           if (cell && cell[0] && cell[0].color === ofColor) {
@@ -1625,7 +1626,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
               }
               const posFrom = new ChessPositionDto(8 - rowIdx, cellIdx + 1);
               const posTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-              const threatenedCell = this.globalVariablesService.field[threat.pos.row][threat.pos.col];
+              const threatenedCell = this.chessBoardStateService.field[threat.pos.row][threat.pos.col];
               if (threatenedCell && threatenedCell[0]) {
                 const protectors = this.getProtectors(
                   threatenedCell,
@@ -1638,18 +1639,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
                 if (threatenedCell[0].piece === ChessPiecesEnum.King) {
                   threatColor = 'red';
                 }
-                GlobalVariablesService.createArrowFromVisualization(
+                ChessBoardStateService.createArrowFromVisualization(
                   this.createVisualizationArrow(posFrom, posTo, threatColor, scaryThreat)
                 );
                 protectors.forEach(protector => {
                   const protectionFrom = new ChessPositionDto(8 - protector.row, protector.col + 1);
                   const protectionTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-                  GlobalVariablesService.createArrowFromVisualization(
+                  ChessBoardStateService.createArrowFromVisualization(
                     this.createVisualizationArrow(protectionFrom, protectionTo, 'gold', 0.25)
                   );
                 });
               } else {
-                GlobalVariablesService.createArrowFromVisualization(
+                ChessBoardStateService.createArrowFromVisualization(
                   this.createVisualizationArrow(posFrom, posTo, 'cyan', scaryThreat)
                 );
               }
@@ -1665,13 +1666,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     rowIdx: number,
     cellIdx: number,
     ofColor: ChessColorsEnum,
-    enemyColor: ChessColorsEnum
+    _enemyColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
     const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
     for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
       for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
-          const targetCell = this.globalVariablesService.field[targetRow][targetCol];
+          const targetCell = this.chessBoardStateService.field[targetRow][targetCol];
           const currentPiece = { color: ofColor, piece: cell[0].piece } as ChessPieceDto;
           const canStepThere = ChessRulesService.canStepThere(
             targetRow,
@@ -1695,13 +1696,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     rowIdx: number,
     cellIdx: number,
     ofColor: ChessColorsEnum,
-    enemyColor: ChessColorsEnum
+    _enemyColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
     const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
     for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
       for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
-          const targetCell = this.globalVariablesService.field[targetRow][targetCol];
+          const targetCell = this.chessBoardStateService.field[targetRow][targetCol];
           const currentPiece = { color: ofColor, piece: cell[0].piece } as ChessPieceDto;
           const canStepThere = ChessRulesService.canStepThere(
             rowIdx, cellIdx,
@@ -1718,10 +1719,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showProtected(ofEnemy = false): void {
-    this.globalVariablesService.boardHelper.arrows = {};
+    this.chessBoardStateService.boardHelper.arrows = {};
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
     if (ofColor) {
-      this.globalVariablesService.field.forEach((row, rowAIdx) => {
+      this.chessBoardStateService.field.forEach((row, rowAIdx) => {
         row.forEach((cellA, cellAIdx) => {
           // All pieces of the color
           if (cellA && cellA[0] && cellA[0].color === ofColor) {
@@ -1729,7 +1730,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
             protectors.forEach(cellB => {
               const posFrom = new ChessPositionDto(8 - cellB.row, cellB.col + 1);
               const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
-              GlobalVariablesService.createArrowFromVisualization(
+              ChessBoardStateService.createArrowFromVisualization(
                 this.createVisualizationArrow(posFrom, posTo, 'gold', 0.25)
               );
             });
@@ -1747,8 +1748,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     enemyColor: ChessColorsEnum
   ): ChessPositionDto[] {
     const protectors = [] as ChessPositionDto[];
-    const currentPiece = { color: ofColor, piece: cellA[0].piece } as ChessPieceDto;
-    this.globalVariablesService.field.forEach((rowB, rowBIdx) => {
+    this.chessBoardStateService.field.forEach((rowB, rowBIdx) => {
       rowB.forEach((cellB, cellBIdx) => {
         // All pieces of the color
         if (cellB && cellB[0] && cellB[0].color === ofColor) {
@@ -1771,9 +1771,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   showHangingPieces(ofEnemy = false): void {
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
-    this.globalVariablesService.boardHelper.arrows = {};
+    this.chessBoardStateService.boardHelper.arrows = {};
     if (ofColor) {
-      this.globalVariablesService.field.forEach((row, rowAIdx) => {
+      this.chessBoardStateService.field.forEach((row, rowAIdx) => {
         row.forEach((cellA, cellAIdx) => {
           // All pieces of the color
           if (cellA && cellA[0] && cellA[0].color === ofColor) {
@@ -1793,7 +1793,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
                 }
                 const posFrom = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
                 const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
-                GlobalVariablesService.createArrowFromVisualization(
+                ChessBoardStateService.createArrowFromVisualization(
                   this.createVisualizationArrow(posFrom, posTo, 'blue', scaryThreat)
                 );
               });
@@ -1808,17 +1808,17 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     let ofColor: ChessColorsEnum;
     let enemyColor: ChessColorsEnum;
     if (!ofEnemy) {
-      ofColor = this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
+      ofColor = this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
       enemyColor = ofColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     } else {
-      enemyColor = this.globalVariablesService.boardHelper.colorTurn as ChessColorsEnum;
+      enemyColor = this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
       ofColor = enemyColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     }
     return {ofColor, enemyColor};
   }
 
   private hasBoardHighlight(targetRow: number, targetCol: number, type: IBoardHighlight['type']): boolean {
-    return this.globalVariablesService.boardHighlights
+    return this.chessBoardStateService.boardHighlights
       .some(highlight => highlight.type === type && highlight.row === targetRow && highlight.col === targetCol);
   }
 
@@ -1839,18 +1839,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
-    const previousField = GlobalVariablesService.CHESS_FIELD;
-    const previousTurn = this.globalVariablesService.boardHelper.colorTurn;
-    const previousCastle = this.globalVariablesService.boardHelper.justDidCastle;
+    const previousField = ChessBoardStateService.CHESS_FIELD;
+    const previousTurn = this.chessBoardStateService.boardHelper.colorTurn;
+    const previousCastle = this.chessBoardStateService.boardHelper.justDidCastle;
     try {
-      GlobalVariablesService.CHESS_FIELD = board;
-      this.globalVariablesService.boardHelper.colorTurn = turn;
-      this.globalVariablesService.boardHelper.justDidCastle = null;
+      ChessBoardStateService.CHESS_FIELD = board;
+      this.chessBoardStateService.boardHelper.colorTurn = turn;
+      this.chessBoardStateService.boardHelper.justDidCastle = null;
       return callback();
     } finally {
-      GlobalVariablesService.CHESS_FIELD = previousField;
-      this.globalVariablesService.boardHelper.colorTurn = previousTurn;
-      this.globalVariablesService.boardHelper.justDidCastle = previousCastle;
+      ChessBoardStateService.CHESS_FIELD = previousField;
+      this.chessBoardStateService.boardHelper.colorTurn = previousTurn;
+      this.chessBoardStateService.boardHelper.justDidCastle = previousCastle;
     }
   }
 
@@ -1986,7 +1986,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private applyDrawRules(hasLegalMovesForCurrentTurn: boolean, isCurrentTurnInCheck: boolean): void {
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       return;
     }
 
@@ -1999,7 +1999,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    if (this.isInsufficientMaterial(this.globalVariablesService.field)) {
+    if (this.isInsufficientMaterial(this.chessBoardStateService.field)) {
       this.setDrawState(ChessBoardMessageConstants.DRAW_BY_INSUFFICIENT_TEXT, ChessBoardMessageConstants.DRAW_BY_INSUFFICIENT_TITLE);
       return;
     }
@@ -2017,9 +2017,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private setDrawState(message: string, historyReason: string): void {
-    this.globalVariablesService.boardHelper.gameOver = true;
-    this.globalVariablesService.boardHelper.checkmateColor = null;
-    this.globalVariablesService.boardHelper.debugText = message;
+    this.chessBoardStateService.boardHelper.gameOver = true;
+    this.chessBoardStateService.boardHelper.checkmateColor = null;
+    this.chessBoardStateService.boardHelper.debugText = message;
     this.pendingDrawOfferBy = null;
     this.appendGameResultToLastMove('1/2-1/2', historyReason);
   }
@@ -2029,22 +2029,22 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private resetBoardState(): void {
-    this.globalVariablesService.field = this.createInitialField();
-    GlobalVariablesService.CHESS_FIELD = this.globalVariablesService.field;
+    this.chessBoardStateService.field = this.createInitialField();
+    ChessBoardStateService.CHESS_FIELD = this.chessBoardStateService.field;
 
-    this.globalVariablesService.boardHelper.debugText = '';
-    this.globalVariablesService.boardHelper.possibles = {};
-    this.globalVariablesService.boardHelper.hits = {};
-    this.globalVariablesService.boardHelper.checks = {};
-    this.globalVariablesService.boardHelper.arrows = {};
-    this.globalVariablesService.boardHelper.history = {};
-    this.globalVariablesService.boardHelper.colorTurn = ChessColorsEnum.White;
-    this.globalVariablesService.boardHelper.canPromote = null;
-    this.globalVariablesService.boardHelper.justDidEnPassant = null;
-    this.globalVariablesService.boardHelper.justDidCastle = null;
-    this.globalVariablesService.boardHelper.gameOver = false;
-    this.globalVariablesService.boardHelper.checkmateColor = null;
-    GlobalVariablesService.BOARD_HELPER = this.globalVariablesService.boardHelper;
+    this.chessBoardStateService.boardHelper.debugText = '';
+    this.chessBoardStateService.boardHelper.possibles = {};
+    this.chessBoardStateService.boardHelper.hits = {};
+    this.chessBoardStateService.boardHelper.checks = {};
+    this.chessBoardStateService.boardHelper.arrows = {};
+    this.chessBoardStateService.boardHelper.history = {};
+    this.chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    this.chessBoardStateService.boardHelper.canPromote = null;
+    this.chessBoardStateService.boardHelper.justDidEnPassant = null;
+    this.chessBoardStateService.boardHelper.justDidCastle = null;
+    this.chessBoardStateService.boardHelper.gameOver = false;
+    this.chessBoardStateService.boardHelper.checkmateColor = null;
+    ChessBoardStateService.BOARD_HELPER = this.chessBoardStateService.boardHelper;
   }
 
   private resetTransientUiState(): void {
@@ -2142,12 +2142,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private appendGameResultToLastMove(result: '1-0' | '0-1' | '1/2-1/2', reason: string): void {
-    const historyEntries = this.globalVariablesService.boardHelper.history;
+    const historyEntries = this.chessBoardStateService.boardHelper.history;
     const historyLength = Object.keys(historyEntries).length;
     const resultSuffix = `${result} {${reason}}`;
 
     if (historyLength < 1) {
-      GlobalVariablesService.addHistory(resultSuffix);
+      ChessBoardStateService.addHistory(resultSuffix);
       return;
     }
 
@@ -2182,7 +2182,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private tickClock(): void {
-    if (!this.clockRunning || !this.clockStarted || this.globalVariablesService.boardHelper.gameOver) {
+    if (!this.clockRunning || !this.clockStarted || this.chessBoardStateService.boardHelper.gameOver) {
       this.stopClock();
       return;
     }
@@ -2194,7 +2194,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const activeColor = this.globalVariablesService.boardHelper.colorTurn;
+    const activeColor = this.chessBoardStateService.boardHelper.colorTurn;
     if (activeColor === ChessColorsEnum.White) {
       this.whiteClockMs = Math.max(0, this.whiteClockMs - elapsedMs);
       if (this.whiteClockMs === 0) {
@@ -2210,7 +2210,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private addIncrementToColor(color: ChessColorsEnum): void {
-    if (!this.clockStarted || this.incrementMs <= 0 || this.globalVariablesService.boardHelper.gameOver) {
+    if (!this.clockStarted || this.incrementMs <= 0 || this.chessBoardStateService.boardHelper.gameOver) {
       return;
     }
     if (color === ChessColorsEnum.White) {
@@ -2221,19 +2221,19 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleTimeForfeit(loserColor: ChessColorsEnum): void {
-    if (this.globalVariablesService.boardHelper.gameOver) {
+    if (this.chessBoardStateService.boardHelper.gameOver) {
       return;
     }
 
     this.stopClock();
     this.pendingDrawOfferBy = null;
-    this.globalVariablesService.boardHelper.gameOver = true;
-    this.globalVariablesService.boardHelper.checkmateColor = null;
+    this.chessBoardStateService.boardHelper.gameOver = true;
+    this.chessBoardStateService.boardHelper.checkmateColor = null;
 
     const winnerColor = loserColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     const winnerResult = winnerColor === ChessColorsEnum.White ? '1-0' : '0-1';
     const loserName = loserColor === ChessColorsEnum.White ? 'White' : 'Black';
-    this.globalVariablesService.boardHelper.debugText = `${loserName} forfeits on time.`;
+    this.chessBoardStateService.boardHelper.debugText = `${loserName} forfeits on time.`;
     this.appendGameResultToLastMove(winnerResult, `${loserName} forfeits on time`);
   }
 
@@ -2242,7 +2242,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getMaxMoveIndex(): number {
-    return (this.globalVariablesService.history || []).length - 1;
+    return (this.chessBoardStateService.history || []).length - 1;
   }
 
   private getCurrentVisibleMoveIndex(): number {
@@ -2258,7 +2258,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private getCurrentPieceCount(): number {
     let totalPieces = 0;
-    this.globalVariablesService.field.forEach(row => {
+    this.chessBoardStateService.field.forEach(row => {
       row.forEach(cell => {
         if (cell && cell[0]) {
           totalPieces += 1;
@@ -2269,23 +2269,23 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private ensureRepetitionTrackingState(): void {
-    const historyLength = this.globalVariablesService.history.length;
+    const historyLength = this.chessBoardStateService.history.length;
     if (this.trackedHistoryLength === historyLength && Object.keys(this.repetitionCounts).length > 0) {
       return;
     }
 
     this.repetitionCounts = {};
-    this.recordPositionKey(this.getPositionKey(this.globalVariablesService.field, this.globalVariablesService.boardHelper.colorTurn));
+    this.recordPositionKey(this.getPositionKey(this.chessBoardStateService.field, this.chessBoardStateService.boardHelper.colorTurn));
     this.trackedHistoryLength = historyLength;
   }
 
   private recordCurrentPosition(): void {
     const positionKey = this.getPositionKey(
-      this.globalVariablesService.field,
-      this.globalVariablesService.boardHelper.colorTurn
+      this.chessBoardStateService.field,
+      this.chessBoardStateService.boardHelper.colorTurn
     );
     this.recordPositionKey(positionKey);
-    this.trackedHistoryLength = this.globalVariablesService.history.length;
+    this.trackedHistoryLength = this.chessBoardStateService.history.length;
   }
 
   private recordPositionKey(positionKey: string): void {
@@ -2306,22 +2306,22 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getDebugPositionKey(): string {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
       return '';
     }
     return this.getPositionKey(
-      this.globalVariablesService.field,
-      this.globalVariablesService.boardHelper.colorTurn
+      this.chessBoardStateService.field,
+      this.chessBoardStateService.boardHelper.colorTurn
     );
   }
 
   getDebugCastlingRights(): string {
-    if (!this.globalVariablesService || !this.globalVariablesService.boardHelper || !this.globalVariablesService.field) {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
       return '-';
     }
     return ChessRulesService.getCastlingRightsNotation(
-      this.globalVariablesService.field,
-      this.globalVariablesService.boardHelper.history
+      this.chessBoardStateService.field,
+      this.chessBoardStateService.boardHelper.history
     );
   }
 
@@ -2339,11 +2339,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     const castlingRights = ChessRulesService.getCastlingRightsNotation(
       board,
-      this.globalVariablesService.boardHelper ? this.globalVariablesService.boardHelper.history : {}
+      this.chessBoardStateService.boardHelper ? this.chessBoardStateService.boardHelper.history : {}
     );
     const enPassantRights = ChessRulesService.getEnPassantRightsNotation(
       board,
-      this.globalVariablesService.boardHelper ? this.globalVariablesService.boardHelper.history : {},
+      this.chessBoardStateService.boardHelper ? this.chessBoardStateService.boardHelper.history : {},
       turn
     );
     return `${turn}|${castlingRights}|${enPassantRights}|${squares.join('|')}`;
@@ -2358,7 +2358,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private isNMoveRule(halfMoveCount: number): boolean {
-    const history = this.globalVariablesService.history;
+    const history = this.chessBoardStateService.history;
     if (history.length < halfMoveCount) {
       return false;
     }
@@ -2444,3 +2444,4 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return false;
   }
 }
+

@@ -1,5 +1,5 @@
 import { ChessRulesService } from './chess-rules.service';
-import { GlobalVariablesService } from './global-variables.service';
+import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
@@ -11,10 +11,10 @@ describe('ChessRulesService instantiation', () => {
 });
 
 describe('ChessRulesService pawn captures', () => {
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
 
   beforeEach(() => {
-    globals = new GlobalVariablesService();
+    globals = new ChessBoardStateService();
     globals.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
@@ -45,7 +45,7 @@ describe('ChessRulesService pawn captures', () => {
 });
 
 describe('ChessRulesService castling', () => {
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
 
   const clearBoard = (): void => {
     for (let row = 0; row <= 7; row++) {
@@ -56,7 +56,7 @@ describe('ChessRulesService castling', () => {
   };
 
   beforeEach(() => {
-    globals = new GlobalVariablesService();
+    globals = new ChessBoardStateService();
     globals.boardHelper.colorTurn = ChessColorsEnum.White;
     globals.boardHelper.history = {};
     globals.boardHelper.justDidCastle = null;
@@ -191,7 +191,7 @@ describe('ChessRulesService castling', () => {
 });
 
 describe('ChessRulesService king safety', () => {
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
 
   const clearBoard = (): void => {
     for (let row = 0; row <= 7; row++) {
@@ -202,7 +202,7 @@ describe('ChessRulesService king safety', () => {
   };
 
   beforeEach(() => {
-    globals = new GlobalVariablesService();
+    globals = new ChessBoardStateService();
     globals.boardHelper.colorTurn = ChessColorsEnum.White;
     clearBoard();
     globals.field[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
@@ -220,10 +220,10 @@ describe('ChessRulesService king safety', () => {
 });
 
 describe('ChessRulesService branch coverage helpers', () => {
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
 
   beforeEach(() => {
-    globals = new GlobalVariablesService();
+    globals = new ChessBoardStateService();
   });
 
   it('returns invalid validation when source square has no piece', () => {
@@ -292,14 +292,14 @@ describe('ChessRulesService branch coverage helpers', () => {
   });
 
   it('handles withBoardContext when BOARD_HELPER is temporarily null', () => {
-    const previousHelper = GlobalVariablesService.BOARD_HELPER;
+    const previousHelper = ChessBoardStateService.BOARD_HELPER;
     try {
-      GlobalVariablesService.BOARD_HELPER = null as any;
+      ChessBoardStateService.BOARD_HELPER = null as any;
       const board = globals.field;
       const result = (ChessRulesService as any).withBoardContext(board, ChessColorsEnum.White, () => 'ok');
       expect(result).toBe('ok');
     } finally {
-      GlobalVariablesService.BOARD_HELPER = previousHelper;
+      ChessBoardStateService.BOARD_HELPER = previousHelper;
     }
   });
 });

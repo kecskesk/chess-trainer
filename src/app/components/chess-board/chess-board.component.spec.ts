@@ -1,5 +1,5 @@
 import { ChessBoardComponent } from './chess-board.component';
-import { GlobalVariablesService } from '../../services/global-variables.service';
+import { ChessBoardStateService } from '../../services/chess-board-state.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
@@ -12,7 +12,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 describe('ChessBoardComponent move sequence integration', () => {
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
   let component: ChessBoardComponent;
 
   const createDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
@@ -67,7 +67,7 @@ describe('ChessBoardComponent move sequence integration', () => {
   };
 
   beforeEach(() => {
-    globals = new GlobalVariablesService();
+    globals = new ChessBoardStateService();
     component = new ChessBoardComponent(globals, {
       get: () => of([])
     } as any);
@@ -1291,7 +1291,7 @@ describe('ChessBoardComponent move sequence integration', () => {
 describe('ChessBoardComponent template drag-enter integration', () => {
   let fixture: ComponentFixture<ChessBoardComponent>;
   let component: ChessBoardComponent;
-  let globals: GlobalVariablesService;
+  let globals: ChessBoardStateService;
 
   const clearBoard = (): void => {
     for (let row = 0; row <= 7; row++) {
@@ -1305,13 +1305,13 @@ describe('ChessBoardComponent template drag-enter integration', () => {
     await TestBed.configureTestingModule({
       declarations: [ChessBoardComponent],
       imports: [DragDropModule],
-      providers: [GlobalVariablesService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [ChessBoardStateService, provideHttpClient(), provideHttpClientTesting()],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChessBoardComponent);
     component = fixture.componentInstance;
-    globals = TestBed.inject(GlobalVariablesService);
+    globals = TestBed.inject(ChessBoardStateService);
     globals.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 

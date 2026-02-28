@@ -10,7 +10,7 @@ import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.int
 import { ChessConstants, VisualizationConstants } from '../constants/chess.constants';
 
 @Injectable()
-export class GlobalVariablesService {
+export class ChessBoardStateService {
   public static BOARD_HELPER: ChessBoardHelperDto = null;
   public static CHESS_FIELD: ChessPieceDto[][][] = [];
   boardHelper = new ChessBoardHelperDto(
@@ -74,8 +74,8 @@ export class GlobalVariablesService {
   ];
 
   constructor() {
-    GlobalVariablesService.CHESS_FIELD = this.field;
-    GlobalVariablesService.BOARD_HELPER = this.boardHelper;
+    ChessBoardStateService.CHESS_FIELD = this.field;
+    ChessBoardStateService.BOARD_HELPER = this.boardHelper;
   }
 
   get possibles(): ChessPositionDto[] {
@@ -135,13 +135,13 @@ export class GlobalVariablesService {
     }
     switch (highlight.type) {
       case 'possible':
-        GlobalVariablesService.addPossible({ row: highlight.row, col: highlight.col });
+        ChessBoardStateService.addPossible({ row: highlight.row, col: highlight.col });
         break;
       case 'capture':
-        GlobalVariablesService.addHit({ row: highlight.row, col: highlight.col });
+        ChessBoardStateService.addHit({ row: highlight.row, col: highlight.col });
         break;
       case 'check':
-        GlobalVariablesService.addCheck({ row: highlight.row, col: highlight.col });
+        ChessBoardStateService.addCheck({ row: highlight.row, col: highlight.col });
         break;
       default:
         break;
@@ -162,7 +162,7 @@ export class GlobalVariablesService {
   }
 
   private static ensureBoardHelperInitialized(): boolean {
-    if (!!this.BOARD_HELPER) {
+    if (this.BOARD_HELPER) {
       return true;
     }
     console.error('BOARD_HELPER is not initialized');
@@ -209,11 +209,11 @@ export class GlobalVariablesService {
       arTop,
       arLeft,
       arRot,
-      GlobalVariablesService.normalizeVisualizationArrowColor(visualizationArrow.color),
+      ChessBoardStateService.normalizeVisualizationArrowColor(visualizationArrow.color),
       arLength,
       arThickness
     );
-    GlobalVariablesService.addArrow(newArrow);
+    ChessBoardStateService.addArrow(newArrow);
   }
 
   private static normalizeVisualizationArrowColor(color: string): IVisualizationArrow['color'] {
@@ -231,11 +231,9 @@ export class GlobalVariablesService {
 
   static translateNotation(targetRow: number, targetCol: number, srcRow: number, srcCol: number,
                     piece: ChessPiecesEnum, hit: boolean, check: boolean, match: boolean, ep: boolean, castleData: string): string {
-    const pieceNotation = GlobalVariablesService.translatePieceNotation(piece);
-    // A = 0 - H = 7
-    const letterChar = GlobalVariablesService.toFileChar(targetCol);
-    const letterCharSrc = GlobalVariablesService.toFileChar(srcCol);
-    // Flip table count bottom-up
+    const pieceNotation = ChessBoardStateService.translatePieceNotation(piece);
+    const letterChar = ChessBoardStateService.toFileChar(targetCol);
+    const letterCharSrc = ChessBoardStateService.toFileChar(srcCol);
     const numberChar = (8 - targetRow);
     const numberCharSrc = (8 - srcRow);
     if (castleData) {
@@ -258,8 +256,7 @@ export class GlobalVariablesService {
   }
 
   static pieceIsInWay(targetRow: number, targetCol: number, srcRow: number, srcCol: number): boolean {
-    // Validate board is initialized
-    if (!GlobalVariablesService.CHESS_FIELD || GlobalVariablesService.CHESS_FIELD.length === 0) {
+    if (!ChessBoardStateService.CHESS_FIELD || ChessBoardStateService.CHESS_FIELD.length === 0) {
       console.error('CHESS_FIELD is not initialized');
       return false;
     }
@@ -267,7 +264,6 @@ export class GlobalVariablesService {
     const stepRow = targetRow - srcRow;
     const stepCol = targetCol - srcCol;
 
-    // If no movement, no piece can be in the way
     if (stepRow === 0 && stepCol === 0) {
       return false;
     }
@@ -284,7 +280,6 @@ export class GlobalVariablesService {
 
     let iterationCount = 0;
     while (nextStepRow !== targetRow || nextStepCol !== targetCol) {
-      // Validate indices are within bounds
       if (
         nextStepRow < ChessConstants.MIN_INDEX || nextStepRow > ChessConstants.MAX_INDEX ||
         nextStepCol < ChessConstants.MIN_INDEX || nextStepCol > ChessConstants.MAX_INDEX
@@ -292,7 +287,7 @@ export class GlobalVariablesService {
         return false;
       }
 
-      const cell = GlobalVariablesService.CHESS_FIELD[nextStepRow] && GlobalVariablesService.CHESS_FIELD[nextStepRow][nextStepCol];
+      const cell = ChessBoardStateService.CHESS_FIELD[nextStepRow] && ChessBoardStateService.CHESS_FIELD[nextStepRow][nextStepCol];
       if (!cell) {
         return false;
       }
@@ -309,7 +304,6 @@ export class GlobalVariablesService {
       }
 
       iterationCount++;
-      // Safety check to prevent infinite loops
       if (iterationCount > VisualizationConstants.MAX_PATH_ITERATIONS) {
         console.warn('Infinite loop detected in pieceIsInWay');
         return false;
@@ -322,5 +316,3 @@ export class GlobalVariablesService {
     return String.fromCharCode('a'.charCodeAt(0) + col);
   }
 }
-
-export { GlobalVariablesService as ChessBoardStateService };

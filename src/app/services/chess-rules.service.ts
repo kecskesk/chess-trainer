@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { GlobalVariablesService } from './global-variables.service';
+import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessMoveResultDto } from '../model/chess-move-result.dto';
 import { ChessMoveParamsDto } from '../model/chess-move-params.dto';
 import { ChessPieceDto } from '../model/chess-piece.dto';
@@ -25,11 +25,11 @@ export class ChessRulesService {
     virtualSourcePiece: ChessPieceDto = null
   ): boolean {
       let sourceCell = null;
-      if (!GlobalVariablesService.CHESS_FIELD || !GlobalVariablesService.BOARD_HELPER) {
+      if (!ChessBoardStateService.CHESS_FIELD || !ChessBoardStateService.BOARD_HELPER) {
         return false;
       }
-      const moveHistory = GlobalVariablesService.BOARD_HELPER.history;
-      sourceCell = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
+      const moveHistory = ChessBoardStateService.BOARD_HELPER.history;
+      sourceCell = ChessBoardStateService.CHESS_FIELD[srcRow][srcCol];
       if (virtualSourcePiece) {
         sourceCell = [virtualSourcePiece];
       }
@@ -49,7 +49,7 @@ export class ChessRulesService {
         moveValidationResult.isValid = true;
         moveValidationResult.isEnemyPiece = true;
       }
-      if (sourceColor !== GlobalVariablesService.BOARD_HELPER.colorTurn && !virtualSourcePiece) {
+      if (sourceColor !== ChessBoardStateService.BOARD_HELPER.colorTurn && !virtualSourcePiece) {
         moveValidationResult.isValid = false;
         moveValidationResult.errorMessage = 'Not this color\'s turn';
         return false;
@@ -70,7 +70,7 @@ export class ChessRulesService {
         cmResult.canDrop = false;
       }
 
-      const enemyKingPos = ChessRulesService.findKingPosition(GlobalVariablesService.CHESS_FIELD, enemyColor);
+      const enemyKingPos = ChessRulesService.findKingPosition(ChessBoardStateService.CHESS_FIELD, enemyColor);
       if (!virtualSourcePiece) {
         if (!enemyKingPos) {
           return cmResult.canDrop;
@@ -118,17 +118,17 @@ export class ChessRulesService {
   }
 
   private static ensureHighlightCollectionsInitialized(): void {
-    if (!GlobalVariablesService.BOARD_HELPER) {
+    if (!ChessBoardStateService.BOARD_HELPER) {
       return;
     }
-    if (!GlobalVariablesService.BOARD_HELPER.possibles) {
-      GlobalVariablesService.BOARD_HELPER.possibles = {};
+    if (!ChessBoardStateService.BOARD_HELPER.possibles) {
+      ChessBoardStateService.BOARD_HELPER.possibles = {};
     }
-    if (!GlobalVariablesService.BOARD_HELPER.hits) {
-      GlobalVariablesService.BOARD_HELPER.hits = {};
+    if (!ChessBoardStateService.BOARD_HELPER.hits) {
+      ChessBoardStateService.BOARD_HELPER.hits = {};
     }
-    if (!GlobalVariablesService.BOARD_HELPER.checks) {
-      GlobalVariablesService.BOARD_HELPER.checks = {};
+    if (!ChessBoardStateService.BOARD_HELPER.checks) {
+      ChessBoardStateService.BOARD_HELPER.checks = {};
     }
   }
 
@@ -141,15 +141,15 @@ export class ChessRulesService {
     canHit: boolean,
     isCheck: boolean
   ): void {
-    if (!GlobalVariablesService.BOARD_HELPER || !canDrop) {
+    if (!ChessBoardStateService.BOARD_HELPER || !canDrop) {
       return;
     }
 
     ChessRulesService.ensureHighlightCollectionsInitialized();
-    GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'possible' });
+    ChessBoardStateService.addHighlight({ row: targetRow, col: targetCol, type: 'possible' });
 
     if (canHit) {
-      GlobalVariablesService.addHighlight({ row: targetRow, col: targetCol, type: 'capture' });
+      ChessBoardStateService.addHighlight({ row: targetRow, col: targetCol, type: 'capture' });
     }
 
     if (!isCheck) {
@@ -157,7 +157,7 @@ export class ChessRulesService {
     }
 
     const checkHighlight: IBoardHighlight = { row: targetRow, col: targetCol, type: 'check' };
-    GlobalVariablesService.addHighlight(checkHighlight);
+    ChessBoardStateService.addHighlight(checkHighlight);
 
     const checkArrow: IVisualizationArrow = {
       fromRow: 8 - srcRow,
@@ -167,7 +167,7 @@ export class ChessRulesService {
       color: 'red',
       intensity: 0.25
     };
-    GlobalVariablesService.createArrowFromVisualization(checkArrow);
+    ChessBoardStateService.createArrowFromVisualization(checkArrow);
   }
 
   public static validateMove(
@@ -179,8 +179,8 @@ export class ChessRulesService {
     justLookingWithPiece: ChessPieceDto = null
   ): IMoveValidationResult {
     const sourceData = justLookingWithPiece ||
-      (GlobalVariablesService.CHESS_FIELD && GlobalVariablesService.CHESS_FIELD[srcRow] && GlobalVariablesService.CHESS_FIELD[srcRow][srcCol]
-        ? GlobalVariablesService.CHESS_FIELD[srcRow][srcCol][0]
+      (ChessBoardStateService.CHESS_FIELD && ChessBoardStateService.CHESS_FIELD[srcRow] && ChessBoardStateService.CHESS_FIELD[srcRow][srcCol]
+        ? ChessBoardStateService.CHESS_FIELD[srcRow][srcCol][0]
         : null);
     const isEmptyTarget = !targetData || targetData.length < 1;
     const isEnemyPiece = !!(sourceData && targetData && targetData[0] && targetData[0].color !== sourceData.color);
@@ -223,7 +223,7 @@ export class ChessRulesService {
       cmResult.canHit = false;
     }
     // Pawn magic 2 (can hit 1 across)
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if (cmResult.canHit && colDelta === 1 && rowDelta === targetDirectionStep && !piecesInWay) {
       cmResult.canDrop = true;
     }
@@ -232,7 +232,7 @@ export class ChessRulesService {
     const lastMoveNotation = cmParams.moveHistory[historyEntryCount];
     const epTargetRow = cmParams.sourceColor === ChessColorsEnum.White ? 3 : 4;
     const epSourceRow = cmParams.sourceColor === ChessColorsEnum.White ? 1 : 6;
-    const expectedEnPassantTriggerNotation = GlobalVariablesService.translateNotation(
+    const expectedEnPassantTriggerNotation = ChessBoardStateService.translateNotation(
       epTargetRow, cmParams.targetCol, epSourceRow, cmParams.targetCol, ChessPiecesEnum.Pawn, false, false, false, false, null);
     if (colDelta === 1 && rowDelta === targetDirectionStep &&
       cmParams.targetRow === enemyFirstStep && lastMoveNotation === expectedEnPassantTriggerNotation) {
@@ -271,7 +271,7 @@ export class ChessRulesService {
     }
 
     const rookSourceCol = isKingSideCastle ? 7 : 0;
-    const rookCell = GlobalVariablesService.CHESS_FIELD[castleSourceRow][rookSourceCol];
+    const rookCell = ChessBoardStateService.CHESS_FIELD[castleSourceRow][rookSourceCol];
     const rookInPlace = rookCell.length === 1 &&
       rookCell[0] && rookCell[0].color === cmParams.sourceColor && rookCell[0].piece === ChessPiecesEnum.Rook;
     if (!rookInPlace) {
@@ -300,7 +300,7 @@ export class ChessRulesService {
 
     const kingPathCols = isKingSideCastle ? [5, 6] : [3, 2];
     const rookPathCols = isKingSideCastle ? [5, 6] : [1, 2, 3];
-    const hasPieceInWay = rookPathCols.some(col => GlobalVariablesService.CHESS_FIELD[castleSourceRow][col].length > 0);
+    const hasPieceInWay = rookPathCols.some(col => ChessBoardStateService.CHESS_FIELD[castleSourceRow][col].length > 0);
     if (hasPieceInWay) {
       return;
     }
@@ -315,7 +315,7 @@ export class ChessRulesService {
     }
 
     cmResult.canDrop = true;
-    GlobalVariablesService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
+    ChessBoardStateService.BOARD_HELPER.justDidCastle = { row: cmParams.targetRow, col: cmParams.targetCol };
   }
 
   static getCastlingRightsNotation(
@@ -551,7 +551,7 @@ export class ChessRulesService {
     const targetColor = ChessRulesService.getEnemyColor(attackerColor);
     for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
       for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const attackerCell = GlobalVariablesService.CHESS_FIELD[srcRow][srcCol];
+        const attackerCell = ChessBoardStateService.CHESS_FIELD[srcRow][srcCol];
         if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
           continue;
         }
@@ -580,7 +580,7 @@ export class ChessRulesService {
     sourceColor: ChessColorsEnum
   ): boolean {
     const simulatedBoard = ChessRulesService.simulateMoveOnBoard(
-      GlobalVariablesService.CHESS_FIELD,
+      ChessBoardStateService.CHESS_FIELD,
       srcRow,
       srcCol,
       targetRow,
@@ -680,21 +680,21 @@ export class ChessRulesService {
   }
 
   private static withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
-    const previousField = GlobalVariablesService.CHESS_FIELD;
-    const previousTurn = GlobalVariablesService.BOARD_HELPER ? GlobalVariablesService.BOARD_HELPER.colorTurn : null;
-    const previousCastle = GlobalVariablesService.BOARD_HELPER ? GlobalVariablesService.BOARD_HELPER.justDidCastle : null;
+    const previousField = ChessBoardStateService.CHESS_FIELD;
+    const previousTurn = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.colorTurn : null;
+    const previousCastle = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.justDidCastle : null;
     try {
-      GlobalVariablesService.CHESS_FIELD = board;
-      if (GlobalVariablesService.BOARD_HELPER) {
-        GlobalVariablesService.BOARD_HELPER.colorTurn = turn;
-        GlobalVariablesService.BOARD_HELPER.justDidCastle = null;
+      ChessBoardStateService.CHESS_FIELD = board;
+      if (ChessBoardStateService.BOARD_HELPER) {
+        ChessBoardStateService.BOARD_HELPER.colorTurn = turn;
+        ChessBoardStateService.BOARD_HELPER.justDidCastle = null;
       }
       return callback();
     } finally {
-      GlobalVariablesService.CHESS_FIELD = previousField;
-      if (GlobalVariablesService.BOARD_HELPER) {
-        GlobalVariablesService.BOARD_HELPER.colorTurn = previousTurn;
-        GlobalVariablesService.BOARD_HELPER.justDidCastle = previousCastle;
+      ChessBoardStateService.CHESS_FIELD = previousField;
+      if (ChessBoardStateService.BOARD_HELPER) {
+        ChessBoardStateService.BOARD_HELPER.colorTurn = previousTurn;
+        ChessBoardStateService.BOARD_HELPER.justDidCastle = previousCastle;
       }
     }
   }
@@ -703,7 +703,7 @@ export class ChessRulesService {
     // invalid IF NOR: Bishop + rook rules
     const violatesBishopPattern = Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow);
     const violatesRookPattern = cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow;
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if ((violatesBishopPattern && violatesRookPattern) || piecesInWay) {
       cmResult.canDrop = false;
     }
@@ -711,7 +711,7 @@ export class ChessRulesService {
 
   static rookRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF: not Same row AND not same col
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if ((cmParams.targetCol !== cmParams.srcCol && cmParams.targetRow !== cmParams.srcRow) || piecesInWay) {
       cmResult.canDrop = false;
     }
@@ -719,7 +719,7 @@ export class ChessRulesService {
 
   static bishopRules(cmResult: ChessMoveResultDto, cmParams: ChessMoveParamsDto): void {
     // invalid IF: not same side as up-down
-    const piecesInWay = GlobalVariablesService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
+    const piecesInWay = ChessBoardStateService.pieceIsInWay(cmParams.targetRow, cmParams.targetCol, cmParams.srcRow, cmParams.srcCol);
     if ((Math.abs(cmParams.targetCol - cmParams.srcCol) !== Math.abs(cmParams.targetRow - cmParams.srcRow)) || piecesInWay) {
       cmResult.canDrop = false;
     }
