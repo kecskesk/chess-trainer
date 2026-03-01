@@ -1,3 +1,12 @@
+:host {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
 .white-piece {
   -webkit-text-stroke: 1px #1c1f2a;
   text-shadow:
@@ -24,7 +33,40 @@ i.fa {
   line-height: 1;
 }
 
-path {
-  stroke: white;
-  stroke-width: 30px;
+.piece-sprite {
+  display: block;
+  width: 96%;
+  height: 96%;
+  background-repeat: no-repeat;
+}
+
+.piece-sprite--sheet1 {
+  background-image: url('../../../assets/Chess_Pieces_Sprite.svg');
+  background-size: 600% 200%;
+}
+
+.ascii-piece {
+  display: block;
+  line-height: 1;
+  font-size: 1.08em;
+  font-family: 'Segoe UI Symbol', 'Noto Sans Symbols2', 'Arial Unicode MS', serif;
+  text-rendering: geometricPrecision;
+}
+
+.ascii-piece--white {
+  color: var(--white-piece-color, #f7f0de);
+  text-shadow:
+    1px 1px 0 #3e3e3e,
+    -1px -1px 0 #3e3e3e,
+    1px -1px 0 #3e3e3e,
+    -1px 1px 0 #3e3e3e;
+}
+
+.ascii-piece--black {
+  color: var(--black-piece-color, #252a3a);
+  text-shadow:
+    1px 1px 0 #a8b2cf,
+    -1px -1px 0 #a8b2cf,
+    1px -1px 0 #a8b2cf,
+    -1px 1px 0 #a8b2cf;
 }

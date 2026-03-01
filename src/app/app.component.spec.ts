@@ -20,6 +20,7 @@ describe('AppComponent', () => {
     expect(component.isGameStarted).toBeFalse();
     expect(component.selectedThemeId).toBe('classic');
     expect(component.selectedPieceThemeId).toBe('classic');
+    expect(component.selectedPieceStyleId).toBe('font-awesome');
     expect(component.squareGapPx).toBe(0);
     expect(component.borderWidthPx).toBe(0);
 
@@ -27,30 +28,37 @@ describe('AppComponent', () => {
     expect(component.isGameStarted).toBeTrue();
   });
 
-  it('reads selected theme and piece theme with fallback', () => {
+  it('reads selected theme and piece settings with fallback', () => {
     const component = new AppComponent();
     component.selectedThemeId = 'ocean';
     component.selectedPieceThemeId = 'mint-charcoal';
+    component.selectedPieceStyleId = 'ascii';
     expect(component.selectedTheme.id).toBe('ocean');
     expect(component.selectedPieceTheme.id).toBe('mint-charcoal');
+    expect(component.selectedPieceStyle.id).toBe('ascii');
 
     component.selectedThemeId = 'missing-theme';
     component.selectedPieceThemeId = 'missing-piece';
+    component.selectedPieceStyleId = 'missing-style' as any;
     expect(component.selectedTheme.id).toBe('classic');
     expect(component.selectedPieceTheme.id).toBe('classic');
+    expect(component.selectedPieceStyle.id).toBe('font-awesome');
   });
 
-  it('persists selected theme and piece theme', () => {
+  it('persists selected theme and piece settings', () => {
     const setItemSpy = spyOn(Storage.prototype, 'setItem').and.callThrough();
     const component = new AppComponent();
 
     component.changeTheme('forest');
     component.changePieceTheme('pure-contrast');
+    component.changePieceStyle('sprite-1');
 
     expect(component.selectedThemeId).toBe('forest');
     expect(component.selectedPieceThemeId).toBe('pure-contrast');
+    expect(component.selectedPieceStyleId).toBe('sprite-1');
     expect(setItemSpy).toHaveBeenCalledWith('ct.start.themeId', 'forest');
     expect(setItemSpy).toHaveBeenCalledWith('ct.start.pieceThemeId', 'pure-contrast');
+    expect(setItemSpy).toHaveBeenCalledWith('ct.start.pieceStyleId', 'sprite-1');
   });
 
   it('clamps and persists spacing controls', () => {
@@ -90,6 +98,7 @@ describe('AppComponent storage loading and failures', () => {
       const values: Record<string, string> = {
         'ct.start.themeId': 'rosewood',
         'ct.start.pieceThemeId': 'pure-contrast',
+        'ct.start.pieceStyleId': 'ascii',
         'ct.start.squareGapPx': '4',
         'ct.start.borderWidthPx': '0'
       };
@@ -100,6 +109,7 @@ describe('AppComponent storage loading and failures', () => {
 
     expect(component.selectedThemeId).toBe('rosewood');
     expect(component.selectedPieceThemeId).toBe('pure-contrast');
+    expect(component.selectedPieceStyleId).toBe('ascii');
     expect(component.squareGapPx).toBe(4);
     expect(component.borderWidthPx).toBe(0);
     expect(getItemSpy).toHaveBeenCalled();
@@ -110,6 +120,7 @@ describe('AppComponent storage loading and failures', () => {
       const values: Record<string, string> = {
         'ct.start.themeId': 'missing',
         'ct.start.pieceThemeId': 'missing',
+        'ct.start.pieceStyleId': 'missing',
         'ct.start.squareGapPx': 'nan',
         'ct.start.borderWidthPx': 'nope'
       };
@@ -120,6 +131,7 @@ describe('AppComponent storage loading and failures', () => {
 
     expect(component.selectedThemeId).toBe('classic');
     expect(component.selectedPieceThemeId).toBe('classic');
+    expect(component.selectedPieceStyleId).toBe('font-awesome');
     expect(component.squareGapPx).toBe(1);
     expect(component.borderWidthPx).toBe(1);
   });
@@ -129,11 +141,13 @@ describe('AppComponent storage loading and failures', () => {
     const component = new AppComponent();
     expect(component.selectedThemeId).toBe('classic');
     expect(component.selectedPieceThemeId).toBe('classic');
+    expect(component.selectedPieceStyleId).toBe('font-awesome');
     expect(getItemSpy).toHaveBeenCalled();
 
     const setItemSpy = spyOn(Storage.prototype, 'setItem').and.throwError('write blocked');
     expect(() => component.changeTheme('graphite')).not.toThrow();
     expect(() => component.changePieceTheme('mint-charcoal')).not.toThrow();
+    expect(() => component.changePieceStyle('ascii')).not.toThrow();
     expect(() => component.setSquareGap(2)).not.toThrow();
     expect(() => component.setBorderWidth(3)).not.toThrow();
     expect(setItemSpy).toHaveBeenCalled();

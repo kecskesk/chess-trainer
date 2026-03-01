@@ -17,6 +17,13 @@ interface PieceThemeOption {
   black: string;
 }
 
+type PieceStyleId = 'font-awesome' | 'sprite-1' | 'ascii';
+
+interface PieceStyleOption {
+  id: PieceStyleId;
+  label: string;
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -28,6 +35,7 @@ export class AppComponent {
   private static readonly STORAGE_KEYS = {
     themeId: 'ct.start.themeId',
     pieceThemeId: 'ct.start.pieceThemeId',
+    pieceStyleId: 'ct.start.pieceStyleId',
     squareGapPx: 'ct.start.squareGapPx',
     borderWidthPx: 'ct.start.borderWidthPx'
   } as const;
@@ -46,10 +54,16 @@ export class AppComponent {
     { id: 'pure-contrast', label: 'Pure Black & White', white: '#ffffff', black: '#000000' },
     { id: 'mint-charcoal', label: 'Mint Charcoal', white: '#e2f2ea', black: '#30353e' }
   ];
+  readonly pieceStyleOptions: PieceStyleOption[] = [
+    { id: 'font-awesome', label: 'Font Awesome' },
+    { id: 'sprite-1', label: 'WikiMedia' },
+    { id: 'ascii', label: 'ASCII' }
+  ];
 
   isGameStarted = false;
   selectedThemeId = this.boardThemeOptions[0].id;
   selectedPieceThemeId = this.pieceThemeOptions[0].id;
+  selectedPieceStyleId: PieceStyleId = this.pieceStyleOptions[0].id;
   squareGapPx = 1;
   borderWidthPx = 1;
 
@@ -67,6 +81,11 @@ export class AppComponent {
     return matchingTheme || this.pieceThemeOptions[0];
   }
 
+  get selectedPieceStyle(): PieceStyleOption {
+    const matchingStyle = this.pieceStyleOptions.find(style => style.id === this.selectedPieceStyleId);
+    return matchingStyle || this.pieceStyleOptions[0];
+  }
+
   startGame(): void {
     this.isGameStarted = true;
   }
@@ -79,6 +98,11 @@ export class AppComponent {
   changePieceTheme(themeId: string): void {
     this.selectedPieceThemeId = themeId;
     this.setStorageValue(AppComponent.STORAGE_KEYS.pieceThemeId, themeId);
+  }
+
+  changePieceStyle(styleId: PieceStyleId): void {
+    this.selectedPieceStyleId = styleId;
+    this.setStorageValue(AppComponent.STORAGE_KEYS.pieceStyleId, styleId);
   }
 
   setSquareGap(value: number): void {
@@ -101,6 +125,10 @@ export class AppComponent {
     const savedPieceThemeId = this.getStorageValue(AppComponent.STORAGE_KEYS.pieceThemeId);
     if (savedPieceThemeId && this.pieceThemeOptions.some(option => option.id === savedPieceThemeId)) {
       this.selectedPieceThemeId = savedPieceThemeId;
+    }
+    const savedPieceStyleId = this.getStorageValue(AppComponent.STORAGE_KEYS.pieceStyleId);
+    if (savedPieceStyleId && this.pieceStyleOptions.some(option => option.id === savedPieceStyleId)) {
+      this.selectedPieceStyleId = savedPieceStyleId as PieceStyleId;
     }
 
     const savedGap = Number(this.getStorageValue(AppComponent.STORAGE_KEYS.squareGapPx));

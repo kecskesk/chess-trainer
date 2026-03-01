@@ -28,6 +28,7 @@
           [darkSquareColor]="option.dark"
           [whitePieceColor]="selectedPieceTheme.white"
           [blackPieceColor]="selectedPieceTheme.black"
+          [pieceStyle]="selectedPieceStyleId"
           [squareGapPx]="squareGapPx"
           [borderWidthPx]="borderWidthPx"></app-chess-board>
         <span>{{option.label}}</span>
@@ -51,6 +52,31 @@
           [darkSquareColor]="selectedTheme.dark"
           [whitePieceColor]="option.white"
           [blackPieceColor]="option.black"
+          [pieceStyle]="selectedPieceStyleId"
+          [squareGapPx]="squareGapPx"
+          [borderWidthPx]="borderWidthPx"></app-chess-board>
+        <span>{{option.label}}</span>
+      </button>
+    </div>
+
+    <h2 class="section-title">Piece Style</h2>
+    <div class="theme-options">
+      <button type="button"
+              class="theme-option"
+              *ngFor="let option of pieceStyleOptions"
+              [class.theme-option--selected]="selectedPieceStyleId === option.id"
+              (click)="changePieceStyle(option.id)">
+        <app-chess-board
+          class="theme-preview"
+          [previewMode]="true"
+          [previewBoardSize]="2"
+          previewRowAnchor="top"
+          previewPreset="piece-colors"
+          [lightSquareColor]="selectedTheme.light"
+          [darkSquareColor]="selectedTheme.dark"
+          [whitePieceColor]="selectedPieceTheme.white"
+          [blackPieceColor]="selectedPieceTheme.black"
+          [pieceStyle]="option.id"
           [squareGapPx]="squareGapPx"
           [borderWidthPx]="borderWidthPx"></app-chess-board>
         <span>{{option.label}}</span>
@@ -99,6 +125,7 @@
       [darkSquareColor]="selectedTheme.dark"
       [whitePieceColor]="selectedPieceTheme.white"
       [blackPieceColor]="selectedPieceTheme.black"
+      [pieceStyle]="selectedPieceStyleId"
       [squareGapPx]="squareGapPx"
       [borderWidthPx]="borderWidthPx"></app-chess-board>
   </section>

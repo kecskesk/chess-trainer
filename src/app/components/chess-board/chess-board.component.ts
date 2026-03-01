@@ -58,6 +58,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   @Input() darkSquareColor = '#b58863';
   @Input() whitePieceColor = '#f7f0de';
   @Input() blackPieceColor = '#252a3a';
+  @Input() pieceStyle: 'font-awesome' | 'sprite-1' | 'ascii' = 'font-awesome';
   @Input() squareGapPx = 1;
   @Input() borderWidthPx = 1;
   @Input() previewMode = false;
