@@ -1231,12 +1231,12 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     expect(component.clockRunning).toBeFalse();
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('0-1 {White resigns}');
 
-    component.undoMoveMock();
+    component.undoMove();
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.clockRunning).toBeTrue();
     expect(chessBoardStateService.history).toEqual(historyBeforeResign);
 
-    component.redoMoveMock();
+    component.redoMove();
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('0-1 {White resigns}');
   });
@@ -1248,15 +1248,15 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
       '3': 'Ng1-f3'
     } as any;
 
-    expect(component.canUndoMoveMock()).toBeTrue();
-    expect(component.canRedoMoveMock()).toBeFalse();
+    expect(component.canUndoMove()).toBeTrue();
+    expect(component.canRedoMove()).toBeFalse();
 
-    component.undoMoveMock();
+    component.undoMove();
     expect(component.mockHistoryCursor).toBe(1);
-    expect(component.canRedoMoveMock()).toBeTrue();
+    expect(component.canRedoMove()).toBeTrue();
     expect(component.getVisibleHistory()).toEqual(['e2-e4', 'e7-e5']);
 
-    component.redoMoveMock();
+    component.redoMove();
     expect(component.mockHistoryCursor).toBeNull();
     expect(component.getVisibleHistory()).toEqual(['e2-e4', 'e7-e5', 'Ng1-f3']);
   });
@@ -1275,13 +1275,13 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
 
     expect(component.getDebugCastlingRights()).toBe('kq');
 
-    component.undoMoveMock();
+    component.undoMove();
     expect(component.getDebugCastlingRights()).toBe('kq');
 
-    component.undoMoveMock();
+    component.undoMove();
     expect(component.getDebugCastlingRights()).toBe('KQkq');
 
-    component.redoMoveMock();
+    component.redoMove();
     expect(component.getDebugCastlingRights()).toBe('kq');
   });
 
@@ -1297,10 +1297,10 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
 
     expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
 
-    component.undoMoveMock();
+    component.undoMove();
     expect(component.getDebugPositionKey().split('|')[2]).toBe('-');
 
-    component.redoMoveMock();
+    component.redoMove();
     expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
   });
 
@@ -1330,12 +1330,12 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls promo
     expect(chessBoardStateService.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
 
-    component.undoMoveMock();
+    component.undoMove();
     expect(chessBoardStateService.field[1][0][0].piece).toBe(ChessPiecesEnum.Pawn);
     expect(chessBoardStateService.field[0][0].length).toBe(0);
     expect(component.getVisibleHistory()).toEqual([]);
 
-    component.redoMoveMock();
+    component.redoMove();
     expect(chessBoardStateService.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
   });
@@ -1381,13 +1381,13 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
 
   it('produces mock export and annotation helper outputs', () => {
     component.exportPgnMock();
-    expect(component.mockExportMessage).toContain('Mock export: PGN ready');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Mock export: PGN ready');
 
     component.exportBoardImageMock();
-    expect(component.mockExportMessage).toContain('Mock export: Board image ready');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Mock export: Board image ready');
 
-    component.exportFenMock();
-    expect(component.mockExportMessage).toContain('Mock export: FEN copied');
+    component.exportFen();
+    expect(chessBoardStateService.boardHelper.debugText).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 
     component.showForkIdeasMock();
     expect(chessBoardStateService.boardHelper.debugText).toContain('Mock: Fork ideas highlighted');
@@ -1583,7 +1583,6 @@ describe('ChessBoardComponent gameplay moves and rules (position and analysis)',
     component.pendingDrawOfferBy = ChessColorsEnum.Black;
     component.resignConfirmColor = ChessColorsEnum.White;
     component.mockHistoryCursor = 3;
-    component.mockExportMessage = 'x';
     component.mateInOneTargets = { '11': true };
     component.mateInOneBlunderTargets = { '22': true };
     (component as any).lastMatePreviewKey = 'x';
@@ -1592,7 +1591,6 @@ describe('ChessBoardComponent gameplay moves and rules (position and analysis)',
     expect(component.pendingDrawOfferBy).toBeNull();
     expect(component.resignConfirmColor).toBeNull();
     expect(component.mockHistoryCursor).toBeNull();
-    expect(component.mockExportMessage).toBe('');
     expect(component.mateInOneTargets).toEqual({});
     expect(component.mateInOneBlunderTargets).toEqual({});
 
@@ -1696,8 +1694,8 @@ describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', 
     spyOnProperty(chessBoardStateService, 'history', 'get').and.returnValue(undefined as any);
     component.mockHistoryCursor = null;
     expect(component.getVisibleHistory()).toEqual([]);
-    component.undoMoveMock();
-    component.redoMoveMock();
+    component.undoMove();
+    component.redoMove();
 
     component.clockStarted = true;
     (component as any).incrementMs = 2000;
@@ -2126,10 +2124,10 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     chessBoardStateService.boardHelper.gameOver = false;
 
     component.mockHistoryCursor = 0;
-    component.undoMoveMock();
+    component.undoMove();
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     component.mockHistoryCursor = 1;
-    component.redoMoveMock();
+    component.redoMove();
     expect(component.mockHistoryCursor).toBeNull();
 
     component.pendingDrawOfferBy = ChessColorsEnum.White;
@@ -2150,7 +2148,7 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     component.mockHistoryCursor = -1;
     expect(component.getVisibleHistory()).toEqual([]);
-    component.undoMoveMock();
+    component.undoMove();
     expect(component.mockHistoryCursor).toBe(-1);
 
     const anyComponent = component as any;
@@ -2487,7 +2485,7 @@ describe('ChessBoardComponent branch coverage helpers (drop validation and openi
   it('covers undo low-index branch and opening-name display fallback branches', () => {
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     component.mockHistoryCursor = 0;
-    component.undoMoveMock();
+    component.undoMove();
     expect(component.mockHistoryCursor).toBe(-1);
 
     const opening = {

@@ -18,6 +18,7 @@ import { ICctRecommendation, ICctRecommendationScored } from '../../model/interf
 import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
 import { ChessMoveNotation } from '../../utils/chess-utils';
+import { ChessFenUtils } from '../../utils/chess-fen.utils';
 import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
@@ -95,7 +96,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   resignConfirmColor: ChessColorsEnum | null = null;
   mockHistoryCursor: number | null = null;
   isBoardFlipped = false;
-  mockExportMessage = '';
   areMockControlsDisabled = true;
   isDebugPanelOpen = false;
   selectedLocale = UiTextLoaderService.DEFAULT_LOCALE;
@@ -765,7 +765,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (boardHelper.checkmateColor !== null) {
       return `${this.uiText.status.checkmatePrefix} - ${boardHelper.checkmateColor === ChessColorsEnum.White ? this.uiText.status.black : this.uiText.status.white} ${this.uiText.message.checkmateWinner}`;
     }
-    return boardHelper.debugText || this.uiText.status.drawFallback;
+    return this.uiText.status.drawFallback;
   }
 
   getAmbientThemeClass(): string {
@@ -1042,11 +1042,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return history.slice(0, clampedIndex + 1);
   }
 
-  canUndoMoveMock(): boolean {
+  canUndoMove(): boolean {
     return this.getCurrentVisibleMoveIndex() >= 0;
   }
 
-  canRedoMoveMock(): boolean {
+  canRedoMove(): boolean {
     const maxIndex = this.getMaxMoveIndex();
     if (maxIndex < 0 || this.mockHistoryCursor === null) {
       return false;
@@ -1054,7 +1054,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.mockHistoryCursor < maxIndex;
   }
 
-  undoMoveMock(): void {
+  undoMove(): void {
     const maxIndex = this.getMaxMoveIndex();
     if (maxIndex < 0) {
       return;
@@ -1067,7 +1067,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.restoreSnapshotForVisibleHistory();
   }
 
-  redoMoveMock(): void {
+  redoMove(): void {
     const maxIndex = this.getMaxMoveIndex();
     if (maxIndex < 0 || this.mockHistoryCursor === null) {
       return;
@@ -1570,11 +1570,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   exportPgnMock(): void {
-    this.mockExportMessage = `${this.uiText.message.mockExportPgnReady} (${new Date().toLocaleTimeString()})`;
+    this.chessBoardStateService.boardHelper.debugText = `${this.uiText.message.mockExportPgnReady} (${new Date().toLocaleTimeString()})`;
   }
 
   exportBoardImageMock(): void {
-    this.mockExportMessage = `${this.uiText.message.mockExportImageReady} (${new Date().toLocaleTimeString()})`;
+    this.chessBoardStateService.boardHelper.debugText = `${this.uiText.message.mockExportImageReady} (${new Date().toLocaleTimeString()})`;
   }
 
   showForkIdeasMock(): void {
@@ -1587,8 +1587,47 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.chessBoardStateService.boardHelper.debugText = this.uiText.message.mockPinIdeas;
   }
 
-  exportFenMock(): void {
-    this.mockExportMessage = `${this.uiText.message.mockExportFenCopied} (${new Date().toLocaleTimeString()})`;
+  exportFen(): void {
+    const fen = this.getCurrentFen();
+    this.chessBoardStateService.boardHelper.debugText = `${fen}`;
+    void this.copyToClipboard(fen);
+  }
+
+  private getCurrentFen(): string {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
+      return '8/8/8/8/8/8/8/8 w - - 0 1';
+    }
+
+    const board = this.chessBoardStateService.field;
+    const turn = this.chessBoardStateService.boardHelper.colorTurn;
+    const moveHistory = this.chessBoardStateService.history || [];
+    const castlingRights = ChessRulesService.getCastlingRightsNotation(
+      board,
+      this.chessBoardStateService.boardHelper.history || {}
+    );
+    const enPassantRights = ChessRulesService.getEnPassantRightsNotation(
+      board,
+      this.chessBoardStateService.boardHelper.history || {},
+      turn
+    );
+    const plyCount = ChessFenUtils.getPlyCountFromHistory(moveHistory);
+    const fullmoveNumber = ChessFenUtils.getFullmoveNumberFromPlyCount(plyCount);
+    const halfmoveClock = ChessFenUtils.getHalfmoveClockFromHistory(moveHistory);
+    return ChessFenUtils.generateFen(
+      board,
+      turn,
+      castlingRights,
+      enPassantRights,
+      halfmoveClock,
+      fullmoveNumber
+    );
+  }
+
+  private copyToClipboard(text: string): Promise<boolean> {
+    if (typeof navigator === 'undefined' || !navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+      return Promise.resolve(false);
+    }
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
   }
 
   private ensureCctRecommendations(): void {
@@ -2473,7 +2512,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.pendingDrawOfferBy = null;
     this.resignConfirmColor = null;
     this.mockHistoryCursor = null;
-    this.mockExportMessage = '';
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
     this.lastMatePreviewKey = '';

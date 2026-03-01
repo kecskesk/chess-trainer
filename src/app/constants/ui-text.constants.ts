@@ -183,7 +183,6 @@ const UiTextDefaults = {
     forfeitsOnTimeNoPeriod: '',
     mockExportPgnReady: '',
     mockExportImageReady: '',
-    mockExportFenCopied: '',
     mockForkIdeas: '',
     mockPinIdeas: '',
     openingPrefix: '',

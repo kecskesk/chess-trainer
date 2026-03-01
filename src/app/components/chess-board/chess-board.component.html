@@ -327,12 +327,11 @@
           <span class="icon-action-btn__icon"><i class="fas fa-image" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.gameTools.image}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportFenMock()" [attr.title]="uiText.gameTools.exportFenTitle" [attr.aria-label]="uiText.gameTools.exportFenAriaLabel">
+        <button class="icon-action-btn" (click)="exportFen()" [attr.title]="uiText.gameTools.exportFenTitle" [attr.aria-label]="uiText.gameTools.exportFenAriaLabel">
           <span class="icon-action-btn__icon"><i class="fas fa-file-code" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">FEN</span>
         </button>
       </div>
-      <div class="mock-export-text" *ngIf="mockExportMessage">{{mockExportMessage}}</div>
     </div>
 
     <div class="tool-card panel-card">
@@ -352,11 +351,11 @@
     <div class="history-card panel-card">
       <h3 class="section-title">{{uiText.history.sectionTitle}}</h3>
       <div class="icon-actions-row icon-actions-row--compact history-controls">
-        <button class="icon-action-btn" [disabled]="!canUndoMoveMock()" (click)="undoMoveMock()" [attr.title]="uiText.history.undoTitle" [attr.aria-label]="uiText.history.undoAriaLabel">
+        <button class="icon-action-btn" [disabled]="!canUndoMove()" (click)="undoMove()" [attr.title]="uiText.history.undoTitle" [attr.aria-label]="uiText.history.undoAriaLabel">
           <span class="icon-action-btn__icon"><i class="fas fa-undo" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.history.undo}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="!canRedoMoveMock()" (click)="redoMoveMock()" [attr.title]="uiText.history.redoTitle" [attr.aria-label]="uiText.history.redoAriaLabel">
+        <button class="icon-action-btn" [disabled]="!canRedoMove()" (click)="redoMove()" [attr.title]="uiText.history.redoTitle" [attr.aria-label]="uiText.history.redoAriaLabel">
           <span class="icon-action-btn__icon"><i class="fas fa-redo" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.history.redo}}</span>
         </button>
