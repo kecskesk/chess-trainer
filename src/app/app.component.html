@@ -1,3 +1,105 @@
-<main class="app-shell">
-	<app-chess-board></app-chess-board>
+<main class="app-shell" [class.app-shell--start]="!isGameStarted">
+  <div class="start-ambient" *ngIf="!isGameStarted" aria-hidden="true"></div>
+  <section class="start-page" *ngIf="!isGameStarted">
+    <div class="start-brand">
+      <img class="start-brand__logo" src="horse.svg" alt="Chess Trainer logo" />
+      <div class="start-brand__text">
+        <p class="start-brand__kicker">Welcome to</p>
+        <h1 class="start-brand__title">Ne Chess Fel! - Chess Trainer</h1>
+      </div>
+    </div>
+
+    <h2 class="start-page__title">Start Game</h2>
+    <p class="start-page__subtitle">Set up your session and start training.</p>
+
+    <h2 class="section-title">Board Color</h2>
+    <div class="theme-options">
+      <button type="button"
+              class="theme-option"
+              *ngFor="let option of boardThemeOptions"
+              [class.theme-option--selected]="selectedThemeId === option.id"
+              (click)="changeTheme(option.id)">
+        <app-chess-board
+          class="theme-preview"
+          [previewMode]="true"
+          [previewBoardSize]="2"
+          previewPreset="piece-colors"
+          [lightSquareColor]="option.light"
+          [darkSquareColor]="option.dark"
+          [whitePieceColor]="selectedPieceTheme.white"
+          [blackPieceColor]="selectedPieceTheme.black"
+          [squareGapPx]="squareGapPx"
+          [borderWidthPx]="borderWidthPx"></app-chess-board>
+        <span>{{option.label}}</span>
+      </button>
+    </div>
+
+    <h2 class="section-title">Piece Colors</h2>
+    <div class="theme-options">
+      <button type="button"
+              class="theme-option"
+              *ngFor="let option of pieceThemeOptions"
+              [class.theme-option--selected]="selectedPieceThemeId === option.id"
+              (click)="changePieceTheme(option.id)">
+        <app-chess-board
+          class="theme-preview"
+          [previewMode]="true"
+          [previewBoardSize]="2"
+          previewRowAnchor="top"
+          previewPreset="piece-colors"
+          [lightSquareColor]="selectedTheme.light"
+          [darkSquareColor]="selectedTheme.dark"
+          [whitePieceColor]="option.white"
+          [blackPieceColor]="option.black"
+          [squareGapPx]="squareGapPx"
+          [borderWidthPx]="borderWidthPx"></app-chess-board>
+        <span>{{option.label}}</span>
+      </button>
+    </div>
+
+    <h2 class="section-title">Board Spacing</h2>
+    <div class="control-group">
+      <label class="slider-label" for="gapSlider">Gap: {{squareGapPx}}px</label>
+      <input id="gapSlider"
+             class="slider-input"
+             type="range"
+             min="0"
+             max="4"
+             step="1"
+             [value]="squareGapPx"
+             (input)="setSquareGap(+$any($event.target).value)" />
+    </div>
+
+    <div class="control-group">
+      <label class="slider-label" for="borderSlider">Border: {{borderWidthPx}}px</label>
+      <input id="borderSlider"
+             class="slider-input"
+             type="range"
+             min="0"
+             max="4"
+             step="1"
+             [value]="borderWidthPx"
+             (input)="setBorderWidth(+$any($event.target).value)" />
+    </div>
+
+    <div class="actions">
+      <button type="button"
+              class="primary-btn"
+              (click)="startGame()">Start Game</button>
+      <a class="secondary-btn"
+         [href]="feedbackUrl"
+         target="_blank"
+         rel="noopener noreferrer">Write Feedback</a>
+    </div>
+  </section>
+
+  <section class="game-page" *ngIf="isGameStarted">
+    <app-chess-board
+      [lightSquareColor]="selectedTheme.light"
+      [darkSquareColor]="selectedTheme.dark"
+      [whitePieceColor]="selectedPieceTheme.white"
+      [blackPieceColor]="selectedPieceTheme.black"
+      [squareGapPx]="squareGapPx"
+      [borderWidthPx]="borderWidthPx"></app-chess-board>
+  </section>
 </main>

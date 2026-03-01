@@ -1,5 +1,12 @@
-<div class="trainer-layout">
-  <div class="top-right-tools">
+<div class="trainer-layout"
+     [class.preview-mode]="previewMode"
+     [style.--light-square-color]="lightSquareColor"
+     [style.--dark-square-color]="darkSquareColor"
+     [style.--white-piece-color]="whitePieceColor"
+     [style.--black-piece-color]="blackPieceColor"
+     [style.--square-gap]="squareGapPx + 'px'"
+     [style.--board-border-width]="borderWidthPx + 'px'">
+  <div class="top-right-tools" *ngIf="!previewMode">
     <div class="language-flags" [attr.aria-label]="uiText.language.ariaLabel">
       <button class="language-flag-btn"
               type="button"
@@ -15,19 +22,20 @@
               (click)="switchLocale('hu_HU')"><span class="flag flag--hu" aria-hidden="true"></span></button>
     </div>
   </div>
-  <div class="ambient-math" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
+  <div class="ambient-math" *ngIf="!previewMode" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
   <section class="board-panel">
     <div class="board-stack">
-      <div class="outer-container board-shell">
+          <div class="outer-container board-shell">
         <div class="container" #chessField>
-          <div #row class="field-row" *ngFor="let displayRow of boardIndices">
-            <div class="field-cell" *ngFor="let displayCol of boardIndices">
+          <div #row class="field-row" *ngFor="let displayRow of renderedBoardRows">
+            <div class="field-cell" *ngFor="let displayCol of renderedBoardCols">
               <div class="piece-box">
                 <div class="square"
                      cdkDropList
                      cdkDropListOrientation="horizontal"
                      [cdkDropListSortingDisabled]="true"
-                      [cdkDropListEnterPredicate]="canDropPredicate"
+                     [cdkDropListEnterPredicate]="canDropPredicate"
+                     [cdkDropListDisabled]="previewMode"
                      [id]="getDisplayFieldId(displayRow, displayCol)"
                      [ngClass]="getDisplaySquareHighlightClass(displayRow, displayCol)"
                      [cdkDropListData]="getDisplayCell(displayRow, displayCol)"
@@ -41,7 +49,7 @@
                                      *ngIf="getDisplayPiece(displayRow, displayCol) as piece"
                                      cdkDrag
                                      [cdkDragData]="piece"
-                                     [cdkDragDisabled]="chessBoardStateService.boardHelper.gameOver || piece.color !== chessBoardStateService.boardHelper.colorTurn"
+                                     [cdkDragDisabled]="previewMode || chessBoardStateService.boardHelper.gameOver || piece.color !== chessBoardStateService.boardHelper.colorTurn"
                                      (cdkDragStarted)="onDragStarted()"
                                      (cdkDragEnded)="onDragEnded()"></app-chess-piece>
                   </div>
@@ -62,7 +70,7 @@
       </div>
 
       <details class="position-key-panel"
-               *ngIf="chessBoardStateService.boardHelper"
+               *ngIf="!previewMode && chessBoardStateService.boardHelper"
                [open]="isDebugPanelOpen"
                (toggle)="onDebugPanelToggle($event)">
         <summary>{{uiText.debugPanel.summary}}</summary>
@@ -73,7 +81,7 @@
     </div>
   </section>
 
-  <section class="sidebar-panel">
+  <section class="sidebar-panel" *ngIf="!previewMode">
     <div class="clock-card panel-card panel-card--wide">
       <div class="clock-card-header">
         <h3 class="section-title">{{uiText.clock.sectionTitle}}</h3>

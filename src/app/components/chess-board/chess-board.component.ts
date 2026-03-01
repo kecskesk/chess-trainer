@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, DragDropModule } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
@@ -54,6 +54,16 @@ interface IGameplaySnapshot {
   imports: [CommonModule, DragDropModule, ChessPieceComponent]
 })
 export class ChessBoardComponent implements AfterViewInit, OnDestroy {
+  @Input() lightSquareColor = '#f1d9b5';
+  @Input() darkSquareColor = '#b58863';
+  @Input() whitePieceColor = '#f7f0de';
+  @Input() blackPieceColor = '#252a3a';
+  @Input() squareGapPx = 1;
+  @Input() borderWidthPx = 1;
+  @Input() previewMode = false;
+  @Input() previewBoardSize = ChessConstants.BOARD_SIZE;
+  @Input() previewRowAnchor: 'top' | 'bottom' = 'bottom';
+  @Input() previewPreset: 'default' | 'piece-colors' = 'default';
   private static readonly NA_PLACEHOLDER = 'n/a';
   readonly uiText = UiText;
   readonly boardIndices: number[] = Array.from({ length: ChessConstants.BOARD_SIZE }, (_, idx) => idx);
@@ -118,6 +128,23 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
+
+  get renderedBoardRows(): number[] {
+    if (!this.previewMode) {
+      return this.boardIndices;
+    }
+    const size = Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
+    const startIndex = this.previewRowAnchor === 'top' ? 0 : ChessConstants.BOARD_SIZE - size;
+    return this.boardIndices.slice(startIndex, startIndex + size);
+  }
+
+  get renderedBoardCols(): number[] {
+    if (!this.previewMode) {
+      return this.boardIndices;
+    }
+    const size = Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
+    return this.boardIndices.slice(0, size);
+  }
 
   constructor(
     public chessBoardStateService: ChessBoardStateService,
@@ -648,6 +675,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getDisplayCell(displayRow: number, displayCol: number): ChessPieceDto[] {
+    if (this.previewMode && this.previewPreset === 'piece-colors') {
+      return this.getPieceColorPreviewCell(displayRow, displayCol);
+    }
     const boardRow = this.getBoardIndexForDisplay(displayRow);
     const boardCol = this.getBoardIndexForDisplay(displayCol);
     return this.chessBoardStateService.field[boardRow][boardCol];
@@ -680,6 +710,28 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const boardRow = this.getBoardIndexForDisplay(displayRow);
     const boardCol = this.getBoardIndexForDisplay(displayCol);
     return this.translateFieldNames(boardRow, boardCol);
+  }
+
+  private getPieceColorPreviewCell(displayRow: number, displayCol: number): ChessPieceDto[] {
+    const rowIndex = this.renderedBoardRows.indexOf(displayRow);
+    const colIndex = this.renderedBoardCols.indexOf(displayCol);
+    if (rowIndex < 0 || colIndex < 0) {
+      return [];
+    }
+
+    if (rowIndex === 0 && colIndex === 0) {
+      return [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)];
+    }
+    if (rowIndex === 0 && colIndex === 1) {
+      return [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)];
+    }
+    if (rowIndex === 1 && colIndex === 0) {
+      return [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    }
+    if (rowIndex === 1 && colIndex === 1) {
+      return [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)];
+    }
+    return [];
   }
 
   getArrowTopForDisplay(arrow: ChessArrowDto): string {

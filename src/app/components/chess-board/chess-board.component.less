@@ -1,4 +1,8 @@
 .trainer-layout {
+  --light-square-color: #f1d9b5;
+  --dark-square-color: #b58863;
+  --square-gap: 1px;
+  --board-border-width: 1px;
   position: relative;
   z-index: 0;
   isolation: isolate;
@@ -11,6 +15,26 @@
   margin: 0 auto;
   padding: 10px;
   box-sizing: border-box;
+}
+
+.trainer-layout.preview-mode {
+  grid-template-columns: 1fr;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
+
+.trainer-layout.preview-mode .board-panel {
+  min-width: auto;
+}
+
+.trainer-layout.preview-mode .board-stack {
+  gap: 0;
+}
+
+.trainer-layout.preview-mode .notation {
+  display: none;
 }
 
 .top-right-tools {
@@ -189,7 +213,7 @@
 
 .piece-box {
   box-sizing: content-box;
-  border: 1px solid black;
+  border: var(--board-border-width) solid black;
 }
 
 .square {
@@ -202,18 +226,18 @@
   text-align: center;
   align-items: center;
   justify-content: center;
-  margin: 1px;
+  margin: var(--square-gap);
   padding: clamp(2px, 0.5vw, 5px);
-  border: 1px solid black;
+  border: var(--board-border-width) solid black;
   overflow: hidden;
   transition: filter 0.15s ease;
 
   &.white-square {
-    background-color: #f1d9b5;
+    background-color: var(--light-square-color);
   }
 
   &.black-square {
-    background-color: #b58863;
+    background-color: var(--dark-square-color);
   }
 }
 

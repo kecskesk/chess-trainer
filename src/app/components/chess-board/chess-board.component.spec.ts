@@ -1304,6 +1304,17 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
   });
 
+});
+
+describe('ChessBoardComponent gameplay moves and rules (clock and controls promotion)', () => {
+  beforeEach(() => {
+    chessBoardStateService = new ChessBoardStateService();
+    component = new ChessBoardComponent(chessBoardStateService, {
+      get: () => of([])
+    } as any);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+  });
+
   it('restores promotion state through undo and redo', () => {
     clearBoard();
     chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
@@ -1327,6 +1338,17 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     component.redoMoveMock();
     expect(chessBoardStateService.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('=Q');
+  });
+
+});
+
+describe('ChessBoardComponent gameplay moves and rules (clock and controls continued)', () => {
+  beforeEach(() => {
+    chessBoardStateService = new ChessBoardStateService();
+    component = new ChessBoardComponent(chessBoardStateService, {
+      get: () => of([])
+    } as any);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
   it('toggles board orientation', () => {
@@ -2600,6 +2622,47 @@ describe('ChessBoardComponent branch coverage helpers (locale switching and open
       emptyItems = items;
     });
     expect(emptyItems).toEqual([]);
+  });
+});
+
+describe('ChessBoardComponent preview presets and render slices', () => {
+  it('covers preview slicing and piece-colors preset mapping branches', () => {
+    component.previewMode = true;
+    component.previewBoardSize = 2;
+    component.previewRowAnchor = 'top';
+    component.previewPreset = 'piece-colors';
+
+    expect(component.renderedBoardRows).toEqual([0, 1]);
+    expect(component.renderedBoardCols).toEqual([0, 1]);
+    expect(component.getDisplayPiece(0, 0)).toEqual(jasmine.objectContaining({
+      color: ChessColorsEnum.White,
+      piece: ChessPiecesEnum.Rook
+    }));
+    expect(component.getDisplayPiece(0, 1)).toEqual(jasmine.objectContaining({
+      color: ChessColorsEnum.Black,
+      piece: ChessPiecesEnum.Bishop
+    }));
+    expect(component.getDisplayPiece(1, 0)).toEqual(jasmine.objectContaining({
+      color: ChessColorsEnum.White,
+      piece: ChessPiecesEnum.Pawn
+    }));
+    expect(component.getDisplayPiece(1, 1)).toEqual(jasmine.objectContaining({
+      color: ChessColorsEnum.White,
+      piece: ChessPiecesEnum.Knight
+    }));
+
+    expect((component as any).getPieceColorPreviewCell(7, 7)).toEqual([]);
+
+    component.previewBoardSize = 3;
+    expect((component as any).getPieceColorPreviewCell(2, 2)).toEqual([]);
+
+    component.previewRowAnchor = 'bottom';
+    component.previewBoardSize = 2;
+    expect(component.renderedBoardRows).toEqual([6, 7]);
+
+    component.previewBoardSize = 0;
+    expect(component.renderedBoardRows).toEqual([7]);
+    expect(component.renderedBoardCols).toEqual([0]);
   });
 });
 
