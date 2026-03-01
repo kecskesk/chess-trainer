@@ -10,12 +10,6 @@ const UiTextDefaults = {
     english: '',
     hungarian: ''
   },
-  infoOverlay: {
-    ariaLabel: '',
-    triggerAriaLabel: '',
-    title: '',
-    items: [] as string[]
-  },
   debugPanel: {
     summary: ''
   },

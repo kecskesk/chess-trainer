@@ -37,8 +37,6 @@ describe('UiTextLoaderService loading and locale selection', () => {
         '! skipped',
         'status.white=White',
         'status.black=Black',
-        'infoOverlay.items.0=Roadmap',
-        'infoOverlay.items.1=CCT',
         'message.checkmateCallout=Checkmate\\!',
         'escaped.value=one\\ntwo\\rthree\\tfour\\:\\=\\\\',
         'coverageArray.0.label=ok',
@@ -55,7 +53,6 @@ describe('UiTextLoaderService loading and locale selection', () => {
     expect(localStorage.getItem('chess-trainer.locale')).toBe('en_US');
     expect(UiText.status.white).toBe('White');
     expect(UiText.status.black).toBe('Black');
-    expect(UiText.infoOverlay.items).toEqual(['Roadmap', 'CCT']);
     expect((UiText as any).coverageArray[0].label).toBe('ok');
     expect((UiText as any).coverageMatrix[0][1]).toBe('ok2');
     expect((UiText as any).coverageNoDelimiterKey).toBe('');

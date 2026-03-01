@@ -8,17 +8,15 @@ describe('ui-text.constants', () => {
     mergeUiText(initialUiTextSnapshot as any);
   });
 
-  it('merges nested values and arrays', () => {
+  it('merges nested values', () => {
     mergeUiText({
       status: { white: 'White', black: 'Black' },
-      infoOverlay: { items: ['a', 'b'] },
       language: { english: 'English' }
     } as any);
 
     expect(UiText.status.white).toBe('White');
     expect(UiText.status.black).toBe('Black');
     expect(UiText.language.english).toBe('English');
-    expect(UiText.infoOverlay.items).toEqual(['a', 'b']);
   });
 
   it('replaces incompatible target types and resets back to defaults', () => {

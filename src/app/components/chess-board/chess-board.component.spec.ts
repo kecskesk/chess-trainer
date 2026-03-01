@@ -1182,14 +1182,13 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview and clock s
     expect(stopClockSpy).toHaveBeenCalled();
   });
 
-  it('toggles debug panel and info overlay state', () => {
+  it('toggles debug panel state', () => {
     component.onDebugPanelToggle({ target: { open: true } } as any);
     expect(component.isDebugPanelOpen).toBeTrue();
 
     component.onDebugPanelToggle({ target: { open: false } } as any);
     expect(component.isDebugPanelOpen).toBeFalse();
 
-    expect(component.isInfoOverlayOpen).toBeFalse();
   });
 
   it('reads check highlight through isCheck helper', () => {

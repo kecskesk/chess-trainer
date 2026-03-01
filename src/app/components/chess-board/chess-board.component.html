@@ -14,18 +14,6 @@
               [attr.aria-label]="uiText.language.hungarian"
               (click)="switchLocale('hu_HU')"><span class="flag flag--hu" aria-hidden="true"></span></button>
     </div>
-    <div class="info-hover" [attr.aria-label]="uiText.infoOverlay.ariaLabel" [class.info-hover--open]="isInfoOverlayOpen">
-      <button class="info-hover__trigger"
-              type="button"
-              [attr.aria-label]="uiText.infoOverlay.triggerAriaLabel"
-              [attr.aria-expanded]="isInfoOverlayOpen">i</button>
-      <div class="info-hover__panel" role="note">
-        <div class="info-hover__title">{{uiText.infoOverlay.title}}</div>
-        <ul>
-          <li *ngFor="let item of uiText.infoOverlay.items">{{item}}</li>
-        </ul>
-      </div>
-    </div>
   </div>
   <div class="ambient-math" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
   <section class="board-panel">

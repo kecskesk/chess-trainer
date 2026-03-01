@@ -87,7 +87,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   mockExportMessage = '';
   areMockControlsDisabled = true;
   isDebugPanelOpen = false;
-  isInfoOverlayOpen = false;
   selectedLocale = UiTextLoaderService.DEFAULT_LOCALE;
   isLanguageSwitching = false;
   private isDestroyed = false;
