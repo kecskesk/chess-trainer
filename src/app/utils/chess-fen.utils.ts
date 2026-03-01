@@ -134,14 +134,11 @@ export class ChessFenUtils {
       return null;
     }
 
-    let withoutResult = normalized.replace(/\s+(?:1-0|0-1|1\/2-1\/2)\s*\{[^}]*\}\s*$/u, '').trim();
+    const withoutResult = normalized.replace(/\s+(?:1-0|0-1|1\/2-1\/2)\s*\{[^}]*\}\s*$/u, '').trim();
     if (/^(?:1-0|0-1|1\/2-1\/2)(?:\s*\{[^}]*\})?$/u.test(withoutResult)) {
       return null;
     }
-    if (!withoutResult) {
-      withoutResult = normalized.replace(/\b(?:1-0|0-1|1\/2-1\/2)\b.*$/u, '').trim();
-    }
-    return withoutResult || null;
+    return withoutResult;
   }
 
   private static isPawnMove(move: string): boolean {

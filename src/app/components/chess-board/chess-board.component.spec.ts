@@ -1400,6 +1400,57 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     expect(chessBoardStateService.boardHelper.arrows).toEqual({});
   });
 
+  it('exports FEN when history containers are missing', () => {
+    spyOnProperty(chessBoardStateService, 'history', 'get').and.returnValue(undefined as any);
+    (chessBoardStateService.boardHelper as any).history = undefined;
+
+    component.exportFen();
+    expect(chessBoardStateService.boardHelper.debugText).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  });
+
+  it('returns fallback FEN when board state service is missing', () => {
+    (component as any).chessBoardStateService = null;
+    expect((component as any).getCurrentFen()).toBe('8/8/8/8/8/8/8/8 w - - 0 1');
+  });
+
+  it('returns false when clipboard API is unavailable', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true
+    });
+
+    try {
+      await expectAsync((component as any).copyToClipboard('x')).toBeResolvedTo(false);
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(navigator, 'clipboard', descriptor);
+      } else {
+        delete (navigator as any).clipboard;
+      }
+    }
+  });
+
+  it('returns true when clipboard write succeeds', async () => {
+    const writeTextSpy = jasmine.createSpy('writeText').and.returnValue(Promise.resolve());
+    const descriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextSpy },
+      configurable: true
+    });
+
+    try {
+      await expectAsync((component as any).copyToClipboard('x')).toBeResolvedTo(true);
+      expect(writeTextSpy).toHaveBeenCalledWith('x');
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(navigator, 'clipboard', descriptor);
+      } else {
+        delete (navigator as any).clipboard;
+      }
+    }
+  });
+
 });
 
 describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () => {

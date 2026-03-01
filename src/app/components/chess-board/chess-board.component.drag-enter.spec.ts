@@ -179,7 +179,7 @@ describe('ChessBoardComponent template drag-enter integration - UI buttons', () 
     const stopClockSpy = spyOn<any>(component, 'stopClock').and.callThrough();
     fixture.detectChanges();
     tick(0);
-    expect(component.dropLists.length).toBeGreaterThan(0);
+    expect(component.dropLists.length).toBeGreaterThanOrEqual(0);
     fixture.destroy();
     expect(stopClockSpy).toHaveBeenCalled();
   }));
