@@ -146,14 +146,14 @@
           (click)="showPossibleMoves(chessBoardStateService.boardHelper.colorTurn)"
           [attr.title]="uiText.status.showPossibleMovesTitle"
           [attr.aria-label]="uiText.status.showPossibleMovesAriaLabel">
-          <span class="icon-action-btn__icon">👁</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-eye" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.showMoves}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary"
           (click)="showPossibleMoves(null)"
           [attr.title]="uiText.status.clearHighlightsTitle"
           [attr.aria-label]="uiText.status.clearHighlightsAriaLabel">
-          <span class="icon-action-btn__icon">⌫</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-eraser" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.clearHighlights}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary status-action-new-game"
@@ -161,7 +161,7 @@
           (click)="startNewGame()"
           [attr.title]="uiText.status.startNewGameTitle"
           [attr.aria-label]="uiText.status.startNewGameAriaLabel">
-          <span class="icon-action-btn__icon">↻</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-sync-alt" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.newGame}}</span>
         </button>
         <button class="icon-action-btn"
@@ -169,7 +169,7 @@
           (click)="offerDraw()"
           [attr.title]="uiText.status.offerDrawTitle"
           [attr.aria-label]="uiText.status.offerDrawAriaLabel">
-          <span class="icon-action-btn__icon">🤝</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-handshake" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.offerDraw}}</span>
         </button>
         <button class="icon-action-btn"
@@ -177,7 +177,7 @@
           (click)="acceptDrawOffer()"
           [attr.title]="uiText.status.acceptDrawTitle"
           [attr.aria-label]="uiText.status.acceptDrawAriaLabel">
-          <span class="icon-action-btn__icon">✔</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-check" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.acceptDraw}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary"
@@ -185,7 +185,7 @@
           (click)="declineDrawOffer()"
           [attr.title]="uiText.status.declineDrawTitle"
           [attr.aria-label]="uiText.status.declineDrawAriaLabel">
-          <span class="icon-action-btn__icon">✖</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-times" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.declineDraw}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--secondary"
@@ -193,7 +193,7 @@
           (click)="claimDraw()"
           [attr.title]="uiText.status.claimDrawTitle"
           [attr.aria-label]="uiText.status.claimDrawAriaLabel">
-          <span class="icon-action-btn__icon">⚖</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-balance-scale" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.claimDraw}}</span>
         </button>
       </div>
@@ -203,7 +203,7 @@
                 (click)="openResignConfirm(chessColors.White)"
                 [attr.title]="uiText.status.whiteResignTitle"
                 [attr.aria-label]="uiText.status.whiteResignAriaLabel">
-          <span class="icon-action-btn__icon">♔</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-chess-king" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.white}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--danger"
@@ -211,7 +211,7 @@
                 (click)="openResignConfirm(chessColors.Black)"
                 [attr.title]="uiText.status.blackResignTitle"
                 [attr.aria-label]="uiText.status.blackResignAriaLabel">
-          <span class="icon-action-btn__icon">♚</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-chess-king" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.status.black}}</span>
         </button>
       </div>
@@ -221,11 +221,11 @@
       <h3 class="section-title">{{getResignConfirmTitle()}}</h3>
       <div class="icon-actions-row icon-actions-row--compact">
         <button class="icon-action-btn icon-action-btn--secondary" (click)="cancelResignConfirm()" [attr.title]="uiText.resignConfirm.cancelTitle" [attr.aria-label]="uiText.resignConfirm.cancelAriaLabel">
-          <span class="icon-action-btn__icon">✖</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-times" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.resignConfirm.cancel}}</span>
         </button>
         <button class="icon-action-btn icon-action-btn--danger" (click)="confirmResign()" [attr.title]="uiText.resignConfirm.confirmTitle" [attr.aria-label]="uiText.resignConfirm.confirmAriaLabel">
-          <span class="icon-action-btn__icon">⚑</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-flag" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.resignConfirm.confirm}}</span>
         </button>
       </div>
@@ -235,19 +235,19 @@
       <h3 class="section-title">{{uiText.promotion.sectionTitle}}</h3>
       <div class="icon-actions-row promote-row">
         <button class="icon-action-btn" (click)="promotePiece('rook')" [attr.title]="uiText.promotion.promoteToRookTitle" [attr.aria-label]="uiText.promotion.promoteToRookAriaLabel">
-          <span class="icon-action-btn__icon">♖</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-chess-rook" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.promotion.rook}}</span>
         </button>
         <button class="icon-action-btn" (click)="promotePiece('bishop')" [attr.title]="uiText.promotion.promoteToBishopTitle" [attr.aria-label]="uiText.promotion.promoteToBishopAriaLabel">
-          <span class="icon-action-btn__icon">♗</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-chess-bishop" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.promotion.bishop}}</span>
         </button>
         <button class="icon-action-btn" (click)="promotePiece('knight')" [attr.title]="uiText.promotion.promoteToKnightTitle" [attr.aria-label]="uiText.promotion.promoteToKnightAriaLabel">
-          <span class="icon-action-btn__icon">♘</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-chess-knight" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.promotion.knight}}</span>
         </button>
         <button class="icon-action-btn" (click)="promotePiece('queen')" [attr.title]="uiText.promotion.promoteToQueenTitle" [attr.aria-label]="uiText.promotion.promoteToQueenAriaLabel">
-          <span class="icon-action-btn__icon">♕</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-chess-queen" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.promotion.queen}}</span>
         </button>
       </div>
@@ -259,25 +259,25 @@
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='threats-mine'"
                 (click)="showThreats()" [attr.title]="uiText.magicToolkit.myThreatsTitle" [attr.aria-label]="uiText.magicToolkit.myThreatsAriaLabel">
-          <span class="icon-action-btn__icon">⚔</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-crosshairs" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicToolkit.mine}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='protected-mine'"
                 (click)="showProtected()" [attr.title]="uiText.magicToolkit.myProtectedTitle" [attr.aria-label]="uiText.magicToolkit.myProtectedAriaLabel">
-          <span class="icon-action-btn__icon">🛡</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-shield-alt" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicToolkit.safe}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='threats-enemy'"
                 (click)="showThreats(true)" [attr.title]="uiText.magicToolkit.enemyThreatsTitle" [attr.aria-label]="uiText.magicToolkit.enemyThreatsAriaLabel">
-          <span class="icon-action-btn__icon">☠</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-skull-crossbones" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicToolkit.enemy}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='protected-enemy'"
                 (click)="showProtected(true)" [attr.title]="uiText.magicToolkit.enemyProtectedTitle" [attr.aria-label]="uiText.magicToolkit.enemyProtectedAriaLabel">
-          <span class="icon-action-btn__icon">⛨</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-user-shield" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicToolkit.guarded}}</span>
         </button>
       </div>
@@ -289,21 +289,21 @@
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='hanging-mine'"
                 (click)="showHangingPieces()" [attr.title]="uiText.magicerToolkit.myHangingTitle" [attr.aria-label]="uiText.magicerToolkit.myHangingAriaLabel">
-          <span class="icon-action-btn__icon">⚠</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicerToolkit.blunder}}</span>
         </button>
         <button class="icon-action-btn"
                 [class.time-btn--selected]="activeTool==='hanging-enemy'"
                 (click)="showHangingPieces(true)" [attr.title]="uiText.magicerToolkit.enemyHangingTitle" [attr.aria-label]="uiText.magicerToolkit.enemyHangingAriaLabel">
-          <span class="icon-action-btn__icon">🎯</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-bullseye" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicerToolkit.target}}</span>
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showForkIdeasMock()" [attr.title]="uiText.magicerToolkit.forkIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.forkIdeasAriaLabel">
-          <span class="icon-action-btn__icon">⑂</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-code-branch" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicerToolkit.fork}}</span>
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showPinIdeasMock()" [attr.title]="uiText.magicerToolkit.pinIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.pinIdeasAriaLabel">
-          <span class="icon-action-btn__icon">📌</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-thumbtack" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicerToolkit.pin}}</span>
         </button>
       </div>
@@ -315,19 +315,19 @@
         <button class="icon-action-btn" (click)="toggleBoardFlip()"
                 [class.time-btn--selected]="isBoardFlipped"
                 [attr.title]="uiText.gameTools.flipBoardTitle" [attr.aria-label]="uiText.gameTools.flipBoardAriaLabel">
-          <span class="icon-action-btn__icon">⇅</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-exchange-alt" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.gameTools.flip}}</span>
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportPgnMock()" [attr.title]="uiText.gameTools.exportPgnTitle" [attr.aria-label]="uiText.gameTools.exportPgnAriaLabel">
-          <span class="icon-action-btn__icon">⭳</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-download" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">PGN</span>
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportBoardImageMock()" [attr.title]="uiText.gameTools.exportImageTitle" [attr.aria-label]="uiText.gameTools.exportImageAriaLabel">
-          <span class="icon-action-btn__icon">🖼</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-image" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.gameTools.image}}</span>
         </button>
         <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportFenMock()" [attr.title]="uiText.gameTools.exportFenTitle" [attr.aria-label]="uiText.gameTools.exportFenAriaLabel">
-          <span class="icon-action-btn__icon">⌘</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-file-code" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">FEN</span>
         </button>
       </div>
@@ -352,11 +352,11 @@
       <h3 class="section-title">{{uiText.history.sectionTitle}}</h3>
       <div class="icon-actions-row icon-actions-row--compact history-controls">
         <button class="icon-action-btn" [disabled]="!canUndoMoveMock()" (click)="undoMoveMock()" [attr.title]="uiText.history.undoTitle" [attr.aria-label]="uiText.history.undoAriaLabel">
-          <span class="icon-action-btn__icon">↶</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-undo" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.history.undo}}</span>
         </button>
         <button class="icon-action-btn" [disabled]="!canRedoMoveMock()" (click)="redoMoveMock()" [attr.title]="uiText.history.redoTitle" [attr.aria-label]="uiText.history.redoAriaLabel">
-          <span class="icon-action-btn__icon">↷</span>
+          <span class="icon-action-btn__icon"><i class="fas fa-redo" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.history.redo}}</span>
         </button>
       </div>
@@ -377,7 +377,7 @@
     <div class="tool-card panel-card cct-card">
       <h3 class="section-title">CCT</h3>
       <div class="cct-row cct-row--capture" [attr.title]="uiText.cct.capturesRowTitle">
-        <span class="cct-row__icon" [attr.title]="uiText.cct.capturesIconTitle">✕</span>
+        <span class="cct-row__icon" [attr.title]="uiText.cct.capturesIconTitle"><i class="fas fa-times" aria-hidden="true"></i></span>
         <ng-container *ngIf="getCctRecommendations(cctCategory.Captures) as captureRecs">
               <span class="cct-step"
                 *ngFor="let rec of captureRecs"
@@ -388,7 +388,7 @@
         </ng-container>
       </div>
       <div class="cct-row cct-row--check" [attr.title]="uiText.cct.checksRowTitle">
-        <span class="cct-row__icon" [attr.title]="uiText.cct.checksIconTitle">♔</span>
+        <span class="cct-row__icon" [attr.title]="uiText.cct.checksIconTitle"><i class="fas fa-chess-king" aria-hidden="true"></i></span>
         <ng-container *ngIf="getCctRecommendations(cctCategory.Checks) as checkRecs">
               <span class="cct-step"
                 *ngFor="let rec of checkRecs"
@@ -399,7 +399,7 @@
         </ng-container>
       </div>
       <div class="cct-row cct-row--threat" [attr.title]="uiText.cct.threatsRowTitle">
-        <span class="cct-row__icon" [attr.title]="uiText.cct.threatsIconTitle">⚠</span>
+        <span class="cct-row__icon" [attr.title]="uiText.cct.threatsIconTitle"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></span>
         <ng-container *ngIf="getCctRecommendations(cctCategory.Threats) as threatRecs">
               <span class="cct-step"
                 *ngFor="let rec of threatRecs"
