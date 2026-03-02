@@ -1,3 +1,4 @@
+/* eslint-disable max-lines-per-function */
 import { ChessBoardComponent } from './chess-board.component';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
@@ -2656,6 +2657,154 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
     expect(component.getMoveQualityLabel(1)).toBe('small error');
     expect(component.getMoveQualityLabel(2)).toBe('genius');
     expect(component.getMoveQualityLabel(3)).toBe('genius');
+  });
+
+  it('covers move quality fallback and class mapping', () => {
+    spyOn(component as any, 'getMoveQuality').and.returnValues({
+      label: 'great',
+      className: 'history-quality--great'
+    } as any, null, {
+      label: 'great',
+      className: 'quality-great'
+    } as any);
+
+    expect(component.getMoveQualityLabel(4)).toBe('great');
+    expect(component.getMoveQualityClass(4)).toBe('');
+    expect(component.getMoveQualityClass(4)).toBe('quality-great');
+  });
+
+  it('covers fen generation fallback branches from snapshots', () => {
+    expect((component as any).generateFenFromSnapshot(null)).toBe('8/8/8/8/8/8/8/8 w - - 0 1');
+
+    const snapshot = (component as any).captureCurrentSnapshot();
+    delete snapshot.boardHelper.history;
+    const generatedFen = (component as any).generateFenFromSnapshot(snapshot);
+    expect(generatedFen).toContain(' w ');
+  });
+
+  it('covers evaluation helpers and analysis meter branches', () => {
+    spyOn(component as any, 'getFenForHistoryIndex').and.returnValue('fen1');
+    (component as any).evalByHistoryIndex.set(2, '+0.31');
+    expect(component.getEvaluationForMove(2)).toBe('+0.31');
+    expect(component.getEvaluationForMove(0)).toBe('...');
+
+    const noEngineComponent = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
+    expect(noEngineComponent.getCurrentAnalysisEvalText()).toBe('n/a');
+
+    spyOn(component, 'getCurrentAnalysisEvalText').and.returnValues('#+2', '#-4', 'bad');
+    expect(component.getAnalysisMeterOffsetPercent()).toBe(100);
+    expect(component.getAnalysisMeterOffsetPercent()).toBe(0);
+    expect(component.getAnalysisMeterOffsetPercent()).toBe(50);
+  });
+
+  it('covers move quality thresholds and null-return branches', () => {
+    spyOn(component, 'getEvaluationForMove').and.callFake((index: number) => {
+      const table: Record<number, string> = {
+        0: '+0.0',
+        1: '+0.0',
+        2: '+0.7',
+        3: '+2.0',
+        4: '+1.0',
+        5: '+0.9',
+        6: '+0.4',
+        7: '+0.3',
+        8: '...'
+      };
+      return table[index] ?? '...';
+    });
+
+    expect(component.getMoveQualityLabel(0)).toBe('');
+    expect(component.getMoveQualityLabel(1)).toBe('');
+    expect(component.getMoveQualityLabel(2)).toBe('good');
+    expect(component.getMoveQualityLabel(3)).toBe('mistake');
+    expect(component.getMoveQualityLabel(4)).toBe('mistake');
+    expect(component.getMoveQualityLabel(5)).toBe('');
+    expect(component.getMoveQualityLabel(6)).toBe('small error');
+    expect(component.getMoveQualityLabel(7)).toBe('');
+    expect(component.getMoveQualityLabel(8)).toBe('');
+  });
+
+  it('covers move quality great and blunder branches', () => {
+    spyOn(component, 'getEvaluationForMove').and.callFake((index: number) => {
+      const table: Record<number, string> = {
+        0: '+0.0',
+        1: '+0.0',
+        2: '+1.2',
+        3: '+4.8'
+      };
+      return table[index] ?? '...';
+    });
+
+    expect(component.getMoveQualityLabel(2)).toBe('great');
+    expect(component.getMoveQualityLabel(3)).toBe('blunder');
+  });
+
+  it('covers showPossibleMoves guard and check/capture arrows path', () => {
+    component.showPossibleMoves(null as any);
+
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[5][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    spyOn<any>(component, 'canPlayLegalMove').and.returnValue(true);
+    spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
+    const possibleSpy = spyOn(ChessBoardStateService, 'addPossible').and.callThrough();
+    const hitSpy = spyOn(ChessBoardStateService, 'addHit').and.callThrough();
+    const checkSpy = spyOn(ChessBoardStateService, 'addCheck').and.callThrough();
+
+    component.showPossibleMoves(ChessColorsEnum.White);
+    expect(possibleSpy).toHaveBeenCalled();
+    expect(hitSpy).toHaveBeenCalled();
+    expect(checkSpy).toHaveBeenCalled();
+  });
+
+  it('covers refreshVisibleHistoryEvaluations cancellation branches', async () => {
+    const neverEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
+    await (neverEngine as any).refreshVisibleHistoryEvaluations(1);
+
+    (component as any).evaluationRunToken = 10;
+    spyOn(component as any, 'getVisibleHistory').and.returnValue(['e2-e4']);
+    spyOn(component as any, 'getFenForHistoryIndex').and.returnValue('fen-a');
+    stockfishServiceStub.evaluateFen.calls.reset();
+    await (component as any).refreshVisibleHistoryEvaluations(9);
+    expect(stockfishServiceStub.evaluateFen).not.toHaveBeenCalled();
+
+    (component as any).evaluationRunToken = 20;
+    let resolveEval!: (value: string) => void;
+    stockfishServiceStub.evaluateFen.and.returnValue(new Promise(resolve => {
+      resolveEval = resolve;
+    }));
+    const resolveRun = (component as any).refreshVisibleHistoryEvaluations(20);
+    (component as any).evaluationRunToken = 21;
+    resolveEval('+0.20');
+    await resolveRun;
+
+    (component as any).evaluationRunToken = 30;
+    let rejectEval!: (error: Error) => void;
+    stockfishServiceStub.evaluateFen.and.returnValue(new Promise((_resolve, reject) => {
+      rejectEval = reject;
+    }));
+    const rejectRun = (component as any).refreshVisibleHistoryEvaluations(30);
+    (component as any).evaluationRunToken = 31;
+    rejectEval(new Error('late failure'));
+    await rejectRun;
+
+    const cleanComponent = new ChessBoardComponent(
+      chessBoardStateService,
+      { get: () => of([]) } as any,
+      undefined,
+      undefined,
+      undefined,
+      stockfishServiceStub as any
+    );
+    expect((cleanComponent as any).getFenForHistoryIndex(-1)).toBe('');
+  });
+
+  it('returns current move eval text when engine exists and cursor is on a move', () => {
+    spyOn<any>(component, 'getCurrentVisibleMoveIndex').and.returnValue(0);
+    spyOn(component, 'getEvaluationForMove').and.returnValue('+0.22');
+    expect(component.getCurrentAnalysisEvalText()).toBe('+0.22');
   });
 });
 
