@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
 
 @Component({
   selector: 'app-chess-board-clock-card',
@@ -40,18 +41,6 @@ export class ChessBoardClockCardComponent {
   }
 
   formatClock(clockMs: number): string {
-    const totalMs = Math.max(0, Math.floor(clockMs));
-    const totalSeconds = Math.floor(totalMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const tenths = Math.floor((totalMs % 1000) / 100);
-    if (minutes >= 1) {
-      return `${this.padToTwo(minutes)}:${this.padToTwo(seconds)}`;
-    }
-    return `${this.padToTwo(minutes)}:${this.padToTwo(seconds)}.${tenths}`;
-  }
-
-  private padToTwo(value: number): string {
-    return value < 10 ? `0${value}` : `${value}`;
+    return ChessBoardClockUtils.formatClock(clockMs);
   }
 }

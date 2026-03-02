@@ -42,6 +42,7 @@ import { ChessBoardInitializationUtils } from '../../utils/chess-board-initializ
 import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
+import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
 
 @Component({
   selector: 'app-chess-board',
@@ -976,15 +977,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   formatClock(clockMs: number): string {
-    const totalMs = Math.max(0, Math.floor(clockMs));
-    const totalSeconds = Math.floor(totalMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    const tenths = Math.floor((totalMs % 1000) / 100);
-    if (minutes >= 1) {
-      return `${this.padToTwo(minutes)}:${this.padToTwo(seconds)}`;
-    }
-    return `${this.padToTwo(minutes)}:${this.padToTwo(seconds)}.${tenths}`;
+    return ChessBoardClockUtils.formatClock(clockMs);
   }
 
   isClockActive(color: ChessColorsEnum): boolean {
@@ -2644,10 +2637,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const loserName = loserColor === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black;
     this.chessBoardStateService.boardHelper.debugText = `${loserName} ${this.uiText.message.forfeitsOnTime}`;
     this.appendGameResultToLastMove(winnerResult, `${loserName} ${this.uiText.message.forfeitsOnTimeNoPeriod}`);
-  }
-
-  private padToTwo(value: number): string {
-    return value.toString().padStart(2, '0');
   }
 
   private getMaxMoveIndex(): number {
