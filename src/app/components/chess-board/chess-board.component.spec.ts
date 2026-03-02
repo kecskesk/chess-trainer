@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { ChessBoardComponent } from './chess-board.component';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
@@ -1378,6 +1377,16 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     expect(component.activeTool).toBeNull();
     expect(chessBoardStateService.boardHelper.arrows).toEqual({});
   });
+});
+
+describe('ChessBoardComponent gameplay moves and rules (clock and controls export state)', () => {
+  beforeEach(() => {
+    chessBoardStateService = new ChessBoardStateService();
+    component = new ChessBoardComponent(chessBoardStateService, {
+      get: () => of([])
+    } as any);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+  });
 
   it('exports FEN when history containers are missing', () => {
     spyOnProperty(chessBoardStateService, 'history', 'get').and.returnValue(undefined as any);
@@ -1429,7 +1438,9 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
       }
     }
   });
+});
 
+describe('ChessBoardComponent gameplay moves and rules (clock and controls overlays)', () => {
   it('covers fork and pin/skewer overlays plus toggle-off branches', () => {
     clearBoard();
     chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
@@ -1503,7 +1514,9 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     (component as any).downloadDataUrl('data:image/png;base64,BB', 'board.png');
     expect(clickSpy).toHaveBeenCalled();
   });
+});
 
+describe('ChessBoardComponent gameplay moves and rules (clock and controls export helpers)', () => {
   it('covers PGN sparse history and private result fallback branches', () => {
     const serviceBackup = (component as any).chessBoardStateService;
     (component as any).chessBoardStateService = null;
@@ -2791,7 +2804,9 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
     expect(component.getMoveQualityClass(4)).toBe('');
     expect(component.getMoveQualityClass(4)).toBe('quality-great');
   });
+});
 
+describe('ChessBoardComponent stockfish evaluation thresholds', () => {
   it('covers fen generation fallback branches from snapshots', () => {
     expect(ChessBoardLogicUtils.generateFenFromSnapshot(null as any)).toBe('8/8/8/8/8/8/8/8 w - - 0 1');
 
@@ -2857,7 +2872,9 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
     expect(component.getMoveQualityLabel(2)).toBe('great');
     expect(component.getMoveQualityLabel(3)).toBe('blunder');
   });
+});
 
+describe('ChessBoardComponent stockfish evaluation helper branches', () => {
   it('covers showPossibleMoves guard and check/capture arrows path', () => {
     component.showPossibleMoves(null as any);
 
@@ -3110,6 +3127,7 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
     );
     expect(localWithCct.getCctRecommendations(CctCategoryEnum.Captures).length).toBe(1);
     expect(cctService.ensureCctRecommendations).toHaveBeenCalled();
+    expect(localWithCct.getCctRecommendations('missing' as any)).toEqual([]);
   });
 
   it('covers private cct cache-hit, self-check continue, threat scoring and king finder', () => {
@@ -3146,6 +3164,26 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
     const found = (component as any).findKing(chessBoardStateService.field, ChessColorsEnum.White);
     expect(found?.row).toBe(7);
     expect(found?.col).toBe(4);
+  });
+
+  it('covers private ensureCctRecommendations check tooltip/score branches for non-capture checks', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    spyOn<any>(component, 'getPositionKey').and.returnValue('check-only');
+    spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) => targetRow === 5 && targetCol === 4);
+    spyOn<any>(component, 'simulateMove').and.callFake((b: any) => ChessBoardLogicUtils.cloneField(b));
+    spyOn<any>(component, 'isKingInCheck').and.callFake((_b: any, color: ChessColorsEnum) => color === ChessColorsEnum.Black);
+    spyOn<any>(component, 'getThreatenedEnemyPiecesByMovedPiece').and.returnValue([ChessPiecesEnum.Queen]);
+
+    (component as any).cctRecommendationsCacheKey = '';
+    (component as any).ensureCctRecommendations();
+    const checks = (component as any).cctRecommendationsCache[CctCategoryEnum.Checks];
+    expect(checks.length).toBeGreaterThan(0);
+    expect(checks[0].tooltip).not.toContain('with capture');
   });
 });
 

@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { ChessBoardOpeningUtils, IOpeningDebugTextDictionary } from './chess-board-opening.utils';
 import { HttpClient } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
@@ -92,7 +91,9 @@ describe('ChessBoardOpeningUtils', () => {
     expect(suggestedDepth.opening?.name).toBe('With Suggested');
     expect(suggestedDepth.baseMatchedDepth).toBe(1);
   });
+});
 
+describe('ChessBoardOpeningUtils debug and asset loading', () => {
   it('formats opening debug text for projected and non-projected suggested lines', () => {
     const opening: any = {
       name: 'Main',

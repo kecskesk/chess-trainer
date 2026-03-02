@@ -10,9 +10,11 @@ import { ICctRecommendation, ICctRecommendationScored } from '../model/interface
 import { IOpeningAssetItem } from '../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../model/interfaces/parsed-opening.interface';
 import { ChessRulesService } from '../services/chess-rules.service';
+import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessBoardCctUtils } from '../utils/chess-board-cct.utils';
 import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 import { UiTextLoaderService } from './ui-text-loader.service';
+import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
 
 interface IOpeningUiText {
   message: {
@@ -24,7 +26,7 @@ interface IOpeningUiText {
   };
 }
 
-@Injectable()
+@Injectable({ providedIn: 'root' })
 export class ChessBoardCctService {
   private openings: IParsedOpening[] = [];
   private activeOpening: IParsedOpening | null = null;
@@ -38,19 +40,13 @@ export class ChessBoardCctService {
 
   constructor(private http: HttpClient) {}
 
-  // eslint-disable-next-line max-lines-per-function
   ensureCctRecommendations(
     board: ChessPieceDto[][][],
     forColor: ChessColorsEnum,
     _historyLength: number
   ): Record<CctCategoryEnum, ICctRecommendation[]> {
     if (!board || !forColor) {
-      this.cctRecommendationsCache = {
-        [CctCategoryEnum.Captures]: [],
-        [CctCategoryEnum.Checks]: [],
-        [CctCategoryEnum.Threats]: []
-      };
-      this.cctRecommendationsCacheKey = '';
+      this.resetCctRecommendationsCache();
       return this.cctRecommendationsCache;
     }
 
@@ -61,9 +57,7 @@ export class ChessBoardCctService {
     }
 
     const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const captures: ICctRecommendationScored[] = [];
-    const checks: ICctRecommendationScored[] = [];
-    const threats: ICctRecommendationScored[] = [];
+    const captures: ICctRecommendationScored[] = [], checks: ICctRecommendationScored[] = [], threats: ICctRecommendationScored[] = [];
 
     for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
       for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
@@ -71,7 +65,6 @@ export class ChessBoardCctService {
         if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
           continue;
         }
-
         const sourcePiece = sourceCell[0];
         for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
           for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
@@ -80,14 +73,7 @@ export class ChessBoardCctService {
             }
 
             const targetCell = clonedBoard[targetRow][targetCol];
-            const canMove = ChessRulesService.canStepThere(
-              targetRow,
-              targetCol,
-              targetCell,
-              srcRow,
-              srcCol,
-              new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
-            );
+            const canMove = this.canPieceMove(clonedBoard, forColor, targetRow, targetCol, targetCell, srcRow, srcCol, sourcePiece);
             if (!canMove) {
               continue;
             }
@@ -105,8 +91,10 @@ export class ChessBoardCctService {
               targetCol,
               forColor,
               enemyColor,
-              (tRow, tCol, tCell, sRow, sCol, sPiece, _aColor) =>
-                ChessRulesService.canStepThere(tRow, tCol, tCell, sRow, sCol, new ChessPieceDto(sPiece.color, sPiece.piece))
+              (tRow, tCol, tCell, sRow, sCol, sPiece, attackerColor) =>
+                this.withBoardContext(afterMove, attackerColor, () =>
+                  ChessRulesService.canStepThere(tRow, tCol, tCell, sRow, sCol, new ChessPieceDto(sPiece.color, sPiece.piece))
+                )
             );
 
             const move = ChessBoardCctUtils.formatCctMove(sourcePiece.piece, srcRow, srcCol, targetRow, targetCol, isCapture, isCheck);
@@ -271,6 +259,56 @@ export class ChessBoardCctService {
     return ChessBoardLogicUtils.getPositionKey(board, turn, {});
   }
 
+  private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
+    const previousField = ChessBoardStateService.CHESS_FIELD;
+    const previousHelper = ChessBoardStateService.BOARD_HELPER;
+    try {
+      ChessBoardStateService.CHESS_FIELD = board;
+      const helper = {
+        ...(previousHelper || {}),
+        colorTurn: turn,
+        history: previousHelper?.history || {},
+        justDidCastle: null
+      } as ChessBoardHelperDto;
+      ChessBoardStateService.BOARD_HELPER = helper;
+      return callback();
+    } finally {
+      ChessBoardStateService.CHESS_FIELD = previousField;
+      ChessBoardStateService.BOARD_HELPER = previousHelper;
+    }
+  }
+
+  private canPieceMove(
+    board: ChessPieceDto[][][],
+    turn: ChessColorsEnum,
+    targetRow: number,
+    targetCol: number,
+    targetCell: ChessPieceDto[],
+    srcRow: number,
+    srcCol: number,
+    sourcePiece: ChessPieceDto
+  ): boolean {
+    return this.withBoardContext(board, turn, () =>
+      ChessRulesService.canStepThere(
+        targetRow,
+        targetCol,
+        targetCell,
+        srcRow,
+        srcCol,
+        new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+      )
+    );
+  }
+
+  private resetCctRecommendationsCache(): void {
+    this.cctRecommendationsCache = {
+      [CctCategoryEnum.Captures]: [],
+      [CctCategoryEnum.Checks]: [],
+      [CctCategoryEnum.Threats]: []
+    };
+    this.cctRecommendationsCacheKey = '';
+  }
+
   private getOpeningAsset$(fileName: string, locale: string): Observable<IOpeningAssetItem[]> {
     const fallbackPath = `assets/openings/${fileName}`;
     if (locale === UiTextLoaderService.DEFAULT_LOCALE) {
@@ -347,15 +385,21 @@ export class ChessBoardCctService {
       }
 
       if (isComplete) {
-        if (!bestIsComplete || matchedDepth > bestMatchDepth || 
-            (matchedDepth === bestMatchDepth && opening.steps.length < (bestMatch?.steps.length || 0))) {
+        const isShorterCompleteLine =
+          matchedDepth === bestMatchDepth &&
+          bestMatch !== null &&
+          opening.steps.length < bestMatch.steps.length;
+        if (!bestIsComplete || matchedDepth > bestMatchDepth || isShorterCompleteLine) {
           bestMatch = opening;
           bestMatchDepth = matchedDepth;
           bestIsComplete = true;
         }
       } else {
-        if (!bestIsComplete && (matchedDepth > bestMatchDepth || 
-            (matchedDepth === bestMatchDepth && opening.steps.length < (bestMatch?.steps.length || 0)))) {
+        const isShorterPartialLine =
+          matchedDepth === bestMatchDepth &&
+          bestMatch !== null &&
+          opening.steps.length < bestMatch.steps.length;
+        if (!bestIsComplete && (matchedDepth > bestMatchDepth || isShorterPartialLine)) {
           bestMatch = opening;
           bestMatchDepth = matchedDepth;
         }

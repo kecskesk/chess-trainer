@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { ChessBoardEvaluationUtils } from './chess-board-evaluation.utils';
 import { ChessBoardLogicUtils } from './chess-board-logic.utils';
 
@@ -73,7 +72,9 @@ describe('ChessBoardEvaluationUtils', () => {
     expect(quality).not.toBeNull();
     expect(quality?.label).toBe('genius');
   });
+});
 
+describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
   it('refreshes visible history evaluations and updates caches', async () => {
     const evalByHistoryIndex = new Map<number, string>();
     const evalCacheByFen = new Map<string, string>([['fen-cached', '+0.20']]);

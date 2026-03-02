@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { StockfishService } from './stockfish.service';
 
 class WorkerMock {
@@ -148,6 +147,18 @@ describe('StockfishService', () => {
     worker.scoreLine = 'info depth 8 pv e2e4 e7e5';
     const score = await service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
     expect(score).toBe('n/a');
+  });
+});
+
+describe('StockfishService edge paths', () => {
+  let service: StockfishService;
+  let worker: WorkerMock;
+
+  beforeEach(() => {
+    (StockfishService as any).HANDSHAKE_TIMEOUT_MS = 8000;
+    service = new StockfishService();
+    worker = new WorkerMock();
+    spyOn<any>(service, 'createWorker').and.returnValue(worker as unknown as Worker);
   });
 
   it('rejects when worker emits error', async () => {

@@ -8,6 +8,7 @@ import { ChessRulesService } from './chess-rules.service';
 import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 import { ChessBoardCctUtils } from '../utils/chess-board-cct.utils';
 import { UiTextLoaderService } from './ui-text-loader.service';
+import { ChessBoardStateService } from './chess-board-state.service';
 
 function emptyBoard(): ChessPieceDto[][][] {
   return Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => [] as ChessPieceDto[]));
@@ -75,6 +76,85 @@ describe('ChessBoardCctService recommendation cache', () => {
     const result = service.ensureCctRecommendations(board, ChessColorsEnum.White, 0);
     expect(result[CctCategoryEnum.Threats].length).toBeGreaterThan(0);
   });
+
+  it('covers black-to-move path and non-capture check tooltip/score branches', () => {
+    const board = emptyBoard();
+    board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+    board[1][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
+
+    spyOn<any>(service, 'getPositionKey').and.returnValue('p3');
+    spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) => targetRow === 2 && targetCol === 4);
+    spyOn(ChessBoardLogicUtils, 'simulateMove').and.callFake((b) => ChessBoardLogicUtils.cloneField(b));
+    spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.callFake((_b, color) => color === ChessColorsEnum.White);
+    spyOn(ChessBoardCctUtils, 'getThreatenedEnemyPiecesByMovedPiece').and.returnValue([ChessPiecesEnum.Queen]);
+
+    const result = service.ensureCctRecommendations(board, ChessColorsEnum.Black, 0);
+    expect(result[CctCategoryEnum.Checks].length).toBeGreaterThan(0);
+    expect(result[CctCategoryEnum.Checks][0].tooltip).not.toContain('with capture');
+  });
+});
+
+describe('ChessBoardCctService recommendation cache tactical regression', () => {
+  let service: ChessBoardCctService;
+
+  beforeEach(() => {
+    service = new ChessBoardCctService({ get: jasmine.createSpy('get').and.returnValue(of([])) } as any);
+  });
+
+  it('does not return all-empty recommendations for a tactical black-to-move middlegame', () => {
+    const board = emptyBoard();
+    board[0][0] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
+    board[0][1] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)];
+    board[0][2] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)];
+    board[0][3] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)];
+    board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+    board[0][5] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)];
+    board[0][6] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)];
+    board[0][7] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
+    board[1][0] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
+    board[1][2] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
+    board[1][7] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
+    board[2][5] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
+    board[3][3] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    board[5][1] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
+    board[5][5] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)];
+    board[6][1] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    board[6][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    board[6][5] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    board[6][6] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    board[6][7] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+    board[7][0] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)];
+    board[7][1] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)];
+    board[7][2] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)];
+    board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    board[7][5] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)];
+    board[7][7] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)];
+
+    const result = service.ensureCctRecommendations(board, ChessColorsEnum.Black, 16);
+    const total =
+      result[CctCategoryEnum.Captures].length +
+      result[CctCategoryEnum.Checks].length +
+      result[CctCategoryEnum.Threats].length;
+    expect(total).toBeGreaterThan(0);
+  });
+
+  it('builds recommendations even when global board helper is temporarily null', () => {
+    const previousHelper = ChessBoardStateService.BOARD_HELPER;
+    const board = emptyBoard();
+    board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
+    board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
+    board[0][3] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)];
+    board[3][3] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
+
+    ChessBoardStateService.BOARD_HELPER = null as any;
+    try {
+      const result = service.ensureCctRecommendations(board, ChessColorsEnum.Black, 0);
+      expect(result[CctCategoryEnum.Captures].length).toBeGreaterThan(0);
+    } finally {
+      ChessBoardStateService.BOARD_HELPER = previousHelper;
+    }
+  });
 });
 
 describe('ChessBoardCctService opening assets', () => {
@@ -110,6 +190,17 @@ describe('ChessBoardCctService opening assets', () => {
     expect(updated).toBeTrue();
     expect((service as any).openings.length).toBe(2);
     expect(http.get).toHaveBeenCalledWith('assets/openings/hu_HU/openings1.json');
+  });
+
+  it('falls back to default locale path when locale input is empty', () => {
+    http.get.and.returnValue(of([{ name: 'A', long_algebraic_notation: '1. e4' }]));
+    let loaded = false;
+    service.loadOpeningsFromAssets('', (value) => {
+      loaded = value;
+    }, () => undefined);
+
+    expect(loaded).toBeTrue();
+    expect(http.get).toHaveBeenCalledWith('assets/openings/openings1.json');
   });
 
   it('resolves localized and default assets with fallback behavior', () => {
@@ -183,6 +274,35 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
     expect(second.debugText).toBe('');
   });
 
+  it('sets debug key with none suffix when no opening is matched', () => {
+    (service as any).openings = [{
+      name: 'Main',
+      steps: ['e4', 'e5'],
+      raw: { long_algebraic_notation: '1. e4 e5' }
+    }];
+    const uiText = {
+      message: {
+        openingLabel: 'Opening',
+        matchedSteps: 'Matched',
+        bookRecommendationWhite: 'White',
+        bookRecommendationBlack: 'Black',
+        lineLabel: 'Line'
+      }
+    };
+
+    const result = service.updateRecognizedOpeningForCurrentHistory(['d4'], uiText as any, '-');
+    expect(result.activeOpening).toBeNull();
+    expect(result.debugText).toBe('');
+  });
+});
+
+describe('ChessBoardCctService opening helper formatting and matching', () => {
+  let service: ChessBoardCctService;
+
+  beforeEach(() => {
+    service = new ChessBoardCctService({ get: jasmine.createSpy('get').and.returnValue(of([])) } as any);
+  });
+
   it('formats opening debug text and private parsing/matching helpers', () => {
     const uiText = {
       message: {
@@ -206,6 +326,14 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
     expect(service.formatOpeningDebugText(opening as any, 0, 1, ['e4'], uiText as any, '-')).toContain('White: BestName');
     expect(service.formatOpeningDebugText(opening as any, 1, 2, ['e4', 'e5'], uiText as any, '-')).toContain('Black: BestMove');
     expect(service.formatOpeningDebugText(opening as any, 2, 2, ['e4', 'e5'], uiText as any, 'N/A')).toContain('Line: 1. e4 e5');
+    expect(service.formatOpeningDebugText(
+      { name: 'NoLine', steps: ['e4'], raw: { long_algebraic_notation: '' } } as any,
+      1,
+      1,
+      ['e4'],
+      uiText as any,
+      'N/A'
+    )).toContain('Line: N/A');
     expect(service.formatOpeningDebugText(null as any, 0, 0, [], uiText as any, '-')).toBe('');
 
     expect((service as any).normalizeOpeningNotation('1. e4 e5 2. Nf3')).toEqual(['e4', 'e5', 'Nf3']);
