@@ -82,7 +82,7 @@ export class VisualizationConstants {
   /** Loop safety cap when stepping through paths. */
   static readonly MAX_PATH_ITERATIONS = 8;
   /** Allowed arrow color tokens from visualization API. */
-  static readonly SUPPORTED_ARROW_COLORS: Array<IVisualizationArrow['color']> = ['red', 'green', 'yellow', 'gold', 'cyan', 'blue'];
+  static readonly SUPPORTED_ARROW_COLORS: Array<IVisualizationArrow['color']> = ['red', 'green', 'yellow', 'gold', 'cyan', 'blue', 'orange'];
 }
 
 /**

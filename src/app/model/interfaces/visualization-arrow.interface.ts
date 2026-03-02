@@ -6,7 +6,7 @@ export interface IVisualizationArrow {
   fromCol: number;
   toRow: number;
   toCol: number;
-  color: 'blue' | 'red' | 'yellow' | 'green' | 'gold' | 'cyan';
+  color: 'blue' | 'red' | 'yellow' | 'green' | 'gold' | 'cyan' | 'orange';
   intensity: number; // 0-1
   label?: string;
 }

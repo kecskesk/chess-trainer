@@ -1386,9 +1386,10 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     expect(castlingRights.length).toBeGreaterThan(0);
   });
 
-  it('produces mock export and annotation helper outputs', () => {
-    component.exportPgnMock();
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Mock export: PGN ready');
+  it('produces export and annotation helper outputs', () => {
+    component.exportPgn();
+    expect(chessBoardStateService.boardHelper.debugText).toContain('[Event "Chess Trainer Game"]');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('[Result "*"');
 
     component.exportBoardImageMock();
     expect(chessBoardStateService.boardHelper.debugText).toContain('Mock export: Board image ready');
@@ -1396,13 +1397,13 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     component.exportFen();
     expect(chessBoardStateService.boardHelper.debugText).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 
-    component.showForkIdeasMock();
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Mock: Fork ideas highlighted');
+    component.showForkIdeas();
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Fork ideas highlighted');
     expect(component.activeTool).toBeNull();
     expect(chessBoardStateService.boardHelper.arrows).toEqual({});
 
-    component.showPinIdeasMock();
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Mock: Pin opportunities highlighted');
+    component.showPinIdeas();
+    expect(chessBoardStateService.boardHelper.debugText).toContain('Pin opportunities highlighted');
     expect(component.activeTool).toBeNull();
     expect(chessBoardStateService.boardHelper.arrows).toEqual({});
   });

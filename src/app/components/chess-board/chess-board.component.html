@@ -311,11 +311,11 @@
           <span class="icon-action-btn__icon"><i class="fas fa-bullseye" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicerToolkit.target}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showForkIdeasMock()" [attr.title]="uiText.magicerToolkit.forkIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.forkIdeasAriaLabel">
+        <button class="icon-action-btn" (click)="showForkIdeas()" [attr.title]="uiText.magicerToolkit.forkIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.forkIdeasAriaLabel">
           <span class="icon-action-btn__icon"><i class="fas fa-code-branch" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicerToolkit.fork}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="showPinIdeasMock()" [attr.title]="uiText.magicerToolkit.pinIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.pinIdeasAriaLabel">
+        <button class="icon-action-btn" (click)="showPinIdeas()" [attr.title]="uiText.magicerToolkit.pinIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.pinIdeasAriaLabel">
           <span class="icon-action-btn__icon"><i class="fas fa-thumbtack" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.magicerToolkit.pin}}</span>
         </button>
@@ -331,11 +331,11 @@
           <span class="icon-action-btn__icon"><i class="fas fa-exchange-alt" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.gameTools.flip}}</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportPgnMock()" [attr.title]="uiText.gameTools.exportPgnTitle" [attr.aria-label]="uiText.gameTools.exportPgnAriaLabel">
+        <button class="icon-action-btn" (click)="exportPgn()" [attr.title]="uiText.gameTools.exportPgnTitle" [attr.aria-label]="uiText.gameTools.exportPgnAriaLabel">
           <span class="icon-action-btn__icon"><i class="fas fa-download" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">PGN</span>
         </button>
-        <button class="icon-action-btn" [disabled]="areMockControlsDisabled" (click)="exportBoardImageMock()" [attr.title]="uiText.gameTools.exportImageTitle" [attr.aria-label]="uiText.gameTools.exportImageAriaLabel">
+        <button class="icon-action-btn" (click)="exportBoardImageMock()" [attr.title]="uiText.gameTools.exportImageTitle" [attr.aria-label]="uiText.gameTools.exportImageAriaLabel">
           <span class="icon-action-btn__icon"><i class="fas fa-image" aria-hidden="true"></i></span>
           <span class="icon-action-btn__text">{{uiText.gameTools.image}}</span>
         </button>

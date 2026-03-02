@@ -4,6 +4,7 @@ import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, DragDrop
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import html2canvas from 'html2canvas';
 import { ChessArrowDto } from 'src/app/model/chess-arrow.dto';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
@@ -1733,28 +1734,116 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.cctRecommendationsCache[category];
   }
 
-  exportPgnMock(): void {
-    this.chessBoardStateService.boardHelper.debugText = `${this.uiText.message.mockExportPgnReady} (${new Date().toLocaleTimeString()})`;
+  exportPgn(): void {
+    const pgn = this.getCurrentPgn();
+    this.chessBoardStateService.boardHelper.debugText = pgn;
+    void this.copyToClipboard(pgn);
   }
 
-  exportBoardImageMock(): void {
+  async exportBoardImageMock(): Promise<void> {
     this.chessBoardStateService.boardHelper.debugText = `${this.uiText.message.mockExportImageReady} (${new Date().toLocaleTimeString()})`;
+    const imageDataUrl = await this.createBoardImageDataUrlFromDom();
+    if (imageDataUrl) {
+      this.downloadDataUrl(
+        imageDataUrl,
+        `chess-board-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+      );
+    }
   }
 
-  showForkIdeasMock(): void {
+  showForkIdeas(): void {
+    const key = 'fork-ideas';
+    if (this.activeTool === key) {
+      this.clearOverlay();
+      return;
+    }
     this.clearOverlay();
-    this.chessBoardStateService.boardHelper.debugText = this.uiText.message.mockForkIdeas;
+    const forkArrows = this.collectForkVisualizationArrows();
+    forkArrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
+    if (forkArrows.length > 0) {
+      this.activeTool = key;
+    }
+    this.chessBoardStateService.boardHelper.debugText = this.uiText.message.forkIdeas;
   }
 
-  showPinIdeasMock(): void {
+  showPinIdeas(): void {
+    const key = 'pin-ideas';
+    if (this.activeTool === key) {
+      this.clearOverlay();
+      return;
+    }
     this.clearOverlay();
-    this.chessBoardStateService.boardHelper.debugText = this.uiText.message.mockPinIdeas;
+    const pinArrows = this.collectPinVisualizationArrows();
+    pinArrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
+    if (pinArrows.length > 0) {
+      this.activeTool = key;
+    }
+    this.chessBoardStateService.boardHelper.debugText = this.uiText.message.pinIdeas;
   }
 
   exportFen(): void {
     const fen = this.getCurrentFen();
     this.chessBoardStateService.boardHelper.debugText = `${fen}`;
     void this.copyToClipboard(fen);
+  }
+
+  private getCurrentPgn(): string {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+      return '';
+    }
+
+    const history = this.chessBoardStateService.history || [];
+    const result = this.getPgnResultFromHistory(history);
+    const pgnDate = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+    const headers = [
+      '[Event "Chess Trainer Game"]',
+      '[Site "Local"]',
+      `[Date "${pgnDate}"]`,
+      '[Round "-"]',
+      '[White "White"]',
+      '[Black "Black"]',
+      `[Result "${result}"]`
+    ];
+
+    const movePairs: string[] = [];
+    for (let index = 0; index < history.length; index += 2) {
+      const moveNumber = Math.floor(index / 2) + 1;
+      const whiteMove = (history[index] || '').trim();
+      const blackMove = (history[index + 1] || '').trim();
+      if (!whiteMove && !blackMove) {
+        continue;
+      }
+      let movePair = `${moveNumber}.`;
+      if (whiteMove) {
+        movePair += ` ${whiteMove}`;
+      }
+      if (blackMove) {
+        movePair += ` ${blackMove}`;
+      }
+      movePairs.push(movePair);
+    }
+
+    const moveSection = movePairs.join(' ').trim();
+    const hasExplicitResult = /(?:^|\s)(1-0|0-1|1\/2-1\/2)(?:\s|$)/.test(moveSection);
+    const withResult = moveSection
+      ? (hasExplicitResult ? moveSection : `${moveSection} ${result}`.trim())
+      : result;
+
+    return `${headers.join('\n')}\n\n${withResult}`;
+  }
+
+  private getPgnResultFromHistory(history: string[]): '1-0' | '0-1' | '1/2-1/2' | '*' {
+    if (!history || history.length < 1) {
+      return '*';
+    }
+    for (let idx = history.length - 1; idx >= 0; idx--) {
+      const item = history[idx] || '';
+      const resultMatch = item.match(/(?:^|\s)(1-0|0-1|1\/2-1\/2)(?:\s|$)/);
+      if (resultMatch && resultMatch[1]) {
+        return resultMatch[1] as '1-0' | '0-1' | '1/2-1/2';
+      }
+    }
+    return '*';
   }
 
   private getCurrentFen(): string {
@@ -1785,6 +1874,44 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       halfmoveClock,
       fullmoveNumber
     );
+  }
+
+  private async createBoardImageDataUrlFromDom(): Promise<string | null> {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return null;
+    }
+
+    const boardElement = this.chessField?.nativeElement?.closest('.board-shell') as HTMLElement | null;
+    if (!boardElement) {
+      return null;
+    }
+
+    try {
+      const deviceScale = Math.max(1, Math.ceil(window.devicePixelRatio || 1));
+      const canvas = await html2canvas(boardElement, {
+        backgroundColor: null,
+        scale: deviceScale,
+        useCORS: true,
+        logging: false
+      });
+      return canvas.toDataURL('image/png');
+    } catch {
+      return null;
+    }
+  }
+
+  private downloadDataUrl(dataUrl: string, fileName: string): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = fileName;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   private copyToClipboard(text: string): Promise<boolean> {
@@ -2464,6 +2591,149 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       color,
       intensity: Math.max(0, Math.min(1, intensity))
     };
+  }
+
+  private collectForkVisualizationArrows(): IVisualizationArrow[] {
+    const forkArrows: IVisualizationArrow[] = [];
+    const board = this.chessBoardStateService.field;
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
+        const cell = board[row][col];
+        if (!(cell && cell[0])) {
+          continue;
+        }
+        const sourcePiece = cell[0];
+        const enemyColor = sourcePiece.color === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+        const threats = this.getThreatsBy(cell, row, col, sourcePiece.color, enemyColor);
+        if (threats.length < 2) {
+          continue;
+        }
+
+        const sourcePosition = new ChessPositionDto(8 - row, col + 1);
+        threats.forEach(threat => {
+          const targetPosition = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
+          forkArrows.push(this.createVisualizationArrow(sourcePosition, targetPosition, 'yellow', 0.25));
+        });
+      }
+    }
+    return forkArrows;
+  }
+
+  private collectPinVisualizationArrows(): IVisualizationArrow[] {
+    const pinArrows: IVisualizationArrow[] = [];
+    const board = this.chessBoardStateService.field;
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
+        const attackerCell = board[row][col];
+        if (!(attackerCell && attackerCell[0])) {
+          continue;
+        }
+
+        const attackerPiece = attackerCell[0];
+        const directions = this.getPinDirections(attackerPiece.piece);
+        if (directions.length < 1) {
+          continue;
+        }
+
+        directions.forEach(direction => {
+          let scanRow = row + direction.dr;
+          let scanCol = col + direction.dc;
+          let maybePinned: ChessPieceDto | null = null;
+          let maybePinnedPos: ChessPositionDto | null = null;
+
+          while (this.isWithinBoard(scanRow, scanCol)) {
+            const targetCell = board[scanRow][scanCol];
+            if (!(targetCell && targetCell[0])) {
+              scanRow += direction.dr;
+              scanCol += direction.dc;
+              continue;
+            }
+
+            const targetPiece = targetCell[0];
+            if (!maybePinned) {
+              if (targetPiece.color === attackerPiece.color) {
+                break;
+              }
+              maybePinned = targetPiece;
+              maybePinnedPos = new ChessPositionDto(scanRow, scanCol);
+              scanRow += direction.dr;
+              scanCol += direction.dc;
+              continue;
+            }
+
+            if (targetPiece.color !== maybePinned.color) {
+              break;
+            }
+
+            if (!maybePinnedPos) {
+              break;
+            }
+
+            if (this.isPinnedToValuablePiece(maybePinned.piece, targetPiece.piece)) {
+              const attackerFrom = new ChessPositionDto(8 - row, col + 1);
+              const pinnedTo = new ChessPositionDto(8 - maybePinnedPos.row, maybePinnedPos.col + 1);
+              const protectedFrom = new ChessPositionDto(8 - scanRow, scanCol + 1);
+              pinArrows.push(this.createVisualizationArrow(attackerFrom, pinnedTo, 'green', 0.25));
+              pinArrows.push(this.createVisualizationArrow(protectedFrom, pinnedTo, 'green', 0.25));
+            }
+
+            if (this.isSkewerPair(maybePinned.piece, targetPiece.piece)) {
+              const attackerFrom = new ChessPositionDto(8 - row, col + 1);
+              const frontTo = new ChessPositionDto(8 - maybePinnedPos.row, maybePinnedPos.col + 1);
+              const rearTo = new ChessPositionDto(8 - scanRow, scanCol + 1);
+              pinArrows.push(this.createVisualizationArrow(attackerFrom, frontTo, 'orange', 0.25));
+              pinArrows.push(this.createVisualizationArrow(frontTo, rearTo, 'orange', 0.25));
+            }
+            break;
+          }
+        });
+      }
+    }
+
+    return pinArrows;
+  }
+
+  private getPinDirections(piece: ChessPiecesEnum): Array<{dr: number, dc: number}> {
+    if (piece === ChessPiecesEnum.Bishop) {
+      return [{ dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }];
+    }
+    if (piece === ChessPiecesEnum.Rook) {
+      return [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
+    }
+    if (piece === ChessPiecesEnum.Queen) {
+      return [
+        { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 },
+        { dr: -1, dc: -1 }, { dr: -1, dc: 1 }, { dr: 1, dc: -1 }, { dr: 1, dc: 1 }
+      ];
+    }
+    return [];
+  }
+
+  private isPinnedToValuablePiece(pinned: ChessPiecesEnum, protectedPiece: ChessPiecesEnum): boolean {
+    if (pinned === ChessPiecesEnum.King) {
+      return false;
+    }
+    if (protectedPiece === ChessPiecesEnum.King) {
+      return true;
+    }
+    return ChessRulesService.valueOfPiece(protectedPiece) > ChessRulesService.valueOfPiece(pinned);
+  }
+
+  private isSkewerPair(frontPiece: ChessPiecesEnum, rearPiece: ChessPiecesEnum): boolean {
+    if (rearPiece === ChessPiecesEnum.King) {
+      return false;
+    }
+    if (frontPiece === ChessPiecesEnum.King) {
+      return true;
+    }
+    return ChessRulesService.valueOfPiece(frontPiece) > ChessRulesService.valueOfPiece(rearPiece);
+  }
+
+  private isWithinBoard(row: number, col: number): boolean {
+    return row >= ChessConstants.MIN_INDEX
+      && row <= ChessConstants.MAX_INDEX
+      && col >= ChessConstants.MIN_INDEX
+      && col <= ChessConstants.MAX_INDEX;
   }
 
   private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
