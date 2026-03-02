@@ -16,6 +16,7 @@ export class ChessBoardToolsCardComponent {
   @Input() canPromote = false;
   @Input() suggestedMoves: string[] = [];
   @Input() suggestedMoveClassProvider: (move: string) => string = () => '';
+  @Input() suggestedMoveScoreProvider: (move: string) => string = () => '';
   @Input() openingRecognition = '';
   @Input() endgameRecognition = '';
 
@@ -48,5 +49,9 @@ export class ChessBoardToolsCardComponent {
       return 'suggested-move--capture';
     }
     return 'suggested-move--threat';
+  }
+
+  getSuggestedMoveScore(move: string): string {
+    return this.suggestedMoveScoreProvider(move) || '';
   }
 }

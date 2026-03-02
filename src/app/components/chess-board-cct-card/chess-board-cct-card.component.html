@@ -8,7 +8,10 @@
             [ngClass]="getMoveClass(rec.move)"
             [title]="rec.tooltip"
             (mouseenter)="previewMove.emit(rec.move)"
-            (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
+            (mouseleave)="clearPreview.emit()">
+        {{rec.move}}
+        <span class="cct-step__score" *ngIf="getMoveScore(rec.move) as score">{{score}}</span>
+      </span>
       <span class="cct-empty" *ngIf="captureRecs.length < 1" [attr.title]="uiText.cct.noCapturesTitle">&mdash;</span>
     </ng-container>
   </div>
@@ -20,7 +23,10 @@
             [ngClass]="getMoveClass(rec.move)"
             [title]="rec.tooltip"
             (mouseenter)="previewMove.emit(rec.move)"
-            (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
+            (mouseleave)="clearPreview.emit()">
+        {{rec.move}}
+        <span class="cct-step__score" *ngIf="getMoveScore(rec.move) as score">{{score}}</span>
+      </span>
       <span class="cct-empty" *ngIf="checkRecs.length < 1" [attr.title]="uiText.cct.noChecksTitle">&mdash;</span>
     </ng-container>
   </div>
@@ -32,7 +38,10 @@
             [ngClass]="getMoveClass(rec.move)"
             [title]="rec.tooltip"
             (mouseenter)="previewMove.emit(rec.move)"
-            (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
+            (mouseleave)="clearPreview.emit()">
+        {{rec.move}}
+        <span class="cct-step__score" *ngIf="getMoveScore(rec.move) as score">{{score}}</span>
+      </span>
       <span class="cct-empty" *ngIf="threatRecs.length < 1" [attr.title]="uiText.cct.noThreatsTitle">&mdash;</span>
     </ng-container>
   </div>

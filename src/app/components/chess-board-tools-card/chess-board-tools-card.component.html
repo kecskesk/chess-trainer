@@ -103,13 +103,19 @@
 <div class="tool-card panel-card">
   <h3 class="section-title">{{uiText.recognition.sectionTitle}}</h3>
   <div class="recognition-line"><strong>{{uiText.recognition.openingLabel}}:</strong> {{openingRecognition}}</div>
-  <div class="recognition-line"><strong>{{uiText.recognition.endgameLabel}}:</strong> {{endgameRecognition}}</div>
+  <div class="recognition-line"
+       *ngIf="endgameRecognition && endgameRecognition !== uiText.recognition.notEndgameYet">
+    <strong>{{uiText.recognition.endgameLabel}}:</strong> {{endgameRecognition}}
+  </div>
   <div class="recognition-line recognition-line--suggestions">
     <strong>{{uiText.recognition.suggestedLabel}}:</strong>
     <span class="suggested-move"
           [ngClass]="getSuggestedMoveClass(move)"
           (mouseenter)="previewMove.emit(move)"
           (mouseleave)="clearPreview.emit()"
-          *ngFor="let move of suggestedMoves">{{move}}</span>
+          *ngFor="let move of suggestedMoves">
+      {{move}}
+      <span class="suggested-score" *ngIf="getSuggestedMoveScore(move) as score">{{score}}</span>
+    </span>
   </div>
 </div>

@@ -50,6 +50,11 @@ interface IStockfishServiceWithMoveEval {
   evaluateFenAfterMoves?: (fen: string, uciMoves: string[], options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
 }
 
+interface ISuggestionEvaluationResult {
+  pawnsByUci: Map<string, number>;
+  textByUci: Map<string, string>;
+}
+
 @Component({
   selector: 'app-chess-board',
   templateUrl: './chess-board.component.html',
@@ -137,6 +142,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private readonly evalCacheByFen = new Map<string, string>();
   private readonly suggestedMovesCacheByFen = new Map<string, string[]>();
   private readonly suggestionQualityByFen = new Map<string, Record<string, string>>();
+  private readonly suggestionEvalTextByFen = new Map<string, Record<string, string>>();
   private readonly pendingEvalByHistoryIndex = new Set<number>();
   private readonly evalErrorByHistoryIndex = new Set<number>();
   private evaluationRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -150,6 +156,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   readonly suggestedMovesLoadingPlaceholder = [this.pendingEvaluationPlaceholder];
   suggestedMoves: string[] = [...this.suggestedMovesLoadingPlaceholder];
   private suggestionQualityByMove: Record<string, string> = {};
+  private suggestionEvalTextByMove: Record<string, string> = {};
   openingsLoaded = false;
   private openings: IParsedOpening[] = [];
   private activeOpening: IParsedOpening | null = null;
@@ -1363,6 +1370,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return '';
     }
     return this.suggestionQualityByMove[move] || '';
+  }
+
+  getSuggestionEvalText(move: string): string {
+    if (!move) {
+      return '';
+    }
+    return this.suggestionEvalTextByMove[move] || '';
   }
 
   previewSuggestedMoveArrows(move: string): void {
@@ -2686,7 +2700,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.evalCacheByFen.clear();
     this.suggestedMovesCacheByFen.clear();
     this.suggestionQualityByFen.clear();
+    this.suggestionEvalTextByFen.clear();
     this.suggestionQualityByMove = {};
+    this.suggestionEvalTextByMove = {};
     this.suggestedMoves = [...this.suggestedMovesLoadingPlaceholder];
     if (this.evaluationRefreshTimer !== null) {
       clearTimeout(this.evaluationRefreshTimer);
@@ -2740,8 +2756,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.suggestedMoves = [...cachedSuggestions];
       const cachedQuality = this.suggestionQualityByFen.get(fen);
       this.suggestionQualityByMove = cachedQuality ? { ...cachedQuality } : {};
+      const cachedEvalText = this.suggestionEvalTextByFen.get(fen);
+      this.suggestionEvalTextByMove = cachedEvalText ? { ...cachedEvalText } : {};
       this.requestClockRender();
-      if (!cachedQuality) {
+      if (!cachedQuality || !cachedEvalText) {
         await this.refreshSuggestionQualities(runToken, fen);
       }
       return;
@@ -2770,6 +2788,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         return;
       }
       this.suggestionQualityByMove = {};
+      this.suggestionEvalTextByMove = {};
       this.suggestedMoves = [ChessBoardComponent.NA_PLACEHOLDER];
       this.requestClockRender();
     }
@@ -2786,8 +2805,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     const cachedQuality = this.suggestionQualityByFen.get(fen);
-    if (cachedQuality) {
+    const cachedEvalText = this.suggestionEvalTextByFen.get(fen);
+    if (cachedQuality && cachedEvalText) {
       this.suggestionQualityByMove = { ...cachedQuality };
+      this.suggestionEvalTextByMove = { ...cachedEvalText };
       this.requestClockRender();
       return;
     }
@@ -2812,16 +2833,22 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const uniqueUciMoves = Array.from(new Set(Array.from(displayToUci.values())));
     if (uniqueUciMoves.length < 1) {
       this.suggestionQualityByMove = {};
+      this.suggestionEvalTextByMove = {};
       this.suggestionQualityByFen.set(fen, {});
+      this.suggestionEvalTextByFen.set(fen, {});
       this.requestClockRender();
       return;
     }
 
-    const evalByUci = await this.evaluateUciMovesForQuality(runToken, fen, uniqueUciMoves);
+    const evaluationResult = await this.evaluateUciMovesForQuality(runToken, fen, uniqueUciMoves);
+    const evalByUci = evaluationResult.pawnsByUci;
+    const evalTextByUci = evaluationResult.textByUci;
 
     if (evalByUci.size < 1) {
       this.suggestionQualityByMove = {};
+      this.suggestionEvalTextByMove = {};
       this.suggestionQualityByFen.set(fen, {});
+      this.suggestionEvalTextByFen.set(fen, {});
       this.requestClockRender();
       return;
     }
@@ -2833,6 +2860,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       : Math.min(...evalValues);
 
     const qualityByMove: Record<string, string> = {};
+    const evalTextByMove: Record<string, string> = {};
     displayToUci.forEach((uciMove, displayMove) => {
       const moveEval = evalByUci.get(uciMove);
       if (moveEval === undefined) {
@@ -2842,10 +2870,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         ? (bestEval - moveEval)
         : (moveEval - bestEval);
       qualityByMove[displayMove] = this.classifySuggestionLoss(loss);
+      const evalText = evalTextByUci.get(uciMove);
+      if (evalText) {
+        evalTextByMove[displayMove] = evalText;
+      }
     });
 
     this.suggestionQualityByFen.set(fen, qualityByMove);
+    this.suggestionEvalTextByFen.set(fen, evalTextByMove);
     this.suggestionQualityByMove = { ...qualityByMove };
+    this.suggestionEvalTextByMove = { ...evalTextByMove };
     this.requestClockRender();
   }
 
@@ -2876,21 +2910,26 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return displayToUci;
   }
 
-  private async evaluateUciMovesForQuality(runToken: number, fen: string, uniqueUciMoves: string[]): Promise<Map<string, number>> {
+  private async evaluateUciMovesForQuality(runToken: number, fen: string, uniqueUciMoves: string[]): Promise<ISuggestionEvaluationResult> {
     const evalByUci = new Map<string, number>();
+    const evalTextByUci = new Map<string, string>();
     const engineService = this.activeStockfishService as IStockfishServiceWithMoveEval | undefined;
     if (!engineService) {
-      return evalByUci;
+      return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
     }
 
     for (const uciMove of uniqueUciMoves) {
       if (runToken !== this.evaluationRunToken) {
-        return evalByUci;
+        return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
       }
       try {
         const evaluation = typeof engineService.evaluateFenAfterMoves === 'function'
           ? await engineService.evaluateFenAfterMoves(fen, [uciMove], { depth: this.suggestedMovesDepth })
           : await engineService.evaluateFen(fen, { depth: this.suggestedMovesDepth });
+        if (evaluation && evaluation !== this.pendingEvaluationPlaceholder && evaluation !== this.evaluationErrorPlaceholder &&
+          evaluation !== ChessBoardComponent.NA_PLACEHOLDER) {
+          evalTextByUci.set(uciMove, evaluation);
+        }
         const pawns = ChessBoardComponentUtils.parseEvaluationPawns(
           evaluation,
           this.pendingEvaluationPlaceholder,
@@ -2905,7 +2944,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         // Ignore individual move failures and continue with available scores.
       }
     }
-    return evalByUci;
+    return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
   }
 
   private classifySuggestionLoss(loss: number): string {
