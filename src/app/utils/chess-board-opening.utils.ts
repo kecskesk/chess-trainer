@@ -1,6 +1,9 @@
 import { ChessMoveNotation } from './chess-utils';
 import { IOpeningAssetItem } from '../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../model/interfaces/parsed-opening.interface';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 export interface IOpeningDebugTextDictionary {
   message: {
@@ -24,6 +27,60 @@ export interface IOpeningMatchResult {
 }
 
 export class ChessBoardOpeningUtils {
+  static loadOpeningsFromAssets(
+    http: HttpClient,
+    locale: string,
+    defaultLocale: string,
+    onItemsLoaded: (items: IParsedOpening[]) => void,
+    onCompleted: () => void,
+    openingFiles: string[] = ['openings1.json', 'openings2.json', 'openings3.json']
+  ): void {
+    if (!(openingFiles && openingFiles.length > 0)) {
+      onCompleted();
+      return;
+    }
+
+    let remainingFiles = openingFiles.length;
+    openingFiles.forEach((fileName) => {
+      ChessBoardOpeningUtils.getOpeningAsset$(http, fileName, locale, defaultLocale).subscribe({
+        next: (items) => {
+          const parsedItems = ChessBoardOpeningUtils.parseOpeningsPayload(items);
+          if (parsedItems.length > 0) {
+            onItemsLoaded(parsedItems);
+          }
+        },
+        complete: () => {
+          remainingFiles -= 1;
+          if (remainingFiles > 0) {
+            return;
+          }
+          onCompleted();
+        }
+      });
+    });
+  }
+
+  static getOpeningAsset$(
+    http: HttpClient,
+    fileName: string,
+    locale: string,
+    defaultLocale: string
+  ): Observable<IOpeningAssetItem[]> {
+    const fallbackPath = `assets/openings/${fileName}`;
+    if (locale === defaultLocale) {
+      return http.get<IOpeningAssetItem[]>(fallbackPath).pipe(
+        catchError(() => of([]))
+      );
+    }
+
+    const localizedPath = `assets/openings/${locale}/${fileName}`;
+    return http.get<IOpeningAssetItem[]>(localizedPath).pipe(
+      catchError(() => http.get<IOpeningAssetItem[]>(fallbackPath).pipe(
+        catchError(() => of([]))
+      ))
+    );
+  }
+
   static parseOpeningsPayload(items: IOpeningAssetItem[]): IParsedOpening[] {
     if (!Array.isArray(items)) {
       return [];

@@ -1,9 +1,8 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, QueryList, ViewChild, ViewChildren, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, Optional, QueryList, ViewChild, ViewChildren, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, DragDropModule } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import html2canvas from 'html2canvas';
 import { ChessArrowDto } from 'src/app/model/chess-arrow.dto';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
@@ -43,6 +42,8 @@ import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
+import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
+import { ChessBoardCctService } from '../../services/chess-board-cct.service';
 
 @Component({
   selector: 'app-chess-board',
@@ -151,6 +152,32 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
   }
 
+  private get activeUiTextLoaderService(): UiTextLoaderService | undefined {
+    if (this.uiTextLoaderService && typeof this.uiTextLoaderService.getCurrentLocale === 'function') {
+      return this.uiTextLoaderService;
+    }
+    const legacyInjected = this.cdr as unknown as UiTextLoaderService | undefined;
+    if (legacyInjected && typeof legacyInjected.getCurrentLocale === 'function') {
+      return legacyInjected;
+    }
+    return undefined;
+  }
+
+  private get activeStockfishService(): StockfishService | undefined {
+    if (this.stockfishService && typeof this.stockfishService.evaluateFen === 'function') {
+      return this.stockfishService;
+    }
+    const legacyFromUiLoader = this.uiTextLoaderService as unknown as StockfishService | undefined;
+    if (legacyFromUiLoader && typeof legacyFromUiLoader.evaluateFen === 'function') {
+      return legacyFromUiLoader;
+    }
+    const legacyFromCdr = this.cdr as unknown as StockfishService | undefined;
+    if (legacyFromCdr && typeof legacyFromCdr.evaluateFen === 'function') {
+      return legacyFromCdr;
+    }
+    return undefined;
+  }
+
   get renderedBoardRows(): number[] {
     if (!this.previewMode) {
       return this.boardIndices;
@@ -169,6 +196,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   constructor(
     public chessBoardStateService: ChessBoardStateService,
     private readonly http: HttpClient,
+    @Optional() private readonly chessBoardCctService?: ChessBoardCctService,
     private readonly ngZone?: NgZone,
     private readonly cdr?: ChangeDetectorRef,
     private readonly uiTextLoaderService?: UiTextLoaderService,
@@ -177,8 +205,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
     this.isDebugPanelOpen = ChessBoardStorageService.readDebugPanelOpenState(this.debugPanelStorageKey);
-    if (this.uiTextLoaderService) {
-      this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
+    if (this.activeUiTextLoaderService) {
+      this.selectedLocale = this.activeUiTextLoaderService.getCurrentLocale();
     }
     this.initializeSnapshotTimeline();
     void this.loadOpeningsFromAssets(this.selectedLocale);
@@ -193,7 +221,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.evaluationRunToken += 1;
     this.stopClock();
     this.syncFlippedDragClass();
-    this.stockfishService?.terminate();
+    this.activeStockfishService?.terminate();
   }
 
   ngAfterViewInit(): void {
@@ -871,14 +899,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   async switchLocale(locale: string): Promise<void> {
-    if (!this.uiTextLoaderService || locale === this.selectedLocale) {
+    if (!this.activeUiTextLoaderService || locale === this.selectedLocale) {
       return;
     }
 
     this.isLanguageSwitching = true;
     try {
-      await this.uiTextLoaderService.setActiveLocale(locale);
-      this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
+      await this.activeUiTextLoaderService.setActiveLocale(locale);
+      this.selectedLocale = this.activeUiTextLoaderService.getCurrentLocale();
       void this.loadOpeningsFromAssets(this.selectedLocale);
       this.requestClockRender();
     } finally {
@@ -1106,35 +1134,17 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getEvaluationForMove(halfMoveIndex: number): string {
-    if (halfMoveIndex < 0) {
-      return ChessBoardComponent.NA_PLACEHOLDER;
-    }
-
-    const fen = this.getFenForHistoryIndex(halfMoveIndex);
-    if (!fen) {
-      return ChessBoardComponent.NA_PLACEHOLDER;
-    }
-
-    const cachedByFen = this.evalCacheByFen.get(fen);
-    if (cachedByFen) {
-      this.evalByHistoryIndex.set(halfMoveIndex, cachedByFen);
-      this.evalErrorByHistoryIndex.delete(halfMoveIndex);
-      this.pendingEvalByHistoryIndex.delete(halfMoveIndex);
-      return cachedByFen;
-    }
-
-    if (this.pendingEvalByHistoryIndex.has(halfMoveIndex)) {
-      return this.pendingEvaluationPlaceholder;
-    }
-    if (this.evalErrorByHistoryIndex.has(halfMoveIndex)) {
-      return this.evaluationErrorPlaceholder;
-    }
-
-    const cachedByIndex = this.evalByHistoryIndex.get(halfMoveIndex);
-    if (cachedByIndex) {
-      return cachedByIndex;
-    }
-    return this.pendingEvaluationPlaceholder;
+    return ChessBoardEvaluationUtils.getEvaluationForMove({
+      halfMoveIndex,
+      getFenForHistoryIndex: (idx) => this.getFenForHistoryIndex(idx),
+      evalByHistoryIndex: this.evalByHistoryIndex,
+      evalCacheByFen: this.evalCacheByFen,
+      pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
+      evalErrorByHistoryIndex: this.evalErrorByHistoryIndex,
+      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
+      pendingEvaluationPlaceholder: this.pendingEvaluationPlaceholder,
+      evaluationErrorPlaceholder: this.evaluationErrorPlaceholder
+    });
   }
 
   getMoveQualityLabel(halfMoveIndex: number): string {
@@ -1148,7 +1158,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getCurrentAnalysisEvalText(): string {
-    if (!this.stockfishService) {
+    if (!this.activeStockfishService) {
       return ChessBoardComponent.NA_PLACEHOLDER;
     }
     const currentMoveIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.mockHistoryCursor);
@@ -1175,21 +1185,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getMoveQuality(halfMoveIndex: number): { label: string; className: string } | null {
-    const previousEval = ChessBoardComponentUtils.parseEvaluationPawns(
-      this.getEvaluationForMove(halfMoveIndex - 1),
+    return ChessBoardEvaluationUtils.getMoveQuality(
+      halfMoveIndex,
+      (idx) => this.getEvaluationForMove(idx),
       this.pendingEvaluationPlaceholder,
       this.evaluationErrorPlaceholder,
       ChessBoardComponent.NA_PLACEHOLDER,
       this.analysisClampPawns
     );
-    const currentEval = ChessBoardComponentUtils.parseEvaluationPawns(
-      this.getEvaluationForMove(halfMoveIndex),
-      this.pendingEvaluationPlaceholder,
-      this.evaluationErrorPlaceholder,
-      ChessBoardComponent.NA_PLACEHOLDER,
-      this.analysisClampPawns
-    );
-    return ChessBoardComponentUtils.getMoveQuality(halfMoveIndex, previousEval, currentEval);
   }
 
   toggleBoardFlip(): void {
@@ -1231,55 +1234,40 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private loadOpeningsFromAssets(locale: string): void {
     const loadId = ++this.openingsLoadId;
-    const openingFiles = ['openings1.json', 'openings2.json', 'openings3.json'];
     const effectiveLocale = locale || UiTextLoaderService.DEFAULT_LOCALE;
-    let remainingFiles = openingFiles.length;
 
     this.openingsLoaded = false;
     this.openings = [];
     this.activeOpening = null;
     this.activeOpeningHistoryKey = '';
 
-    openingFiles.forEach((fileName) => {
-      this.getOpeningAsset$(fileName, effectiveLocale).subscribe({
-        next: (items) => {
-          if (loadId !== this.openingsLoadId) {
-            return;
-          }
-          const parsedItems = ChessBoardOpeningUtils.parseOpeningsPayload(items);
-          if (parsedItems.length > 0) {
-            this.openings = [...this.openings, ...parsedItems];
-          }
-        },
-        complete: () => {
-          if (loadId !== this.openingsLoadId) {
-            return;
-          }
-          remainingFiles -= 1;
-          if (remainingFiles > 0) {
-            return;
-          }
-          this.openingsLoaded = true;
-          this.updateRecognizedOpeningForCurrentHistory();
-          this.requestClockRender();
+    ChessBoardOpeningUtils.loadOpeningsFromAssets(
+      this.http,
+      effectiveLocale,
+      UiTextLoaderService.DEFAULT_LOCALE,
+      (parsedItems) => {
+        if (loadId !== this.openingsLoadId || parsedItems.length < 1) {
+          return;
         }
-      });
-    });
+        this.openings = [...this.openings, ...parsedItems];
+      },
+      () => {
+        if (loadId !== this.openingsLoadId) {
+          return;
+        }
+        this.openingsLoaded = true;
+        this.updateRecognizedOpeningForCurrentHistory();
+        this.requestClockRender();
+      }
+    );
   }
 
   private getOpeningAsset$(fileName: string, locale: string): Observable<IOpeningAssetItem[]> {
-    const fallbackPath = `assets/openings/${fileName}`;
-    if (locale === UiTextLoaderService.DEFAULT_LOCALE) {
-      return this.http.get<IOpeningAssetItem[]>(fallbackPath).pipe(
-        catchError(() => of([]))
-      );
-    }
-
-    const localizedPath = `assets/openings/${locale}/${fileName}`;
-    return this.http.get<IOpeningAssetItem[]>(localizedPath).pipe(
-      catchError(() => this.http.get<IOpeningAssetItem[]>(fallbackPath).pipe(
-        catchError(() => of([]))
-      ))
+    return ChessBoardOpeningUtils.getOpeningAsset$(
+      this.http,
+      fileName,
+      locale,
+      UiTextLoaderService.DEFAULT_LOCALE
     );
   }
 
@@ -1415,8 +1403,20 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getCctRecommendations(category: CctCategoryEnum): ICctRecommendation[] {
-    this.ensureCctRecommendations();
-    return this.cctRecommendationsCache[category];
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
+      return [];
+    }
+    if (!this.chessBoardCctService) {
+      return [];
+    }
+    const forColor = this.chessBoardStateService.boardHelper.colorTurn;
+    const historyLength = this.chessBoardStateService.history.length;
+    const cache = this.chessBoardCctService.ensureCctRecommendations(
+      this.chessBoardStateService.field,
+      forColor,
+      historyLength
+    );
+    return cache[category] || [];
   }
 
   exportPgn(): void {
@@ -2277,12 +2277,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private cloneBoard(board: ChessPieceDto[][][]): ChessPieceDto[][][] {
-    return board.map(row => row.map(cell => {
-      if (!cell || cell.length < 1) {
-        return [];
-      }
-      return [new ChessPieceDto(cell[0].color, cell[0].piece)];
-    }));
+    return ChessBoardLogicUtils.cloneField(board);
   }
 
   private canPlayLegalMove(
@@ -2320,39 +2315,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     targetRow: number,
     targetCol: number
   ): ChessPieceDto[][][] {
-    const nextBoard = this.cloneBoard(board);
-    const movingPiece = nextBoard[srcRow][srcCol] && nextBoard[srcRow][srcCol][0]
-      ? new ChessPieceDto(nextBoard[srcRow][srcCol][0].color, nextBoard[srcRow][srcCol][0].piece)
-      : null;
-    if (!movingPiece) {
-      return nextBoard;
-    }
-
-    if (movingPiece.piece === ChessPiecesEnum.Pawn && srcCol !== targetCol && nextBoard[targetRow][targetCol].length < 1) {
-      nextBoard[srcRow][targetCol] = [];
-    }
-
-    nextBoard[srcRow][srcCol] = [];
-    nextBoard[targetRow][targetCol] = [movingPiece];
-
-    if (movingPiece.piece === ChessPiecesEnum.King && srcRow === targetRow && Math.abs(targetCol - srcCol) === 2) {
-      const isKingSideCastle = targetCol > srcCol;
-      const rookSourceCol = isKingSideCastle ? 7 : 0;
-      const rookTargetCol = isKingSideCastle ? 5 : 3;
-      const rookCell = nextBoard[targetRow][rookSourceCol];
-      if (rookCell && rookCell[0] && rookCell[0].piece === ChessPiecesEnum.Rook) {
-        const rook = new ChessPieceDto(rookCell[0].color, rookCell[0].piece);
-        nextBoard[targetRow][rookSourceCol] = [];
-        nextBoard[targetRow][rookTargetCol] = [rook];
-      }
-    }
-
-    const promotionRow = movingPiece.color === ChessColorsEnum.White ? ChessConstants.MIN_INDEX : ChessConstants.MAX_INDEX;
-    if (movingPiece.piece === ChessPiecesEnum.Pawn && targetRow === promotionRow) {
-      nextBoard[targetRow][targetCol][0].piece = ChessPiecesEnum.Queen;
-    }
-
-    return nextBoard;
+    return ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
   }
 
   private findKing(board: ChessPieceDto[][][], color: ChessColorsEnum): ChessPositionDto | null {
@@ -2368,34 +2331,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private isKingInCheck(board: ChessPieceDto[][][], kingColor: ChessColorsEnum): boolean {
-    const king = this.findKing(board, kingColor);
-    if (!king) {
-      return false;
-    }
-    const attackerColor = kingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
-      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
-        const attackerCell = board[row][col];
-        if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
-          continue;
-        }
-        const attacker = attackerCell[0];
-        const canHitKing = this.withBoardContext(board, attackerColor, () =>
-          ChessRulesService.canStepThere(
-            king.row,
-            king.col,
-            [new ChessPieceDto(kingColor, ChessPiecesEnum.King)],
-            row,
-            col,
-            new ChessPieceDto(attacker.color, attacker.piece)
-          )
-        );
-        if (canHitKing) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return ChessBoardLogicUtils.isKingInCheck(board, kingColor, (
+      targetRow,
+      targetCol,
+      targetCell,
+      sourceRow,
+      sourceCol,
+      sourcePiece
+    ) =>
+      this.withBoardContext(board, sourcePiece.color, () =>
+        ChessRulesService.canStepThere(targetRow, targetCol, targetCell, sourceRow, sourceCol, sourcePiece)
+      )
+    );
   }
 
   private hasAnyLegalMove(board: ChessPieceDto[][][], forColor: ChessColorsEnum): boolean {
@@ -2551,79 +2498,84 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private startClock(): void {
-    if (this.clockIntervalId !== null) {
+    const startResult = ChessBoardClockUtils.startClock(
+      this.clockIntervalId,
+      this.lastClockTickAt,
+      this.clockTickIntervalMs,
+      () => this.tickClock(),
+      this.ngZone
+    );
+    if (!startResult.started) {
       return;
     }
-    this.lastClockTickAt = Date.now();
-    this.clockRunning = true;
-    const tick = () => this.tickClock();
-    if (this.ngZone) {
-      this.clockIntervalId = window.setInterval(() => this.ngZone.run(tick), this.clockTickIntervalMs);
-    } else {
-      this.clockIntervalId = window.setInterval(tick, this.clockTickIntervalMs);
-    }
+    this.clockIntervalId = startResult.clockIntervalId;
+    this.lastClockTickAt = startResult.lastClockTickAt;
+    this.clockRunning = startResult.clockRunning;
     this.requestClockRender();
   }
 
   private stopClock(): void {
-    if (this.clockIntervalId !== null) {
-      window.clearInterval(this.clockIntervalId);
-      this.clockIntervalId = null;
-    }
-    this.clockRunning = false;
+    const stopResult = ChessBoardClockUtils.stopClock(this.clockIntervalId);
+    this.clockIntervalId = stopResult.clockIntervalId;
+    this.clockRunning = stopResult.clockRunning;
     this.requestClockRender();
   }
 
   private tickClock(): void {
-    if (!this.clockRunning || !this.clockStarted || this.chessBoardStateService.boardHelper.gameOver) {
+    const tickResult = ChessBoardClockUtils.tickClock(
+      this.clockRunning,
+      this.clockStarted,
+      this.chessBoardStateService.boardHelper.gameOver,
+      this.lastClockTickAt,
+      this.chessBoardStateService.boardHelper.colorTurn,
+      this.whiteClockMs,
+      this.blackClockMs
+    );
+    if (tickResult.shouldStop) {
       this.stopClock();
       return;
     }
-
-    const now = Date.now();
-    const elapsedMs = now - this.lastClockTickAt;
-    this.lastClockTickAt = now;
-    if (elapsedMs <= 0) {
-      return;
+    this.lastClockTickAt = tickResult.lastClockTickAt;
+    this.whiteClockMs = tickResult.whiteClockMs;
+    this.blackClockMs = tickResult.blackClockMs;
+    if (tickResult.forfeitColor !== null) {
+      this.handleTimeForfeit(tickResult.forfeitColor);
     }
-
-    const activeColor = this.chessBoardStateService.boardHelper.colorTurn;
-    if (activeColor === ChessColorsEnum.White) {
-      this.whiteClockMs = Math.max(0, this.whiteClockMs - elapsedMs);
-      if (this.whiteClockMs === 0) {
-        this.handleTimeForfeit(ChessColorsEnum.White);
-      }
+    if (tickResult.shouldRender) {
       this.requestClockRender();
-      return;
     }
-
-    this.blackClockMs = Math.max(0, this.blackClockMs - elapsedMs);
-    if (this.blackClockMs === 0) {
-      this.handleTimeForfeit(ChessColorsEnum.Black);
-    }
-    this.requestClockRender();
   }
 
   private requestClockRender(): void {
-    if (!this.cdr || this.isDestroyed) {
+    if (!this.cdr || this.isDestroyed || typeof this.cdr.markForCheck !== 'function') {
       return;
     }
     this.cdr.markForCheck();
   }
 
   private addIncrementToColor(color: ChessColorsEnum): void {
-    if (!this.clockStarted || this.incrementMs <= 0 || this.chessBoardStateService.boardHelper.gameOver) {
-      return;
-    }
-    if (color === ChessColorsEnum.White) {
-      this.whiteClockMs += this.incrementMs;
-      return;
-    }
-    this.blackClockMs += this.incrementMs;
+    const nextClocks = ChessBoardClockUtils.addIncrementToColor(
+      color,
+      this.clockStarted,
+      this.incrementMs,
+      this.chessBoardStateService.boardHelper.gameOver,
+      this.whiteClockMs,
+      this.blackClockMs
+    );
+    this.whiteClockMs = nextClocks.whiteClockMs;
+    this.blackClockMs = nextClocks.blackClockMs;
   }
 
   private handleTimeForfeit(loserColor: ChessColorsEnum): void {
-    if (this.chessBoardStateService.boardHelper.gameOver) {
+    const forfeitResult = ChessBoardClockUtils.handleTimeForfeit(
+      loserColor,
+      this.chessBoardStateService.boardHelper.gameOver,
+      this.uiText.status.white,
+      this.uiText.status.black,
+      this.uiText.message.forfeitsOnTime,
+      this.uiText.message.forfeitsOnTimeNoPeriod
+    );
+    if (!forfeitResult) {
       return;
     }
 
@@ -2631,12 +2583,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.pendingDrawOfferBy = null;
     this.chessBoardStateService.boardHelper.gameOver = true;
     this.chessBoardStateService.boardHelper.checkmateColor = null;
-
-    const winnerColor = loserColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const winnerResult = winnerColor === ChessColorsEnum.White ? '1-0' : '0-1';
-    const loserName = loserColor === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black;
-    this.chessBoardStateService.boardHelper.debugText = `${loserName} ${this.uiText.message.forfeitsOnTime}`;
-    this.appendGameResultToLastMove(winnerResult, `${loserName} ${this.uiText.message.forfeitsOnTimeNoPeriod}`);
+    this.chessBoardStateService.boardHelper.debugText = forfeitResult.debugText;
+    this.appendGameResultToLastMove(forfeitResult.winnerResult, forfeitResult.appendReason);
   }
 
   private getMaxMoveIndex(): number {
@@ -2725,7 +2673,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private scheduleEvaluationRefresh(): void {
-    if (!this.stockfishService || this.previewMode) {
+    if (!this.activeStockfishService || this.previewMode) {
       return;
     }
     if (this.evaluationRefreshTimer !== null) {
@@ -2740,70 +2688,26 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private async refreshVisibleHistoryEvaluations(runToken: number): Promise<void> {
-    if (!this.stockfishService) {
+    if (!this.activeStockfishService) {
       return;
     }
-
-    const visibleHistory = this.getVisibleHistory();
-    if (visibleHistory.length < 1) {
-      return;
-    }
-
-    for (let idx = 0; idx < visibleHistory.length; idx++) {
-      if (runToken !== this.evaluationRunToken) {
-        return;
-      }
-
-      const fen = this.getFenForHistoryIndex(idx);
-      if (!fen) {
-        this.evalByHistoryIndex.set(idx, ChessBoardComponent.NA_PLACEHOLDER);
-        this.pendingEvalByHistoryIndex.delete(idx);
-        this.evalErrorByHistoryIndex.delete(idx);
-        continue;
-      }
-
-      const cachedScore = this.evalCacheByFen.get(fen);
-      if (cachedScore) {
-        this.evalByHistoryIndex.set(idx, cachedScore);
-        this.pendingEvalByHistoryIndex.delete(idx);
-        this.evalErrorByHistoryIndex.delete(idx);
-        continue;
-      }
-
-      this.pendingEvalByHistoryIndex.add(idx);
-      this.evalErrorByHistoryIndex.delete(idx);
-      this.requestClockRender();
-
-      try {
-        const score = await this.stockfishService.evaluateFen(fen);
-        if (runToken !== this.evaluationRunToken) {
-          return;
-        }
-        this.evalCacheByFen.set(fen, score);
-        this.evalByHistoryIndex.set(idx, score);
-      } catch {
-        if (runToken !== this.evaluationRunToken) {
-          return;
-        }
-        this.evalErrorByHistoryIndex.add(idx);
-      } finally {
-        if (runToken === this.evaluationRunToken) {
-          this.pendingEvalByHistoryIndex.delete(idx);
-          this.requestClockRender();
-        }
-      }
-    }
+    await ChessBoardEvaluationUtils.refreshVisibleHistoryEvaluations({
+      runToken,
+      getCurrentRunToken: () => this.evaluationRunToken,
+      visibleHistoryLength: this.getVisibleHistory().length,
+      getFenForHistoryIndex: (idx) => this.getFenForHistoryIndex(idx),
+      evaluateFen: (fen) => this.activeStockfishService!.evaluateFen(fen),
+      evalByHistoryIndex: this.evalByHistoryIndex,
+      evalCacheByFen: this.evalCacheByFen,
+      pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
+      evalErrorByHistoryIndex: this.evalErrorByHistoryIndex,
+      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
+      requestRender: () => this.requestClockRender()
+    });
   }
 
   private getFenForHistoryIndex(halfMoveIndex: number): string {
-    if (halfMoveIndex < 0) {
-      return '';
-    }
-    const snapshotIndex = halfMoveIndex + 1;
-    if (snapshotIndex < 0 || snapshotIndex >= this.moveSnapshots.length) {
-      return '';
-    }
-    return ChessBoardLogicUtils.generateFenFromSnapshot(this.moveSnapshots[snapshotIndex]);
+    return ChessBoardEvaluationUtils.getFenForHistoryIndex(halfMoveIndex, this.moveSnapshots);
   }
 
   private getActiveSnapshotIndex(): number {

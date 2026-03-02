@@ -18,6 +18,11 @@ module.exports = function (config) {
     coverageReporter: {
       dir: require('path').join(__dirname, '../coverage'),
       reports: ['html', 'lcovonly', 'json', 'text-summary'],
+      reporters: [
+        { type: 'html' },
+        { type: 'json' },
+        { type: 'text-summary' }
+      ],
       fixWebpackSourcePaths: true,
       check: {
         global: {

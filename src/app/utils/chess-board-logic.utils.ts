@@ -46,6 +46,13 @@ export class ChessBoardLogicUtils {
     }));
   }
 
+  /**
+   * @deprecated Use cloneField instead
+   */
+  static cloneBoard(board: ChessPieceDto[][][]): ChessPieceDto[][][] {
+    return ChessBoardLogicUtils.cloneField(board);
+  }
+
   static clonePosition(position: ChessPositionDto | null): ChessPositionDto | null {
     if (!position) {
       return null;
@@ -147,5 +154,250 @@ export class ChessBoardLogicUtils {
     }
 
     return false;
+  }
+
+  static findKing(board: ChessPieceDto[][][], color: ChessColorsEnum): ChessPositionDto | null {
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
+        const cell = board[row][col];
+        if (cell && cell[0] && cell[0].color === color && cell[0].piece === ChessPiecesEnum.King) {
+          return new ChessPositionDto(row, col);
+        }
+      }
+    }
+    return null;
+  }
+
+  static isKingInCheck(
+    board: ChessPieceDto[][][],
+    kingColor: ChessColorsEnum,
+    canStepThereFn?: (
+      targetRow: number,
+      targetCol: number,
+      targetCell: ChessPieceDto[],
+      sourceRow: number,
+      sourceCol: number,
+      sourcePiece: ChessPieceDto
+    ) => boolean
+  ): boolean {
+    const king = ChessBoardLogicUtils.findKing(board, kingColor);
+    if (!king) {
+      return false;
+    }
+    const attackerColor = kingColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
+        const attackerCell = board[row][col];
+        if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
+          continue;
+        }
+        const attacker = attackerCell[0];
+        
+        let canHitKing: boolean;
+        if (canStepThereFn) {
+          canHitKing = canStepThereFn(
+            king.row,
+            king.col,
+            [new ChessPieceDto(kingColor, ChessPiecesEnum.King)],
+            row,
+            col,
+            new ChessPieceDto(attacker.color, attacker.piece)
+          );
+        } else {
+          canHitKing = ChessRulesService.canStepThere(
+            king.row,
+            king.col,
+            [new ChessPieceDto(kingColor, ChessPiecesEnum.King)],
+            row,
+            col,
+            new ChessPieceDto(attacker.color, attacker.piece)
+          );
+        }
+        if (canHitKing) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  static hasAnyLegalMove(
+    board: ChessPieceDto[][][],
+    forColor: ChessColorsEnum,
+    canStepThereFn?: (
+      targetRow: number,
+      targetCol: number,
+      targetCell: ChessPieceDto[],
+      srcRow: number,
+      srcCol: number,
+      sourcePiece: ChessPieceDto
+    ) => boolean,
+    simulateMoveFn?: (
+      board: ChessPieceDto[][][],
+      srcRow: number,
+      srcCol: number,
+      targetRow: number,
+      targetCol: number
+    ) => ChessPieceDto[][][]
+  ): boolean {
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
+        const sourceCell = board[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
+          continue;
+        }
+        const sourcePiece = sourceCell[0];
+        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
+            if (srcRow === targetRow && srcCol === targetCol) {
+              continue;
+            }
+            
+            let canMove: boolean;
+            if (canStepThereFn) {
+              canMove = canStepThereFn(
+                targetRow,
+                targetCol,
+                board[targetRow][targetCol],
+                srcRow,
+                srcCol,
+                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+              );
+            } else {
+              canMove = ChessRulesService.canStepThere(
+                targetRow,
+                targetCol,
+                board[targetRow][targetCol],
+                srcRow,
+                srcCol,
+                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+              );
+            }
+            if (!canMove) {
+              continue;
+            }
+            
+            let afterMove: ChessPieceDto[][][];
+            if (simulateMoveFn) {
+              afterMove = simulateMoveFn(board, srcRow, srcCol, targetRow, targetCol);
+            } else {
+              afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            }
+            if (!ChessBoardLogicUtils.isKingInCheck(afterMove, forColor)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  static simulateMove(
+    board: ChessPieceDto[][][],
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number
+  ): ChessPieceDto[][][] {
+    const nextBoard = ChessBoardLogicUtils.cloneField(board);
+    const movingPiece = nextBoard[srcRow][srcCol] && nextBoard[srcRow][srcCol][0]
+      ? new ChessPieceDto(nextBoard[srcRow][srcCol][0].color, nextBoard[srcRow][srcCol][0].piece)
+      : null;
+    if (!movingPiece) {
+      return nextBoard;
+    }
+
+    if (movingPiece.piece === ChessPiecesEnum.Pawn && srcCol !== targetCol && nextBoard[targetRow][targetCol].length < 1) {
+      nextBoard[srcRow][targetCol] = [];
+    }
+
+    nextBoard[srcRow][srcCol] = [];
+    nextBoard[targetRow][targetCol] = [movingPiece];
+
+    if (movingPiece.piece === ChessPiecesEnum.King && srcRow === targetRow && Math.abs(targetCol - srcCol) === 2) {
+      const isKingSideCastle = targetCol > srcCol;
+      const rookSourceCol = isKingSideCastle ? 7 : 0;
+      const rookTargetCol = isKingSideCastle ? 5 : 3;
+      const rookCell = nextBoard[targetRow][rookSourceCol];
+      if (rookCell && rookCell[0] && rookCell[0].piece === ChessPiecesEnum.Rook) {
+        const rook = new ChessPieceDto(rookCell[0].color, rookCell[0].piece);
+        nextBoard[targetRow][rookSourceCol] = [];
+        nextBoard[targetRow][rookTargetCol] = [rook];
+      }
+    }
+
+    const promotionRow = movingPiece.color === ChessColorsEnum.White ? ChessConstants.MIN_INDEX : ChessConstants.MAX_INDEX;
+    if (movingPiece.piece === ChessPiecesEnum.Pawn && targetRow === promotionRow) {
+      nextBoard[targetRow][targetCol][0].piece = ChessPiecesEnum.Queen;
+    }
+
+    return nextBoard;
+  }
+
+  static isWithinBoard(row: number, col: number): boolean {
+    return row >= ChessConstants.MIN_INDEX
+      && row <= ChessConstants.MAX_INDEX
+      && col >= ChessConstants.MIN_INDEX
+      && col <= ChessConstants.MAX_INDEX;
+  }
+
+  static canPlayLegalMove(
+    board: ChessPieceDto[][][],
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    forColor: ChessColorsEnum,
+    sourcePiece: ChessPieceDto,
+    canStepThereFn?: (
+      targetRow: number,
+      targetCol: number,
+      targetCell: ChessPieceDto[],
+      srcRow: number,
+      srcCol: number,
+      sourcePiece: ChessPieceDto
+    ) => boolean,
+    simulateMoveFn?: (
+      board: ChessPieceDto[][][],
+      srcRow: number,
+      srcCol: number,
+      targetRow: number,
+      targetCol: number
+    ) => ChessPieceDto[][][]
+  ): boolean {
+    const targetCell = board[targetRow][targetCol];
+    
+    let canStepThere: boolean;
+    if (canStepThereFn) {
+      canStepThere = canStepThereFn(
+        targetRow,
+        targetCol,
+        targetCell,
+        srcRow,
+        srcCol,
+        new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+      );
+    } else {
+      canStepThere = ChessRulesService.canStepThere(
+        targetRow,
+        targetCol,
+        targetCell,
+        srcRow,
+        srcCol,
+        new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+      );
+    }
+    if (!canStepThere) {
+      return false;
+    }
+
+    let afterMove: ChessPieceDto[][][];
+    if (simulateMoveFn) {
+      afterMove = simulateMoveFn(board, srcRow, srcCol, targetRow, targetCol);
+    } else {
+      afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+    }
+    return !ChessBoardLogicUtils.isKingInCheck(afterMove, forColor);
   }
 }

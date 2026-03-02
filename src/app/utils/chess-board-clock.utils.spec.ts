@@ -1,6 +1,8 @@
 import { ChessBoardClockUtils } from './chess-board-clock.utils';
+import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { NgZone } from '@angular/core';
 
-describe('ChessBoardClockUtils', () => {
+describe('ChessBoardClockUtils formatting', () => {
   it('pads values to two digits', () => {
     expect(ChessBoardClockUtils.padToTwo(0)).toBe('00');
     expect(ChessBoardClockUtils.padToTwo(9)).toBe('09');
@@ -11,5 +13,203 @@ describe('ChessBoardClockUtils', () => {
     expect(ChessBoardClockUtils.formatClock(500)).toBe('00:00.5');
     expect(ChessBoardClockUtils.formatClock(65000)).toBe('01:05');
     expect(ChessBoardClockUtils.formatClock(10 * 60 * 1000)).toBe('10:00');
+  });
+});
+
+describe('ChessBoardClockUtils interval lifecycle', () => {
+  it('starts and stops clock intervals', () => {
+    const tick = jasmine.createSpy('tick');
+    let scheduledTick: (() => void) | null = null;
+    const startResult = ChessBoardClockUtils.startClock(
+      null,
+      0,
+      100,
+      tick,
+      undefined,
+      () => 500,
+      (handler) => {
+        scheduledTick = handler;
+        return 9;
+      }
+    );
+    expect(startResult.started).toBeTrue();
+    expect(startResult.clockIntervalId).toBe(9);
+    expect(startResult.lastClockTickAt).toBe(500);
+    expect(startResult.clockRunning).toBeTrue();
+    expect(scheduledTick).not.toBeNull();
+
+    const stopSpy = jasmine.createSpy('clear');
+    const stopResult = ChessBoardClockUtils.stopClock(9, stopSpy);
+    expect(stopSpy).toHaveBeenCalledWith(9);
+    expect(stopResult.clockIntervalId).toBeNull();
+    expect(stopResult.clockRunning).toBeFalse();
+  });
+
+  it('covers start/stop guard branches and ngZone scheduling', () => {
+    const alreadyRunning = ChessBoardClockUtils.startClock(5, 100, 100, () => undefined);
+    expect(alreadyRunning.started).toBeFalse();
+    expect(alreadyRunning.clockIntervalId).toBe(5);
+
+    let ran = false;
+    const zone = {
+      run: (fn: () => void) => fn()
+    } as unknown as NgZone;
+    let handler: (() => void) | null = null;
+    ChessBoardClockUtils.startClock(
+      null,
+      0,
+      200,
+      () => {
+        ran = true;
+      },
+      zone,
+      () => 10,
+      (tick) => {
+        handler = tick;
+        return 1;
+      }
+    );
+    handler?.();
+    expect(ran).toBeTrue();
+
+    const stopped = ChessBoardClockUtils.stopClock(null);
+    expect(stopped.clockRunning).toBeFalse();
+  });
+});
+
+describe('ChessBoardClockUtils tick behavior', () => {
+  it('ticks the active side and marks forfeits', () => {
+    const tickWhite = ChessBoardClockUtils.tickClock(
+      true,
+      true,
+      false,
+      1000,
+      ChessColorsEnum.White,
+      1200,
+      2500,
+      () => 1600
+    );
+    expect(tickWhite.whiteClockMs).toBe(600);
+    expect(tickWhite.blackClockMs).toBe(2500);
+    expect(tickWhite.forfeitColor).toBeNull();
+
+    const tickBlackForfeit = ChessBoardClockUtils.tickClock(
+      true,
+      true,
+      false,
+      1000,
+      ChessColorsEnum.Black,
+      1200,
+      300,
+      () => 1600
+    );
+    expect(tickBlackForfeit.blackClockMs).toBe(0);
+    expect(tickBlackForfeit.forfeitColor).toBe(ChessColorsEnum.Black);
+  });
+
+  it('covers tick early-return and non-progress branches', () => {
+    const stopped = ChessBoardClockUtils.tickClock(
+      false,
+      true,
+      false,
+      1000,
+      ChessColorsEnum.White,
+      1000,
+      1000,
+      () => 1001
+    );
+    expect(stopped.shouldStop).toBeTrue();
+
+    const nonProgress = ChessBoardClockUtils.tickClock(
+      true,
+      true,
+      false,
+      1000,
+      ChessColorsEnum.White,
+      1000,
+      1000,
+      () => 1000
+    );
+    expect(nonProgress.shouldRender).toBeFalse();
+    expect(nonProgress.shouldStop).toBeFalse();
+  });
+
+});
+
+describe('ChessBoardClockUtils increment and forfeit behavior', () => {
+  it('adds increment and formats time-forfeit result', () => {
+    const incrementedWhite = ChessBoardClockUtils.addIncrementToColor(
+      ChessColorsEnum.White,
+      true,
+      2000,
+      false,
+      10000,
+      10000
+    );
+    expect(incrementedWhite.whiteClockMs).toBe(12000);
+    expect(incrementedWhite.blackClockMs).toBe(10000);
+
+    const noIncrement = ChessBoardClockUtils.addIncrementToColor(
+      ChessColorsEnum.Black,
+      false,
+      2000,
+      false,
+      10000,
+      10000
+    );
+    expect(noIncrement.blackClockMs).toBe(10000);
+
+    const forfeit = ChessBoardClockUtils.handleTimeForfeit(
+      ChessColorsEnum.White,
+      false,
+      'White',
+      'Black',
+      'forfeits on time.',
+      'forfeits on time'
+    );
+    expect(forfeit).not.toBeNull();
+    expect(forfeit?.winnerResult).toBe('0-1');
+    expect(forfeit?.debugText).toBe('White forfeits on time.');
+
+    const blackForfeit = ChessBoardClockUtils.handleTimeForfeit(
+      ChessColorsEnum.Black,
+      false,
+      'White',
+      'Black',
+      'forfeits on time.',
+      'forfeits on time'
+    );
+    expect(blackForfeit?.winnerResult).toBe('1-0');
+
+    expect(
+      ChessBoardClockUtils.handleTimeForfeit(
+        ChessColorsEnum.Black,
+        true,
+        'White',
+        'Black',
+        'forfeits on time.',
+        'forfeits on time'
+      )
+    ).toBeNull();
+
+    const blackIncrement = ChessBoardClockUtils.addIncrementToColor(
+      ChessColorsEnum.Black,
+      true,
+      500,
+      false,
+      1000,
+      1000
+    );
+    expect(blackIncrement.blackClockMs).toBe(1500);
+
+    const guardIncrement = ChessBoardClockUtils.addIncrementToColor(
+      ChessColorsEnum.White,
+      true,
+      500,
+      true,
+      1000,
+      1000
+    );
+    expect(guardIncrement.whiteClockMs).toBe(1000);
   });
 });

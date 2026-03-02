@@ -1,4 +1,7 @@
+/* eslint-disable max-lines-per-function */
 import { ChessBoardOpeningUtils, IOpeningDebugTextDictionary } from './chess-board-opening.utils';
+import { HttpClient } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
 
 const uiText: IOpeningDebugTextDictionary = {
   message: {
@@ -114,5 +117,70 @@ describe('ChessBoardOpeningUtils', () => {
     expect(withMissingHistorySteps).toContain('Opening: Main');
 
     expect(ChessBoardOpeningUtils.formatOpeningDebugText(null as any, 0, 0, [], uiText, 'n/a')).toBe('');
+  });
+
+  it('loads localized assets with fallback and completes after all files', () => {
+    const http = {
+      get: jasmine.createSpy('get').and.callFake((path: string) => {
+        if (path.includes('openings2.json') && path.includes('/hu_HU/')) {
+          return throwError(() => new Error('missing localized file'));
+        }
+        if (path.endsWith('openings1.json')) {
+          return of([{ name: 'A', long_algebraic_notation: '1. e2-e4' }]);
+        }
+        if (path.endsWith('openings2.json')) {
+          return of([{ name: 'B', long_algebraic_notation: '1. d2-d4' }]);
+        }
+        return of([]);
+      })
+    } as unknown as HttpClient;
+
+    const loadedNames: string[] = [];
+    let completed = false;
+    ChessBoardOpeningUtils.loadOpeningsFromAssets(
+      http,
+      'hu_HU',
+      'en_US',
+      (items) => loadedNames.push(...items.map(item => item.name)),
+      () => {
+        completed = true;
+      }
+    );
+
+    expect(http.get).toHaveBeenCalledWith('assets/openings/hu_HU/openings2.json');
+    expect(http.get).toHaveBeenCalledWith('assets/openings/openings2.json');
+    expect(loadedNames).toEqual(['A', 'B']);
+    expect(completed).toBeTrue();
+  });
+
+  it('reads default locale opening asset from fallback path', () => {
+    const http = {
+      get: jasmine.createSpy('get').and.returnValue(of([]))
+    } as unknown as HttpClient;
+
+    ChessBoardOpeningUtils.getOpeningAsset$(http, 'openings1.json', 'en_US', 'en_US').subscribe();
+    expect(http.get).toHaveBeenCalledTimes(1);
+    expect(http.get).toHaveBeenCalledWith('assets/openings/openings1.json');
+  });
+
+  it('completes immediately when opening files list is empty', () => {
+    const http = {
+      get: jasmine.createSpy('get')
+    } as unknown as HttpClient;
+    let completed = false;
+
+    ChessBoardOpeningUtils.loadOpeningsFromAssets(
+      http,
+      'en_US',
+      'en_US',
+      () => undefined,
+      () => {
+        completed = true;
+      },
+      []
+    );
+
+    expect(completed).toBeTrue();
+    expect((http.get as jasmine.Spy).calls.count()).toBe(0);
   });
 });

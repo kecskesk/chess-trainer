@@ -15,6 +15,7 @@ import { ChessBoardLogicUtils } from '../../utils/chess-board-logic.utils';
 import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
+import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -3067,6 +3068,84 @@ describe('ChessBoardComponent branch coverage helpers (history element resolutio
     (component as any).historyLog = { value: 1 };
 
     expect((component as any).resolveHistoryElement()).toBeNull();
+  });
+});
+
+describe('ChessBoardComponent branch coverage helpers (cct access and private wrappers)', () => {
+  it('covers active stockfish legacy-from-cdr getter path', () => {
+    const legacyEngine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.returnValue(Promise.resolve('0.00')),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(
+      chessBoardStateService,
+      { get: () => of([]) } as any,
+      undefined,
+      undefined,
+      legacyEngine as any
+    );
+    expect((local as any).activeStockfishService).toBe(legacyEngine as any);
+  });
+
+  it('covers getCctRecommendations guards and service-backed branch', () => {
+    const localNoCct = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
+    expect(localNoCct.getCctRecommendations(CctCategoryEnum.Captures)).toEqual([]);
+
+    const helperBackup = chessBoardStateService.boardHelper;
+    (chessBoardStateService as any).boardHelper = null;
+    expect(localNoCct.getCctRecommendations(CctCategoryEnum.Captures)).toEqual([]);
+    (chessBoardStateService as any).boardHelper = helperBackup;
+
+    const cctService = {
+      ensureCctRecommendations: jasmine.createSpy('ensureCctRecommendations').and.returnValue({
+        [CctCategoryEnum.Captures]: [{ move: 'Qh5+', tooltip: 'x' }],
+        [CctCategoryEnum.Checks]: [],
+        [CctCategoryEnum.Threats]: []
+      })
+    };
+    const localWithCct = new ChessBoardComponent(
+      chessBoardStateService,
+      { get: () => of([]) } as any,
+      cctService as any
+    );
+    expect(localWithCct.getCctRecommendations(CctCategoryEnum.Captures).length).toBe(1);
+    expect(cctService.ensureCctRecommendations).toHaveBeenCalled();
+  });
+
+  it('covers private cct cache-hit, self-check continue, threat scoring and king finder', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    const positionKeySpy = spyOn<any>(component, 'getPositionKey').and.returnValues('same-key', 'key-a', 'key-b');
+    (component as any).cctRecommendationsCacheKey = 'same-key';
+    (component as any).ensureCctRecommendations();
+    expect((component as any).cctRecommendationsCacheKey).toBe('same-key');
+
+    (component as any).cctRecommendationsCacheKey = '';
+    const canStepSpy = spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) =>
+      targetRow === 5 && targetCol === 4
+    );
+    spyOn<any>(component, 'simulateMove').and.callFake((b: any) => ChessBoardLogicUtils.cloneField(b));
+    const checkSpy = spyOn<any>(component, 'isKingInCheck').and.callFake((_b: any, color: ChessColorsEnum) =>
+      color === ChessColorsEnum.White
+    );
+    const threatenedSpy = spyOn<any>(component, 'getThreatenedEnemyPiecesByMovedPiece').and.returnValue([ChessPiecesEnum.Queen]);
+    (component as any).ensureCctRecommendations();
+
+    expect(positionKeySpy).toHaveBeenCalled();
+    checkSpy.and.callFake(() => false);
+    threatenedSpy.and.returnValue([ChessPiecesEnum.Queen]);
+    (component as any).cctRecommendationsCacheKey = '';
+    (component as any).ensureCctRecommendations();
+    expect(canStepSpy).toHaveBeenCalled();
+    expect(checkSpy).toHaveBeenCalled();
+
+    const found = (component as any).findKing(chessBoardStateService.field, ChessColorsEnum.White);
+    expect(found?.row).toBe(7);
+    expect(found?.col).toBe(4);
   });
 });
 
