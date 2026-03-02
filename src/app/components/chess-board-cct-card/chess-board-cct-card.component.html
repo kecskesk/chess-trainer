@@ -5,6 +5,7 @@
     <ng-container *ngIf="captures as captureRecs">
       <span class="cct-step"
             *ngFor="let rec of captureRecs"
+            [ngClass]="getMoveClass(rec.move)"
             [title]="rec.tooltip"
             (mouseenter)="previewMove.emit(rec.move)"
             (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
@@ -16,6 +17,7 @@
     <ng-container *ngIf="checks as checkRecs">
       <span class="cct-step"
             *ngFor="let rec of checkRecs"
+            [ngClass]="getMoveClass(rec.move)"
             [title]="rec.tooltip"
             (mouseenter)="previewMove.emit(rec.move)"
             (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
@@ -27,6 +29,7 @@
     <ng-container *ngIf="threats as threatRecs">
       <span class="cct-step"
             *ngFor="let rec of threatRecs"
+            [ngClass]="getMoveClass(rec.move)"
             [title]="rec.tooltip"
             (mouseenter)="previewMove.emit(rec.move)"
             (mouseleave)="clearPreview.emit()">{{rec.move}}</span>

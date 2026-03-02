@@ -119,7 +119,8 @@
       [activeTool]="activeTool"
       [isBoardFlipped]="isBoardFlipped"
       [canPromote]="chessBoardStateService.boardHelper.canPromote !== null"
-      [suggestedMoves]="getMockSuggestedMoves()"
+      [suggestedMoves]="suggestedMoves"
+      [suggestedMoveClassProvider]="getSuggestionQualityClass.bind(this)"
       [openingRecognition]="getMockOpeningRecognition()"
       [endgameRecognition]="getMockEndgameRecognition()"
       (promotePiece)="promotePiece($event)"
@@ -152,6 +153,7 @@
       [captures]="getCctRecommendations(cctCategory.Captures)"
       [checks]="getCctRecommendations(cctCategory.Checks)"
       [threats]="getCctRecommendations(cctCategory.Threats)"
+      [getMoveClass]="getSuggestionQualityClass.bind(this)"
       (previewMove)="previewSuggestedMoveArrows($event)"
       (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-cct-card>
   </section>

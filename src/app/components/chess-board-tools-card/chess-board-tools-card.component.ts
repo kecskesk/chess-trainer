@@ -15,6 +15,7 @@ export class ChessBoardToolsCardComponent {
   @Input() isBoardFlipped = false;
   @Input() canPromote = false;
   @Input() suggestedMoves: string[] = [];
+  @Input() suggestedMoveClassProvider: (move: string) => string = () => '';
   @Input() openingRecognition = '';
   @Input() endgameRecognition = '';
 
@@ -32,6 +33,10 @@ export class ChessBoardToolsCardComponent {
   @Output() clearPreview = new EventEmitter<void>();
 
   getSuggestedMoveClass(move: string): string {
+    const qualityClass = this.suggestedMoveClassProvider(move);
+    if (qualityClass) {
+      return qualityClass;
+    }
     if (!move) {
       return 'suggested-move--threat';
     }

@@ -45,6 +45,11 @@ import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 import { ChessBoardCctService } from '../../services/chess-board-cct.service';
 
+interface IStockfishServiceWithMoveEval {
+  evaluateFen: (fen: string, options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
+  evaluateFenAfterMoves?: (fen: string, uciMoves: string[], options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
+}
+
 @Component({
   selector: 'app-chess-board',
   templateUrl: './chess-board.component.html',
@@ -130,6 +135,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   };
   private readonly evalByHistoryIndex = new Map<number, string>();
   private readonly evalCacheByFen = new Map<string, string>();
+  private readonly suggestedMovesCacheByFen = new Map<string, string[]>();
+  private readonly suggestionQualityByFen = new Map<string, Record<string, string>>();
   private readonly pendingEvalByHistoryIndex = new Set<number>();
   private readonly evalErrorByHistoryIndex = new Set<number>();
   private evaluationRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -138,6 +145,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private readonly pendingEvaluationPlaceholder = '...';
   private readonly evaluationErrorPlaceholder = 'err';
   private readonly analysisClampPawns = 10;
+  private readonly suggestedMovesDepth = 12;
+  private readonly suggestedMovesCount = 3;
+  readonly suggestedMovesLoadingPlaceholder = [this.pendingEvaluationPlaceholder];
+  suggestedMoves: string[] = [...this.suggestedMovesLoadingPlaceholder];
+  private suggestionQualityByMove: Record<string, string> = {};
   openingsLoaded = false;
   private openings: IParsedOpening[] = [];
   private activeOpening: IParsedOpening | null = null;
@@ -1344,6 +1356,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return 'suggested-move--capture';
     }
     return 'suggested-move--threat';
+  }
+
+  getSuggestionQualityClass(move: string): string {
+    if (!move) {
+      return '';
+    }
+    return this.suggestionQualityByMove[move] || '';
   }
 
   previewSuggestedMoveArrows(move: string): void {
@@ -2665,6 +2684,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.pendingEvalByHistoryIndex.clear();
     this.evalErrorByHistoryIndex.clear();
     this.evalCacheByFen.clear();
+    this.suggestedMovesCacheByFen.clear();
+    this.suggestionQualityByFen.clear();
+    this.suggestionQualityByMove = {};
+    this.suggestedMoves = [...this.suggestedMovesLoadingPlaceholder];
     if (this.evaluationRefreshTimer !== null) {
       clearTimeout(this.evaluationRefreshTimer);
       this.evaluationRefreshTimer = null;
@@ -2704,6 +2727,344 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
       requestRender: () => this.requestClockRender()
     });
+    await this.refreshSuggestedMoves(runToken);
+  }
+
+  private async refreshSuggestedMoves(runToken: number): Promise<void> {
+    if (!this.activeStockfishService || runToken !== this.evaluationRunToken) {
+      return;
+    }
+    const fen = this.getCurrentFen();
+    const cachedSuggestions = this.suggestedMovesCacheByFen.get(fen);
+    if (cachedSuggestions) {
+      this.suggestedMoves = [...cachedSuggestions];
+      const cachedQuality = this.suggestionQualityByFen.get(fen);
+      this.suggestionQualityByMove = cachedQuality ? { ...cachedQuality } : {};
+      this.requestClockRender();
+      if (!cachedQuality) {
+        await this.refreshSuggestionQualities(runToken, fen);
+      }
+      return;
+    }
+
+    this.suggestedMoves = [...this.suggestedMovesLoadingPlaceholder];
+    this.requestClockRender();
+    try {
+      const engineTopMoves = await this.activeStockfishService.getTopMoves(fen, {
+        depth: this.suggestedMovesDepth,
+        multiPv: this.suggestedMovesCount
+      });
+      if (runToken !== this.evaluationRunToken) {
+        return;
+      }
+      const formattedSuggestions = this.formatEngineSuggestions(engineTopMoves);
+      const resolvedSuggestions = formattedSuggestions.length > 0
+        ? formattedSuggestions
+        : [ChessBoardComponent.NA_PLACEHOLDER];
+      this.suggestedMovesCacheByFen.set(fen, resolvedSuggestions);
+      this.suggestedMoves = [...resolvedSuggestions];
+      await this.refreshSuggestionQualities(runToken, fen, engineTopMoves, formattedSuggestions);
+      this.requestClockRender();
+    } catch {
+      if (runToken !== this.evaluationRunToken) {
+        return;
+      }
+      this.suggestionQualityByMove = {};
+      this.suggestedMoves = [ChessBoardComponent.NA_PLACEHOLDER];
+      this.requestClockRender();
+    }
+  }
+
+  private async refreshSuggestionQualities(
+    runToken: number,
+    fen: string,
+    engineTopMoves: string[] = [],
+    formattedEngineSuggestions: string[] = []
+  ): Promise<void> {
+    if (!this.activeStockfishService || runToken !== this.evaluationRunToken) {
+      return;
+    }
+
+    const cachedQuality = this.suggestionQualityByFen.get(fen);
+    if (cachedQuality) {
+      this.suggestionQualityByMove = { ...cachedQuality };
+      this.requestClockRender();
+      return;
+    }
+
+    let topMovesUci = engineTopMoves;
+    if (topMovesUci.length < 1) {
+      topMovesUci = await this.activeStockfishService.getTopMoves(fen, {
+        depth: this.suggestedMovesDepth,
+        multiPv: this.suggestedMovesCount
+      });
+    }
+    if (runToken !== this.evaluationRunToken) {
+      return;
+    }
+
+    const topMovesDisplay = formattedEngineSuggestions.length > 0
+      ? formattedEngineSuggestions
+      : this.formatEngineSuggestions(topMovesUci);
+
+    const displayToUci = this.buildDisplayToUciMap(topMovesUci, topMovesDisplay);
+
+    const uniqueUciMoves = Array.from(new Set(Array.from(displayToUci.values())));
+    if (uniqueUciMoves.length < 1) {
+      this.suggestionQualityByMove = {};
+      this.suggestionQualityByFen.set(fen, {});
+      this.requestClockRender();
+      return;
+    }
+
+    const evalByUci = await this.evaluateUciMovesForQuality(runToken, fen, uniqueUciMoves);
+
+    if (evalByUci.size < 1) {
+      this.suggestionQualityByMove = {};
+      this.suggestionQualityByFen.set(fen, {});
+      this.requestClockRender();
+      return;
+    }
+
+    const evalValues = Array.from(evalByUci.values());
+    const turnColor = this.chessBoardStateService.boardHelper.colorTurn;
+    const bestEval = turnColor === ChessColorsEnum.White
+      ? Math.max(...evalValues)
+      : Math.min(...evalValues);
+
+    const qualityByMove: Record<string, string> = {};
+    displayToUci.forEach((uciMove, displayMove) => {
+      const moveEval = evalByUci.get(uciMove);
+      if (moveEval === undefined) {
+        return;
+      }
+      const loss = turnColor === ChessColorsEnum.White
+        ? (bestEval - moveEval)
+        : (moveEval - bestEval);
+      qualityByMove[displayMove] = this.classifySuggestionLoss(loss);
+    });
+
+    this.suggestionQualityByFen.set(fen, qualityByMove);
+    this.suggestionQualityByMove = { ...qualityByMove };
+    this.requestClockRender();
+  }
+
+  private buildDisplayToUciMap(topMovesUci: string[], topMovesDisplay: string[]): Map<string, string> {
+    const displayToUci = new Map<string, string>();
+    topMovesDisplay.forEach((move, index) => {
+      const uciMove = (topMovesUci[index] || '').trim().toLowerCase();
+      if (move && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uciMove) && !displayToUci.has(move)) {
+        displayToUci.set(move, uciMove);
+      }
+    });
+
+    const cctMoves = [
+      ...this.getCctRecommendations(CctCategoryEnum.Captures).map(item => item.move),
+      ...this.getCctRecommendations(CctCategoryEnum.Checks).map(item => item.move),
+      ...this.getCctRecommendations(CctCategoryEnum.Threats).map(item => item.move)
+    ];
+    cctMoves.forEach(move => {
+      if (!move || displayToUci.has(move)) {
+        return;
+      }
+      const resolved = this.resolveMoveToUci(move);
+      if (resolved) {
+        displayToUci.set(move, resolved);
+      }
+    });
+
+    return displayToUci;
+  }
+
+  private async evaluateUciMovesForQuality(runToken: number, fen: string, uniqueUciMoves: string[]): Promise<Map<string, number>> {
+    const evalByUci = new Map<string, number>();
+    const engineService = this.activeStockfishService as IStockfishServiceWithMoveEval | undefined;
+    if (!engineService) {
+      return evalByUci;
+    }
+
+    for (const uciMove of uniqueUciMoves) {
+      if (runToken !== this.evaluationRunToken) {
+        return evalByUci;
+      }
+      try {
+        const evaluation = typeof engineService.evaluateFenAfterMoves === 'function'
+          ? await engineService.evaluateFenAfterMoves(fen, [uciMove], { depth: this.suggestedMovesDepth })
+          : await engineService.evaluateFen(fen, { depth: this.suggestedMovesDepth });
+        const pawns = ChessBoardComponentUtils.parseEvaluationPawns(
+          evaluation,
+          this.pendingEvaluationPlaceholder,
+          this.evaluationErrorPlaceholder,
+          ChessBoardComponent.NA_PLACEHOLDER,
+          this.analysisClampPawns
+        );
+        if (pawns !== null) {
+          evalByUci.set(uciMove, pawns);
+        }
+      } catch {
+        // Ignore individual move failures and continue with available scores.
+      }
+    }
+    return evalByUci;
+  }
+
+  private classifySuggestionLoss(loss: number): string {
+    if (loss <= 0.10) {
+      return 'history-quality--genius';
+    }
+    if (loss <= 0.30) {
+      return 'history-quality--great';
+    }
+    if (loss <= 0.60) {
+      return 'history-quality--good';
+    }
+    if (loss <= 1.20) {
+      return 'history-quality--small-error';
+    }
+    if (loss <= 2.50) {
+      return 'history-quality--mistake';
+    }
+    return 'history-quality--blunder';
+  }
+
+  private formatEngineSuggestions(uciMoves: string[]): string[] {
+    if (!uciMoves || uciMoves.length < 1) {
+      return [];
+    }
+    return uciMoves
+      .map(move => this.formatUciMoveForDisplay(move))
+      .filter(move => !!move)
+      .slice(0, this.suggestedMovesCount);
+  }
+
+  private formatUciMoveForDisplay(uciMove: string): string {
+    const normalized = (uciMove || '').trim();
+    const moveMatch = normalized.match(/^([a-h][1-8])([a-h][1-8])[qrbn]?$/);
+    if (!moveMatch) {
+      return '';
+    }
+    const fromSquare = this.parseSquareToCoords(moveMatch[1]);
+    const toSquare = this.parseSquareToCoords(moveMatch[2]);
+    if (!fromSquare || !toSquare) {
+      return '';
+    }
+
+    const sourceCell = this.chessBoardStateService.field[fromSquare.row][fromSquare.col];
+    if (!(sourceCell && sourceCell[0])) {
+      return moveMatch[2];
+    }
+    const sourcePiece = sourceCell[0];
+    const targetCell = this.chessBoardStateService.field[toSquare.row][toSquare.col];
+    const isCapture =
+      !!(targetCell && targetCell[0] && targetCell[0].color !== sourcePiece.color) ||
+      (sourcePiece.piece === ChessPiecesEnum.Pawn && fromSquare.col !== toSquare.col);
+    const toAlgebraic = moveMatch[2];
+
+    if (sourcePiece.piece === ChessPiecesEnum.Pawn) {
+      if (isCapture) {
+        const fromFile = moveMatch[1].charAt(0);
+        return `${fromFile}x${toAlgebraic}`;
+      }
+      return toAlgebraic;
+    }
+
+    const pieceNotation = ChessBoardCctUtils.pieceNotation(sourcePiece.piece);
+    return `${pieceNotation}${isCapture ? 'x' : ''}${toAlgebraic}`;
+  }
+
+  private parseSquareToCoords(square: string): { row: number; col: number } | null {
+    const normalized = (square || '').trim().toLowerCase();
+    const squareMatch = normalized.match(/^([a-h])([1-8])$/);
+    if (!squareMatch) {
+      return null;
+    }
+    const file = squareMatch[1];
+    const rank = Number(squareMatch[2]);
+    const col = file.charCodeAt(0) - 'a'.charCodeAt(0);
+    const row = ChessConstants.BOARD_SIZE - rank;
+    if (col < ChessConstants.MIN_INDEX || col > ChessConstants.MAX_INDEX ||
+      row < ChessConstants.MIN_INDEX || row > ChessConstants.MAX_INDEX) {
+      return null;
+    }
+    return { row, col };
+  }
+
+  private resolveMoveToUci(move: string): string | null {
+    const normalized = (move || '').trim().replace(/^\.\.\./, '').replace(/[+#?!]/g, '');
+    const targetMatch = normalized.match(/([a-h][1-8])$/);
+    if (!targetMatch) {
+      return null;
+    }
+    const targetSquare = targetMatch[1];
+    const targetCoords = this.parseSquareToCoords(targetSquare);
+    if (!targetCoords) {
+      return null;
+    }
+    const targetCell = this.chessBoardStateService.field[targetCoords.row][targetCoords.col];
+    const turnColor = this.chessBoardStateService.boardHelper.colorTurn;
+
+    const pieceChar = normalized.charAt(0);
+    let pieceType = ChessPiecesEnum.Pawn;
+    if (pieceChar === 'K') {
+      pieceType = ChessPiecesEnum.King;
+    } else if (pieceChar === 'Q') {
+      pieceType = ChessPiecesEnum.Queen;
+    } else if (pieceChar === 'R') {
+      pieceType = ChessPiecesEnum.Rook;
+    } else if (pieceChar === 'B') {
+      pieceType = ChessPiecesEnum.Bishop;
+    } else if (pieceChar === 'N') {
+      pieceType = ChessPiecesEnum.Knight;
+    }
+
+    const pawnCaptureFileMatch = normalized.match(/^([a-h])x[a-h][1-8]$/);
+    const pawnCaptureFile = pawnCaptureFileMatch ? pawnCaptureFileMatch[1] : '';
+    const candidates: string[] = [];
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
+        const sourceCell = this.chessBoardStateService.field[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0])) {
+          continue;
+        }
+        const sourcePiece = sourceCell[0];
+        if (sourcePiece.color !== turnColor || sourcePiece.piece !== pieceType) {
+          continue;
+        }
+        if (pieceType === ChessPiecesEnum.Pawn && pawnCaptureFile) {
+          const sourceFile = String.fromCharCode('a'.charCodeAt(0) + srcCol);
+          if (sourceFile !== pawnCaptureFile) {
+            continue;
+          }
+        }
+
+        const isValid = ChessRulesService.validateMove(
+          targetCoords.row,
+          targetCoords.col,
+          targetCell,
+          srcRow,
+          srcCol
+        ).isValid;
+        if (!isValid) {
+          continue;
+        }
+
+        const fromSquare = ChessBoardCctUtils.toAlgebraicSquare(srcRow, srcCol);
+        let promotionSuffix = '';
+        if (
+          pieceType === ChessPiecesEnum.Pawn &&
+          ((sourcePiece.color === ChessColorsEnum.White && targetCoords.row === 0) ||
+           (sourcePiece.color === ChessColorsEnum.Black && targetCoords.row === ChessConstants.MAX_INDEX))
+        ) {
+          promotionSuffix = 'q';
+        }
+        candidates.push(`${fromSquare}${targetSquare}${promotionSuffix}`);
+      }
+    }
+
+    if (candidates.length < 1) {
+      return null;
+    }
+    return candidates[0];
   }
 
   private getFenForHistoryIndex(halfMoveIndex: number): string {

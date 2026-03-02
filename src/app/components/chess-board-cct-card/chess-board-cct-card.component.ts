@@ -15,6 +15,7 @@ export class ChessBoardCctCardComponent {
   @Input() captures: ICctRecommendation[] = [];
   @Input() checks: ICctRecommendation[] = [];
   @Input() threats: ICctRecommendation[] = [];
+  @Input() getMoveClass: (move: string) => string = () => '';
 
   @Output() previewMove = new EventEmitter<string>();
   @Output() clearPreview = new EventEmitter<void>();
