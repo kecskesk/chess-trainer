@@ -62,15 +62,20 @@ class WorkerMock {
   }
 }
 
-describe('StockfishService', () => {
+const setupServiceWithMockWorker = () => {
+  (StockfishService as any).HANDSHAKE_TIMEOUT_MS = 8000;
+  const service = new StockfishService();
+  const worker = new WorkerMock();
+  spyOn<any>(service, 'createWorker').and.returnValue(worker as unknown as Worker);
+  return { service, worker };
+};
+
+describe('StockfishService evaluateFen', () => {
   let service: StockfishService;
   let worker: WorkerMock;
 
   beforeEach(() => {
-    (StockfishService as any).HANDSHAKE_TIMEOUT_MS = 8000;
-    service = new StockfishService();
-    worker = new WorkerMock();
-    spyOn<any>(service, 'createWorker').and.returnValue(worker as unknown as Worker);
+    ({ service, worker } = setupServiceWithMockWorker());
   });
 
   it('completes handshake and parses cp score', async () => {
@@ -112,6 +117,8 @@ describe('StockfishService', () => {
     const result = await (service as any).evaluateFen(undefined);
     expect(result).toBe('n/a');
     expect((service as any).getSideToMoveFromFen(undefined)).toBe('w');
+    expect(await service.evaluateFenAfterMoves(undefined as any, ['e2e4'])).toBe('n/a');
+    expect(await service.getTopMoves(undefined as any)).toEqual([]);
   });
 
   it('returns initPromise while handshake is in progress', async () => {
@@ -148,21 +155,103 @@ describe('StockfishService', () => {
     const score = await service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
     expect(score).toBe('n/a');
   });
+
 });
 
-describe('StockfishService edge paths', () => {
+describe('StockfishService evaluateFenAfterMoves and top moves', () => {
   let service: StockfishService;
   let worker: WorkerMock;
 
   beforeEach(() => {
-    (StockfishService as any).HANDSHAKE_TIMEOUT_MS = 8000;
-    service = new StockfishService();
-    worker = new WorkerMock();
-    spyOn<any>(service, 'createWorker').and.returnValue(worker as unknown as Worker);
+    ({ service, worker } = setupServiceWithMockWorker());
+  });
+
+  it('evaluates fen after moves and caches by composite cache key', async () => {
+    const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    const score1 = await service.evaluateFenAfterMoves(fen, ['e2e4', '  E7E5  '], { depth: 9 });
+    const score2 = await service.evaluateFenAfterMoves(fen, ['e2e4', 'e7e5'], { depth: 9 });
+
+    expect(score1).toBe('+0.47');
+    expect(score2).toBe('+0.47');
+    expect(worker.postedCommands).toContain(`position fen ${fen} moves e2e4 e7e5`);
+    expect(worker.postedCommands.filter(command => command.startsWith('go depth 9')).length).toBe(1);
+  });
+
+  it('falls back to evaluateFen from evaluateFenAfterMoves when no valid moves are provided', async () => {
+    const fallbackSpy = spyOn(service, 'evaluateFen').and.returnValue(Promise.resolve('+0.11'));
+    const result = await service.evaluateFenAfterMoves('8/8/8/8/8/8/8/8 w - - 0 1', ['bad-move'], { depth: 5 });
+    expect(result).toBe('+0.11');
+    expect(fallbackSpy).toHaveBeenCalled();
+  });
+
+  it('returns n/a from evaluateFenAfterMoves when fen is empty', async () => {
+    const result = await service.evaluateFenAfterMoves(' ', ['e2e4']);
+    expect(result).toBe('n/a');
+  });
+
+  it('returns top moves using multipv and caches the result', async () => {
+    const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    worker.emitScoreLine = false;
+    worker.emitBestmove = false;
+    await (service as any).ensureReady();
+    const pending = service.getTopMoves(fen, { depth: 7, multiPv: 2 });
+    await Promise.resolve();
+    (service as any).onWorkerMessage({ data: 'info depth 7 multipv 1 pv e2e4 e7e5' } as MessageEvent<string>);
+    (service as any).onWorkerMessage({ data: 'info depth 7 multipv 2 pv d2d4 d7d5' } as MessageEvent<string>);
+    (service as any).onWorkerMessage({ data: 'bestmove e2e4' } as MessageEvent<string>);
+    const top1 = await pending;
+    const top2 = await service.getTopMoves(fen, { depth: 7, multiPv: 2 });
+
+    expect(top1).toEqual(['e2e4', 'd2d4']);
+    expect(top2).toEqual(['e2e4', 'd2d4']);
+    expect(worker.postedCommands).toContain('setoption name MultiPV value 2');
+  });
+
+  it('returns bestmove as fallback when top move pv lines are absent', async () => {
+    const topMoves = await service.getTopMoves('8/8/8/8/8/8/8/8 w - - 0 1', { depth: 6, multiPv: 3 });
+    expect(topMoves).toEqual(['e2e4']);
+  });
+
+  it('handles getTopMoves empty fen and clamps multipv', async () => {
+    const empty = await service.getTopMoves('   ');
+    expect(empty).toEqual([]);
+
+    await service.getTopMoves('8/8/8/8/8/8/8/8 w - - 0 1', { multiPv: 99 });
+    expect(worker.postedCommands).toContain('setoption name MultiPV value 8');
+  });
+
+  it('uses movetime when requesting top moves', async () => {
+    await service.getTopMoves('8/8/8/8/8/8/8/8 w - - 0 1', { movetimeMs: 15 });
+    expect(worker.postedCommands).toContain('go movetime 15');
+  });
+
+  it('rejects and clears an active top-moves request', async () => {
+    worker.emitScoreLine = false;
+    worker.emitBestmove = false;
+    await (service as any).ensureReady();
+    const pending = service.getTopMoves('8/8/8/8/8/8/8/8 w - - 0 1', { depth: 8, multiPv: 2 });
+    await Promise.resolve();
+    (service as any).rejectPendingTopMoves('cancelled');
+    await expectAsync(pending).toBeRejectedWithError('cancelled');
+  });
+});
+
+describe('StockfishService edge paths (errors/readiness)', () => {
+  let service: StockfishService;
+  let worker: WorkerMock;
+
+  beforeEach(() => {
+    ({ service, worker } = setupServiceWithMockWorker());
   });
 
   it('rejects when worker emits error', async () => {
     const pending = service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
+    setTimeout(() => worker.onerror?.(new Event('error')), 0);
+    await expectAsync(pending).toBeRejectedWithError('Stockfish worker error');
+  });
+
+  it('rejects pending getTopMoves when worker emits error', async () => {
+    const pending = service.getTopMoves('8/8/8/8/8/8/8/8 w - - 0 1', { multiPv: 2 });
     setTimeout(() => worker.onerror?.(new Event('error')), 0);
     await expectAsync(pending).toBeRejectedWithError('Stockfish worker error');
   });
@@ -201,6 +290,15 @@ describe('StockfishService edge paths', () => {
     });
     await expectAsync(service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1')).toBeRejectedWithError('create failed');
   });
+});
+
+describe('StockfishService edge paths (helpers)', () => {
+  let service: StockfishService;
+  let worker: WorkerMock;
+
+  beforeEach(() => {
+    ({ service, worker } = setupServiceWithMockWorker());
+  });
 
   it('ignores empty/non-string worker messages', async () => {
     await service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
@@ -226,6 +324,42 @@ describe('StockfishService edge paths', () => {
     spyOn(Number, 'isNaN').and.callFake((value: unknown) => (value === 47 ? true : originalIsNaN(value)));
     const result = (service as any).parseScoreFromInfoLine('info depth 8 score cp 47', '8/8/8/8/8/8/8/8 w - - 0 1');
     expect(result).toBeNull();
+  });
+
+  it('covers helper branches for parsing/collecting and parity transformations', () => {
+    expect((service as any).parseTopMoveFromInfoLine('x')).toBeNull();
+    expect((service as any).parseTopMoveFromInfoLine('info depth 5 multipv 0 pv e2e4')).toBeNull();
+    expect((service as any).parseTopMoveFromInfoLine('info depth 5 multipv 1')).toBeNull();
+    expect((service as any).parseTopMoveFromInfoLine('info depth 5 multipv 2 pv g1f3')).toEqual({ pv: 2, move: 'g1f3' });
+
+    expect((service as any).collectTopMoves({
+      maxMoves: 2,
+      bestmove: 'a2a4',
+      movesByPv: new Map<number, string>()
+    })).toEqual(['a2a4']);
+
+    const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    expect((service as any).withAppliedMoveParity(fen, 0)).toBe(fen);
+    expect((service as any).withAppliedMoveParity(fen, 1)).toContain(' b ');
+    expect((service as any).withAppliedMoveParity('8/8/8/8/8/8/8/8 b - - 0 1', 1)).toContain(' w ');
+    expect((service as any).withAppliedMoveParity(undefined, 1)).toBeUndefined();
+    expect((service as any).withAppliedMoveParity('badfen', 1)).toBe('badfen');
+  });
+
+  it('normalizes undefined move tokens in evaluateFenAfterMoves', async () => {
+    const score = await service.evaluateFenAfterMoves('8/8/8/8/8/8/8/8 w - - 0 1', [undefined as any, 'e2e4'], { depth: 4 });
+    expect(score).toBe('-0.47');
+  });
+
+  it('handles undefined move array in evaluateFenAfterMoves', async () => {
+    const score = await service.evaluateFenAfterMoves('8/8/8/8/8/8/8/8 w - - 0 1', undefined as any, { depth: 4 });
+    expect(score).toBe('+0.47');
+  });
+
+  it('covers rejectPendingTopMoves no-op and terminate with no worker', () => {
+    expect(() => (service as any).rejectPendingTopMoves('x')).not.toThrow();
+    (service as any).worker = null;
+    expect(() => service.terminate()).not.toThrow();
   });
 
   it('creates worker with stockfish asset path', () => {

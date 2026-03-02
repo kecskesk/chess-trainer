@@ -17,4 +17,9 @@ describe('ChessBoardCctCardComponent', () => {
     expect(previewSpy).toHaveBeenCalledWith('Nf7+');
     expect(clearSpy).toHaveBeenCalled();
   });
+
+  it('exposes default move class and score providers', () => {
+    expect(component.getMoveClass('Nf3')).toBe('');
+    expect(component.getMoveScore('Nf3')).toBe('');
+  });
 });

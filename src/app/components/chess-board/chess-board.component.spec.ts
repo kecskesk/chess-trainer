@@ -15,6 +15,7 @@ import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
+import { ChessConstants } from '../../constants/chess.constants';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -3184,6 +3185,363 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
     const checks = (component as any).cctRecommendationsCache[CctCategoryEnum.Checks];
     expect(checks.length).toBeGreaterThan(0);
     expect(checks[0].tooltip).not.toContain('with capture');
+  });
+});
+
+describe('ChessBoardComponent suggestion scoring helpers basics', () => {
+  it('covers suggestion getters and white mock suggested branch', () => {
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect(component.getMockSuggestedMoves()).toEqual(['Qh5+', 'Nxe5', 'd4']);
+    expect(component.getSuggestionQualityClass('')).toBe('');
+    expect(component.getSuggestionEvalText('')).toBe('');
+
+    (component as any).suggestionQualityByMove = { Nf3: 'history-quality--great' };
+    (component as any).suggestionEvalTextByMove = { Nf3: '+0.42' };
+    expect(component.getSuggestionQualityClass('Nf3')).toBe('history-quality--great');
+    expect(component.getSuggestionEvalText('Nf3')).toBe('+0.42');
+  });
+
+  it('covers refreshSuggestedMoves cached branch and refresh delegation', async () => {
+    const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    spyOn<any>(component, 'getCurrentFen').and.returnValue(fen);
+    (component as any).evaluationRunToken = 7;
+    (component as any).suggestedMovesCacheByFen.set(fen, ['Nf3']);
+    const refreshQualitySpy = spyOn<any>(component, 'refreshSuggestionQualities').and.resolveTo();
+
+    await (component as any).refreshSuggestedMoves(7);
+    expect(component.suggestedMoves).toEqual(['Nf3']);
+    expect(refreshQualitySpy).toHaveBeenCalledWith(7, fen);
+
+    (component as any).suggestionQualityByFen.set(fen, { Nf3: 'history-quality--great' });
+    (component as any).suggestionEvalTextByFen.set(fen, { Nf3: '+0.20' });
+    refreshQualitySpy.calls.reset();
+    await (component as any).refreshSuggestedMoves(7);
+    expect(refreshQualitySpy).not.toHaveBeenCalled();
+    expect(component.getSuggestionEvalText('Nf3')).toBe('+0.20');
+  });
+
+  it('covers refreshSuggestedMoves success and catch branches', async () => {
+    const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    const engine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.1'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, engine as any);
+    spyOn<any>(local, 'getCurrentFen').and.returnValue(fen);
+    (local as any).evaluationRunToken = 2;
+    const qualitySpy = spyOn<any>(local, 'refreshSuggestionQualities').and.resolveTo();
+
+    await (local as any).refreshSuggestedMoves(2);
+    expect(local.suggestedMoves.length).toBeGreaterThan(0);
+    expect(engine.getTopMoves).toHaveBeenCalled();
+    expect(qualitySpy).toHaveBeenCalled();
+
+    engine.getTopMoves.and.rejectWith(new Error('boom'));
+    (local as any).suggestedMovesCacheByFen.clear();
+    await (local as any).refreshSuggestedMoves(2);
+    expect(local.suggestedMoves).toEqual(['n/a']);
+  });
+
+  it('covers refreshSuggestionQualities early returns and empty-uci mapping branch', async () => {
+    const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
+    await (localNoEngine as any).refreshSuggestionQualities(1, 'fen');
+
+    const engine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.2'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, engine as any);
+    (local as any).evaluationRunToken = 5;
+    await (local as any).refreshSuggestionQualities(5, 'fen-empty', [], []);
+    expect((local as any).suggestionQualityByFen.get('fen-empty')).toEqual({});
+    expect((local as any).suggestionEvalTextByFen.get('fen-empty')).toEqual({});
+  });
+});
+
+describe('ChessBoardComponent suggestion scoring helpers mapping', () => {
+  it('covers build/classify/format/parse helper branches', async () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.field[5][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    const resolveSpy = spyOn<any>(component, 'resolveMoveToUci').and.callFake((move: string) => move === 'exd3' ? 'e4d3' : null);
+    spyOn(component, 'getCctRecommendations').and.returnValues(
+      [{ move: 'Nf3', tooltip: '' }],
+      [{ move: 'exd3', tooltip: '' }],
+      [{ move: 'bad', tooltip: '' }]
+    );
+    const map = (component as any).buildDisplayToUciMap(['g1f3'], ['Nf3']);
+    expect(map.get('Nf3')).toBe('g1f3');
+    expect(map.get('exd3')).toBe('e4d3');
+
+    expect((component as any).classifySuggestionLoss(0.05)).toBe('history-quality--genius');
+    expect((component as any).classifySuggestionLoss(0.2)).toBe('history-quality--great');
+    expect((component as any).classifySuggestionLoss(0.5)).toBe('history-quality--good');
+    expect((component as any).classifySuggestionLoss(1.0)).toBe('history-quality--small-error');
+    expect((component as any).classifySuggestionLoss(2.0)).toBe('history-quality--mistake');
+    expect((component as any).classifySuggestionLoss(3.0)).toBe('history-quality--blunder');
+
+    expect((component as any).formatEngineSuggestions([])).toEqual([]);
+    expect((component as any).formatUciMoveForDisplay('bad')).toBe('');
+    expect((component as any).parseSquareToCoords('z9')).toBeNull();
+    expect((component as any).parseSquareToCoords('a1')).toEqual({ row: 7, col: 0 });
+
+    // ensure a non-pawn capture is covered: Knight captures pawn (should show 'x')
+    clearBoard();
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[5][5] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect((component as any).formatUciMoveForDisplay('g1f3')).toBe('Nxf3');
+
+    // also verify non-capture knight move remains valid
+    clearBoard();
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[5][5] = [];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect((component as any).formatUciMoveForDisplay('g1f3')).toBe('Nf3');
+
+    // restore default starting board for subsequent expectations
+    const restoredState = new ChessBoardStateService();
+    chessBoardStateService = restoredState;
+    (component as any).chessBoardStateService = restoredState;
+
+    expect((component as any).formatUciMoveForDisplay('e2e4')).toBe('e4');
+    expect((component as any).formatUciMoveForDisplay('e2d3')).toBe('exd3');
+
+    resolveSpy.and.callThrough();
+    expect((component as any).resolveMoveToUci('invalid')).toBeNull();
+  });
+
+  it('covers resolveMoveToUci legal move branch', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    expect((component as any).resolveMoveToUci('Nf3')).toBe('g1f3');
+  });
+
+  it('covers evaluateUciMovesForQuality fallbacks and run-token early return', async () => {
+    const withAfterMoves = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.10'),
+      evaluateFenAfterMoves: jasmine.createSpy('evaluateFenAfterMoves').and.resolveTo('+0.30'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, withAfterMoves as any);
+    (local as any).evaluationRunToken = 8;
+    const withAfterResult = await (local as any).evaluateUciMovesForQuality(8, 'fen', ['e2e4']);
+    expect(withAfterResult.pawnsByUci.get('e2e4')).toBe(0.3);
+    expect(withAfterResult.textByUci.get('e2e4')).toBe('+0.30');
+
+    const withoutAfterMoves = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.50'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const fallback = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, withoutAfterMoves as any);
+    (fallback as any).evaluationRunToken = 3;
+    const fallbackResult = await (fallback as any).evaluateUciMovesForQuality(3, 'fen', ['e2e4']);
+    expect(fallbackResult.pawnsByUci.get('e2e4')).toBe(0.5);
+    expect(withoutAfterMoves.evaluateFen).toHaveBeenCalled();
+
+    (fallback as any).evaluationRunToken = 99;
+    const early = await (fallback as any).evaluateUciMovesForQuality(1, 'fen', ['e2e4']);
+    expect(early.pawnsByUci.size).toBe(0);
+  });
+});
+
+describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
+  it('covers refreshSuggestedMoves run-token mismatch exits', async () => {
+    const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    const engine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.1'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, engine as any);
+    engine.getTopMoves.and.callFake(async () => {
+      (local as any).evaluationRunToken = 2;
+      return ['g1f3'];
+    });
+    spyOn<any>(local, 'getCurrentFen').and.returnValue(fen);
+    (local as any).evaluationRunToken = 1;
+    await (local as any).refreshSuggestedMoves(1);
+    expect((local as any).suggestedMovesCacheByFen.has(fen)).toBeFalse();
+
+    engine.getTopMoves.and.callFake(async () => {
+      (local as any).evaluationRunToken = 3;
+      throw new Error('boom');
+    });
+    await (local as any).refreshSuggestedMoves(2);
+    expect(local.suggestedMoves).not.toEqual(['n/a']);
+  });
+
+  it('covers refreshSuggestionQualities cached, mismatch and empty-eval branches', async () => {
+    const engine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.1'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, engine as any);
+    (local as any).evaluationRunToken = 7;
+    (local as any).suggestionQualityByFen.set('cached', { Nf3: 'history-quality--great' });
+    (local as any).suggestionEvalTextByFen.set('cached', { Nf3: '+0.20' });
+    await (local as any).refreshSuggestionQualities(7, 'cached', ['g1f3'], ['Nf3']);
+    expect((local as any).suggestionQualityByMove.Nf3).toBe('history-quality--great');
+
+    engine.getTopMoves.and.callFake(async () => {
+      (local as any).evaluationRunToken = 8;
+      return ['g1f3'];
+    });
+    await (local as any).refreshSuggestionQualities(7, 'mismatch');
+
+    (local as any).evaluationRunToken = 9;
+    spyOn<any>(local, 'evaluateUciMovesForQuality').and.resolveTo({
+      pawnsByUci: new Map<string, number>(),
+      textByUci: new Map<string, string>()
+    });
+    await (local as any).refreshSuggestionQualities(9, 'empty-eval', ['g1f3'], ['Nf3']);
+    expect((local as any).suggestionQualityByFen.get('empty-eval')).toEqual({});
+  });
+
+  it('covers refreshSuggestionQualities map scoring and undefined eval paths', async () => {
+    const engine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.1'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, engine as any);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    (local as any).evaluationRunToken = 5;
+    spyOn<any>(local, 'buildDisplayToUciMap').and.returnValue(new Map<string, string>([
+      ['Nf3', 'g1f3'],
+      ['e4', 'e2e4']
+    ]));
+    spyOn<any>(local, 'evaluateUciMovesForQuality').and.resolveTo({
+      pawnsByUci: new Map<string, number>([['g1f3', 0.3]]),
+      textByUci: new Map<string, string>([['g1f3', '+0.30']])
+    });
+    await (local as any).refreshSuggestionQualities(5, 'scored', ['g1f3'], ['Nf3']);
+    expect((local as any).suggestionQualityByMove.Nf3).toBe('history-quality--genius');
+    expect((local as any).suggestionEvalTextByMove.Nf3).toBe('+0.30');
+    expect((local as any).suggestionQualityByMove.e4).toBeUndefined();
+  });
+});
+
+describe('ChessBoardComponent suggestion scoring edge mapping branches', () => {
+  it('covers refreshSuggestedMoves fallback when formatted suggestions are empty', async () => {
+    const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    const engine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.1'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['xxxx']),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, engine as any);
+    spyOn<any>(local, 'getCurrentFen').and.returnValue(fen);
+    (local as any).evaluationRunToken = 4;
+    await (local as any).refreshSuggestedMoves(4);
+    expect(local.suggestedMoves).toEqual(['n/a']);
+  });
+
+  it('covers buildDisplayToUciMap branch when display list is longer than uci list', () => {
+    spyOn(component, 'getCctRecommendations').and.returnValues([], [], []);
+    const map = (component as any).buildDisplayToUciMap(['g1f3'], ['Nf3', 'e4']);
+    expect(map.get('Nf3')).toBe('g1f3');
+    expect(map.has('e4')).toBeFalse();
+  });
+
+  it('covers no-engine evaluation, parseSquare bounds and format parsing guards', async () => {
+    const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
+    const direct = await (localNoEngine as any).evaluateUciMovesForQuality(1, 'fen', ['e2e4']);
+    expect(direct.pawnsByUci.size).toBe(0);
+
+    const parseSpy = spyOn<any>(component, 'parseSquareToCoords').and.returnValue(null);
+    expect((component as any).formatUciMoveForDisplay('e2e4')).toBe('');
+    parseSpy.and.callThrough();
+
+    clearBoard();
+    expect((component as any).formatUciMoveForDisplay('e2e4')).toBe('e4');
+
+    const originalMax = (ChessConstants as any).MAX_INDEX;
+    (ChessConstants as any).MAX_INDEX = -1;
+    try {
+      expect((component as any).parseSquareToCoords('a1')).toBeNull();
+    } finally {
+      (ChessConstants as any).MAX_INDEX = originalMax;
+    }
+
+    expect((component as any).formatUciMoveForDisplay(undefined)).toBe('');
+    expect((component as any).parseSquareToCoords(undefined)).toBeNull();
+    expect((component as any).resolveMoveToUci(undefined)).toBeNull();
+  });
+
+  it('covers resolveMoveToUci piece-type, capture-file, invalid and promotion branches', () => {
+    clearBoard();
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[7][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    spyOn(ChessRulesService, 'validateMove').and.returnValue({ isValid: true } as any);
+
+    expect((component as any).resolveMoveToUci('Ke2')).toBe('e1e2');
+    expect((component as any).resolveMoveToUci('Qh5')).toBe('d1h5');
+    expect((component as any).resolveMoveToUci('Ra3')).toBe('a1a3');
+    expect((component as any).resolveMoveToUci('Bb5')).toBe('c1b5');
+
+    chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    expect((component as any).resolveMoveToUci('dxe5')).toBeNull();
+
+    chessBoardStateService.field[1][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
+    expect((component as any).resolveMoveToUci('a8')).toBe('a7a8q');
+
+    clearBoard();
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[6][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
+    expect((component as any).resolveMoveToUci('a1')).toBe('a2a1q');
+
+    clearBoard();
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[7][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    (ChessRulesService.validateMove as any).and.returnValue({ isValid: false });
+    expect((component as any).resolveMoveToUci('Nf3')).toBeNull();
+    (ChessRulesService.validateMove as any).and.returnValue({ isValid: true });
+    expect((component as any).resolveMoveToUci('Nf3')).toBe('g1f3');
+    spyOn<any>(component, 'parseSquareToCoords').and.returnValue(null);
+    expect((component as any).resolveMoveToUci('Nf3')).toBeNull();
+  });
+
+  it('covers suggestion quality scoring for black side', async () => {
+    const engine = {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.1'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
+      terminate: jasmine.createSpy('terminate')
+    };
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, engine as any);
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    (local as any).evaluationRunToken = 12;
+    spyOn<any>(local, 'buildDisplayToUciMap').and.returnValue(new Map<string, string>([
+      ['Nf3', 'g1f3'],
+      ['e4', 'e2e4']
+    ]));
+    spyOn<any>(local, 'evaluateUciMovesForQuality').and.resolveTo({
+      pawnsByUci: new Map<string, number>([['g1f3', 0.3], ['e2e4', 1.2]]),
+      textByUci: new Map<string, string>([['g1f3', '+0.30'], ['e2e4', '+1.20']])
+    });
+    await (local as any).refreshSuggestionQualities(12, 'black-scored', ['g1f3'], ['Nf3']);
+    expect((local as any).suggestionQualityByMove.e4).toBe('history-quality--small-error');
   });
 });
 
