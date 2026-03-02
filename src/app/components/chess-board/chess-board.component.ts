@@ -18,7 +18,6 @@ import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 import { ICctRecommendation, ICctRecommendationScored } from '../../model/interfaces/cct-recommendation.interface';
 import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
-import { ChessMoveNotation } from '../../utils/chess-utils';
 import { ChessFenUtils } from '../../utils/chess-fen.utils';
 import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
 import { UiText } from '../../constants/ui-text.constants';
@@ -36,6 +35,11 @@ import { IGameplaySnapshot } from '../../model/interfaces/chess-board-gameplay-s
 import { ChessBoardLogicUtils } from '../../utils/chess-board-logic.utils';
 import { ChessBoardSnapshotService } from '../../services/chess-board-snapshot.service';
 import { ChessBoardCctUtils } from '../../utils/chess-board-cct.utils';
+import { ChessBoardDisplayUtils } from '../../utils/chess-board-display.utils';
+import { ChessBoardHistoryService } from '../../services/chess-board-history.service';
+import { ChessBoardOpeningUtils } from '../../utils/chess-board-opening.utils';
+import { ChessBoardInitializationUtils } from '../../utils/chess-board-initialization.utils';
+import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
 
 @Component({
   selector: 'app-chess-board',
@@ -1272,41 +1276,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getBoardIndexForDisplay(displayIndex: number): number {
-    if (!this.isBoardFlipped) {
-      return displayIndex;
-    }
-    return ChessConstants.MAX_INDEX - displayIndex;
+    return ChessBoardDisplayUtils.getBoardIndexForDisplay(displayIndex, this.isBoardFlipped);
   }
 
   private mapPercentCoordinateForDisplay(value: string): string {
-    if (!this.isBoardFlipped || !value) {
-      return value;
-    }
-    const match = value.trim().match(/^(-?\d+(?:\.\d+)?)%$/);
-    if (!match) {
-      return value;
-    }
-    const parsed = Number(match[1]);
-    return `${Number((100 - parsed).toFixed(4))}%`;
+    return ChessBoardDisplayUtils.mapPercentCoordinateForDisplay(value, this.isBoardFlipped);
   }
 
   private mapRotationForDisplay(value: string): string {
-    if (!this.isBoardFlipped || !value) {
-      return value;
-    }
-    const match = value.trim().match(/^(-?\d+(?:\.\d+)?)deg$/);
-    if (!match) {
-      return value;
-    }
-    const parsed = Number(match[1]);
-    let rotated = parsed + 180;
-    while (rotated >= 360) {
-      rotated -= 360;
-    }
-    while (rotated < 0) {
-      rotated += 360;
-    }
-    return `${Number(rotated.toFixed(4))}deg`;
+    return ChessBoardDisplayUtils.mapRotationForDisplay(value, this.isBoardFlipped);
   }
 
   private syncFlippedDragClass(): void {
@@ -1336,42 +1314,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getDisplayedOpeningName(opening: IParsedOpening, historySteps: string[]): string {
-    if (!opening || !opening.raw) {
-      return '';
-    }
-
-    const suggestedName = (opening.raw.suggested_best_response_name || '').trim();
-    const suggestedStep = opening.raw.suggested_best_response_notation_step || '';
-    const suggestedMove = this.extractNotationSteps(suggestedStep)[0] || '';
-    if (!suggestedName || !suggestedMove || historySteps.length <= opening.steps.length) {
-      return opening.name;
-    }
-
-    const openingPrefixMatches = opening.steps.every((step, idx) => historySteps[idx] === step);
-    if (!openingPrefixMatches) {
-      return opening.name;
-    }
-
-    if (historySteps[opening.steps.length] === suggestedMove) {
-      if (this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)) {
-        return `${opening.name}: ${suggestedName}`;
-      }
-      return suggestedName;
-    }
-
-    return opening.name;
+    return ChessBoardOpeningUtils.getDisplayedOpeningName(opening, historySteps);
   }
 
   private shouldPrefixSuggestedOpeningName(openingName: string, suggestedName: string): boolean {
-    const base = (openingName || '').trim();
-    const suggestion = (suggestedName || '').trim();
-    if (!base || !suggestion) {
-      return false;
-    }
-
-    const normalizedBase = base.toLowerCase();
-    const normalizedSuggestion = suggestion.toLowerCase();
-    return !(normalizedSuggestion.includes(normalizedBase) || normalizedBase.includes(normalizedSuggestion));
+    return ChessBoardOpeningUtils.shouldPrefixSuggestedOpeningName(openingName, suggestedName);
   }
 
   private loadOpeningsFromAssets(locale: string): void {
@@ -1429,42 +1376,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private parseOpeningsPayload(items: IOpeningAssetItem[]): IParsedOpening[] {
-    if (!Array.isArray(items)) {
-      return [];
-    }
-
-    return items
-      .filter(item => !!(item && item.name && item.long_algebraic_notation))
-      .map(item => ({
-        name: item.name,
-        raw: item,
-        steps: this.extractNotationSteps(item.long_algebraic_notation)
-      }))
-      .filter(item => item.steps.length > 0);
-  }
-
-  private extractNotationSteps(notation: string): string[] {
-    if (!notation) {
-      return [];
-    }
-    return notation
-      .split(/\s+/)
-      .map(token => token.trim())
-      .filter(token => token.length > 0)
-      .filter(token => !/^\d+\.{1,3}$/.test(token))
-      .map(token => this.normalizeNotationToken(token))
-        .filter(token => ChessMoveNotation.isValidLongNotation(token))
-      .filter(token => token.length > 0);
+    return ChessBoardOpeningUtils.parseOpeningsPayload(items);
   }
 
   private normalizeNotationToken(token: string): string {
-    if (!token) {
-      return '';
-    }
-    return token
-      .replace(/[+#?!]+$/g, '')
-      .replace(/\s*e\.p\.$/i, '')
-      .trim();
+    return ChessBoardOpeningUtils.normalizeNotationToken(token);
   }
 
   private updateRecognizedOpeningForCurrentHistory(): void {
@@ -1477,84 +1393,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       .map(step => this.normalizeNotationToken(step))
       .filter(step => step.length > 0);
 
-    let bestMatch: IParsedOpening | null = null;
-    let bestMatchDepth = 0;
-    let bestMatchBaseDepth = 0;
-    let bestMatchIsComplete = false;
-    let bestMatchStepLength = Number.MAX_SAFE_INTEGER;
-
-    this.openings.forEach(opening => {
-      const maxComparableLength = Math.min(historySteps.length, opening.steps.length);
-      let baseMatchedDepth = 0;
-      for (let idx = 0; idx < maxComparableLength; idx++) {
-        if (historySteps[idx] !== opening.steps[idx]) {
-          break;
-        }
-        baseMatchedDepth += 1;
-      }
-
-      if (baseMatchedDepth < 1) {
-        return;
-      }
-
-      let effectiveMatchedDepth = baseMatchedDepth;
-      let effectiveStepLength = opening.steps.length;
-      const suggestedSequence = this.extractNotationSteps(opening.raw.suggested_best_response_notation_step || '');
-      const hasStartedSuggestedLine =
-        baseMatchedDepth === opening.steps.length &&
-        suggestedSequence.length > 0 &&
-        historySteps.length > opening.steps.length &&
-        historySteps[opening.steps.length] === suggestedSequence[0];
-
-      if (hasStartedSuggestedLine) {
-        const extraHistoryCount = Math.max(historySteps.length - opening.steps.length, 0);
-        const maxComparableSuggestedCount = Math.min(extraHistoryCount, suggestedSequence.length);
-        for (let idx = 0; idx < maxComparableSuggestedCount; idx++) {
-          if (historySteps[opening.steps.length + idx] !== suggestedSequence[idx]) {
-            break;
-          }
-          effectiveMatchedDepth += 1;
-        }
-        effectiveStepLength += suggestedSequence.length;
-      }
-
-      const isCompleteMatch = effectiveMatchedDepth === effectiveStepLength;
-
-      if (effectiveMatchedDepth > bestMatchDepth) {
-        bestMatchDepth = effectiveMatchedDepth;
-        bestMatchBaseDepth = baseMatchedDepth;
-        bestMatch = opening;
-        bestMatchIsComplete = isCompleteMatch;
-        bestMatchStepLength = effectiveStepLength;
-        return;
-      }
-
-      if (effectiveMatchedDepth === bestMatchDepth) {
-        if (isCompleteMatch && !bestMatchIsComplete) {
-          bestMatch = opening;
-          bestMatchBaseDepth = baseMatchedDepth;
-          bestMatchIsComplete = true;
-          bestMatchStepLength = effectiveStepLength;
-          return;
-        }
-
-        if (isCompleteMatch === bestMatchIsComplete && effectiveStepLength < bestMatchStepLength) {
-          bestMatch = opening;
-          bestMatchBaseDepth = baseMatchedDepth;
-          bestMatchIsComplete = isCompleteMatch;
-          bestMatchStepLength = effectiveStepLength;
-        }
-      }
-    });
-
-    this.activeOpening = bestMatch;
+    const bestMatchResult = ChessBoardOpeningUtils.findBestOpeningMatch(this.openings, historySteps);
+    this.activeOpening = bestMatchResult.opening;
     const historyKey = historySteps.join('|');
     const debugKey = `${historyKey}::${this.activeOpening ? this.activeOpening.name : 'none'}`;
     if (this.activeOpening && debugKey !== this.activeOpeningHistoryKey) {
       this.activeOpeningHistoryKey = debugKey;
       this.chessBoardStateService.boardHelper.debugText = this.formatOpeningDebugText(
         this.activeOpening,
-        bestMatchBaseDepth,
+        bestMatchResult.baseMatchedDepth,
         historySteps.length,
         historySteps
       );
@@ -1567,80 +1414,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     historyDepth: number,
     historySteps: string[]
   ): string {
-    if (!opening || !opening.raw) {
-      return '';
-    }
-
-    const openingLine = opening.raw.long_algebraic_notation || ChessBoardComponent.NA_PLACEHOLDER;
-    const suggestedName = opening.raw.suggested_best_response_name || ChessBoardComponent.NA_PLACEHOLDER;
-    const suggestedDisplayName =
-      suggestedName !== ChessBoardComponent.NA_PLACEHOLDER && this.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
-        ? `${opening.name}: ${suggestedName}`
-        : suggestedName;
-    const suggestedStep = opening.raw.suggested_best_response_notation_step || ChessBoardComponent.NA_PLACEHOLDER;
-    const description = opening.raw.short_description || ChessBoardComponent.NA_PLACEHOLDER;
-    const displayedOpeningName = this.getDisplayedOpeningName(opening, historySteps);
-    const suggestedSequence = this.extractNotationSteps(suggestedStep);
-    const suggestedResponseMove = suggestedSequence[0] || ChessBoardComponent.NA_PLACEHOLDER;
-    const hasStartedSuggestedLine =
-      suggestedSequence.length > 0 &&
-      historySteps.length > opening.steps.length &&
-      historySteps[opening.steps.length] === suggestedSequence[0];
-    const shouldProjectSuggestedLine =
-      matchedDepth === opening.steps.length &&
-      hasStartedSuggestedLine;
-
-    const fullProjectedLineSteps = shouldProjectSuggestedLine
-      ? [...opening.steps, ...suggestedSequence]
-      : [...opening.steps];
-
-    let effectiveMatchedDepth = matchedDepth;
-    if (shouldProjectSuggestedLine) {
-      const extraHistoryCount = Math.max(historySteps.length - opening.steps.length, 0);
-      const maxComparableSuggestedCount = Math.min(extraHistoryCount, suggestedSequence.length);
-      for (let idx = 0; idx < maxComparableSuggestedCount; idx++) {
-        if (historySteps[opening.steps.length + idx] !== suggestedSequence[idx]) {
-          break;
-        }
-        effectiveMatchedDepth += 1;
-      }
-    }
-
-    const effectiveLineDepth = fullProjectedLineSteps.length;
-    const openingLineWithExtension =
-      shouldProjectSuggestedLine && suggestedStep !== ChessBoardComponent.NA_PLACEHOLDER
-        ? `${openingLine} ${suggestedStep}`
-        : openingLine;
-
-    const noMovePlaceholder = '—';
-    const lineContinuation = effectiveMatchedDepth < effectiveLineDepth
-      ? fullProjectedLineSteps[effectiveMatchedDepth]
-      : noMovePlaceholder;
-    const nextSide = historyDepth % 2 === 0 ? this.uiText.status.white : this.uiText.status.black;
-    const responseSide = nextSide === this.uiText.status.white ? this.uiText.status.black : this.uiText.status.white;
-    let bookRecommendationNow = noMovePlaceholder;
-    if (lineContinuation !== noMovePlaceholder) {
-      bookRecommendationNow = lineContinuation;
-    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== ChessBoardComponent.NA_PLACEHOLDER) {
-      bookRecommendationNow = suggestedResponseMove;
-    }
-
-    const debugLines = [
-      `${this.uiText.message.openingPrefix}: ${displayedOpeningName}`,
-      `${this.uiText.message.matchedStepsPrefix}: ${effectiveMatchedDepth}/${Math.max(effectiveLineDepth, historyDepth)}`,
-      `${this.uiText.message.linePrefix}: ${openingLineWithExtension}`,
-      `${this.uiText.message.bookRecommendationPrefix} (${nextSide} ${this.uiText.message.bookRecommendationNowSuffix}): ${bookRecommendationNow}`
-    ];
-
-    if (lineContinuation !== noMovePlaceholder && suggestedStep !== ChessBoardComponent.NA_PLACEHOLDER && !shouldProjectSuggestedLine) {
-      debugLines.push(
-        `${this.uiText.message.bookRecommendationPrefix} (${responseSide} ${this.uiText.message.bookRecommendationAfterSuffix}): ${suggestedDisplayName} (${suggestedStep})`
-      );
-    }
-
-    debugLines.push(`${this.uiText.message.notesPrefix}: ${description}`);
-
-    return debugLines.join('\n');
+    return ChessBoardOpeningUtils.formatOpeningDebugText(
+      opening,
+      matchedDepth,
+      historyDepth,
+      historySteps,
+      this.uiText,
+      ChessBoardComponent.NA_PLACEHOLDER
+    );
   }
 
   getMockEndgameRecognition(): string {
@@ -1795,59 +1576,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return '';
     }
-
-    const history = this.chessBoardStateService.history || [];
-    const result = this.getPgnResultFromHistory(history);
-    const pgnDate = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
-    const headers = [
-      '[Event "Chess Trainer Game"]',
-      '[Site "Local"]',
-      `[Date "${pgnDate}"]`,
-      '[Round "-"]',
-      '[White "White"]',
-      '[Black "Black"]',
-      `[Result "${result}"]`
-    ];
-
-    const movePairs: string[] = [];
-    for (let index = 0; index < history.length; index += 2) {
-      const moveNumber = Math.floor(index / 2) + 1;
-      const whiteMove = (history[index] || '').trim();
-      const blackMove = (history[index + 1] || '').trim();
-      if (!whiteMove && !blackMove) {
-        continue;
-      }
-      let movePair = `${moveNumber}.`;
-      if (whiteMove) {
-        movePair += ` ${whiteMove}`;
-      }
-      if (blackMove) {
-        movePair += ` ${blackMove}`;
-      }
-      movePairs.push(movePair);
-    }
-
-    const moveSection = movePairs.join(' ').trim();
-    const hasExplicitResult = /(?:^|\s)(1-0|0-1|1\/2-1\/2)(?:\s|$)/.test(moveSection);
-    const withResult = moveSection
-      ? (hasExplicitResult ? moveSection : `${moveSection} ${result}`.trim())
-      : result;
-
-    return `${headers.join('\n')}\n\n${withResult}`;
+    return ChessBoardExportUtils.getCurrentPgn(this.chessBoardStateService.history || []);
   }
 
   private getPgnResultFromHistory(history: string[]): '1-0' | '0-1' | '1/2-1/2' | '*' {
-    if (!history || history.length < 1) {
-      return '*';
-    }
-    for (let idx = history.length - 1; idx >= 0; idx--) {
-      const item = history[idx] || '';
-      const resultMatch = item.match(/(?:^|\s)(1-0|0-1|1\/2-1\/2)(?:\s|$)/);
-      if (resultMatch && resultMatch[1]) {
-        return resultMatch[1] as '1-0' | '0-1' | '1/2-1/2';
-      }
-    }
-    return '*';
+    return ChessBoardExportUtils.getPgnResultFromHistory(history);
   }
 
   private getCurrentFen(): string {
@@ -2904,78 +2637,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private createInitialField(): ChessPieceDto[][][] {
-    return [
-      [
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Queen)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Knight)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)]
-      ],
-      [
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)]
-      ],
-      [[], [], [], [], [], [], [], []],
-      [[], [], [], [], [], [], [], []],
-      [[], [], [], [], [], [], [], []],
-      [[], [], [], [], [], [], [], []],
-      [
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]
-      ],
-      [
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)],
-        [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)]
-      ]
-    ];
+    return ChessBoardInitializationUtils.createInitialField();
   }
 
   private randomizeAmbientStyle(): void {
-    this.ambientStyle = {
-      '--blob1-x': `${this.randomBetween(28, 42)}%`,
-      '--blob1-y': `${this.randomBetween(24, 40)}%`,
-      '--blob1-r': `${this.randomBetween(7, 11)}%`,
-      '--blob2-x': `${this.randomBetween(58, 72)}%`,
-      '--blob2-y': `${this.randomBetween(24, 40)}%`,
-      '--blob2-r': `${this.randomBetween(7, 12)}%`,
-      '--blob3-x': `${this.randomBetween(40, 60)}%`,
-      '--blob3-y': `${this.randomBetween(52, 68)}%`,
-      '--blob3-r': `${this.randomBetween(6, 10)}%`,
-      '--blob4-x': `${this.randomBetween(30, 46)}%`,
-      '--blob4-y': `${this.randomBetween(58, 78)}%`,
-      '--blob4-r': `${this.randomBetween(7, 11)}%`,
-      '--blob5-x': `${this.randomBetween(54, 70)}%`,
-      '--blob5-y': `${this.randomBetween(58, 78)}%`,
-      '--blob5-r': `${this.randomBetween(6, 10)}%`,
-      '--wobble-a': `${this.randomBetween(5.8, 8.4)}s`,
-      '--wobble-b': `${this.randomBetween(7.6, 11.2)}s`
-    };
+    this.ambientStyle = ChessBoardInitializationUtils.randomizeAmbientStyle((min, max) => this.randomBetween(min, max));
   }
 
   private randomBetween(min: number, max: number): number {
-    return Number((Math.random() * (max - min) + min).toFixed(2));
+    return ChessBoardInitializationUtils.randomBetween(min, max);
   }
 
   private appendGameResultToLastMove(result: '1-0' | '0-1' | '1/2-1/2', reason: string): void {
@@ -3100,20 +2770,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getMaxMoveIndex(): number {
-    const historyMaxIndex = (this.chessBoardStateService.history || []).length - 1;
-    const snapshotMaxIndex = this.moveSnapshots.length - 2;
-    return Math.max(historyMaxIndex, snapshotMaxIndex);
+    return ChessBoardHistoryService.getMaxMoveIndex(
+      (this.chessBoardStateService.history || []).length,
+      this.moveSnapshots.length
+    );
   }
 
   private getCurrentVisibleMoveIndex(): number {
-    const maxIndex = this.getMaxMoveIndex();
-    if (maxIndex < 0) {
-      return -1;
-    }
-    if (this.mockHistoryCursor === null) {
-      return maxIndex;
-    }
-    return Math.max(-1, Math.min(this.mockHistoryCursor, maxIndex));
+    return ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.mockHistoryCursor);
   }
 
   private initializeSnapshotTimeline(): void {
@@ -3281,15 +2945,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getActiveSnapshotIndex(): number {
-    if (this.moveSnapshots.length < 1) {
-      return -1;
-    }
-    if (this.mockHistoryCursor === null) {
-      return this.moveSnapshots.length - 1;
-    }
-    const maxHistoryIndex = this.getMaxMoveIndex();
-    const clampedHistoryIndex = Math.max(-1, Math.min(this.mockHistoryCursor, maxHistoryIndex));
-    return Math.max(0, Math.min(clampedHistoryIndex + 1, this.moveSnapshots.length - 1));
+    return ChessBoardHistoryService.getActiveSnapshotIndex(
+      this.moveSnapshots.length,
+      this.mockHistoryCursor,
+      this.getMaxMoveIndex()
+    );
   }
 
   private captureCurrentSnapshot(): IGameplaySnapshot {
@@ -3427,3 +3087,4 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return ChessBoardLogicUtils.isInsufficientMaterial(board);
   }
 }
+
