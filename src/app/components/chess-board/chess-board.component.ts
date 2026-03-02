@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, QueryList, ViewChild, ViewChildren, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, DragDropModule } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
@@ -25,6 +25,13 @@ import { UiText } from '../../constants/ui-text.constants';
 import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
 import { UiTextLoaderService } from '../../services/ui-text-loader.service';
 import { StockfishService } from '../../services/stockfish.service';
+import { ChessBoardLanguageToolsComponent } from '../chess-board-language-tools/chess-board-language-tools.component';
+import { ChessBoardPositionKeyComponent } from '../chess-board-position-key/chess-board-position-key.component';
+import { ChessBoardClockCardComponent } from '../chess-board-clock-card/chess-board-clock-card.component';
+import { ChessBoardStatusCardComponent } from '../chess-board-status-card/chess-board-status-card.component';
+import { ChessBoardToolsCardComponent } from '../chess-board-tools-card/chess-board-tools-card.component';
+import { ChessBoardHistoryCardComponent } from '../chess-board-history-card/chess-board-history-card.component';
+import { ChessBoardCctCardComponent } from '../chess-board-cct-card/chess-board-cct-card.component';
 
 interface IBoardHelperSnapshot {
   debugText: string;
@@ -54,7 +61,19 @@ interface IGameplaySnapshot {
   templateUrl: './chess-board.component.html',
   styleUrls: ['./chess-board.component.less'],
   standalone: true,
-  imports: [CommonModule, DragDropModule, ChessPieceComponent]
+  encapsulation: ViewEncapsulation.None,
+  imports: [
+    CommonModule,
+    DragDropModule,
+    ChessPieceComponent,
+    ChessBoardLanguageToolsComponent,
+    ChessBoardPositionKeyComponent,
+    ChessBoardClockCardComponent,
+    ChessBoardStatusCardComponent,
+    ChessBoardToolsCardComponent,
+    ChessBoardHistoryCardComponent,
+    ChessBoardCctCardComponent
+  ]
 })
 export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   @Input() lightSquareColor = '#f1d9b5';
@@ -72,7 +91,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   readonly uiText = UiText;
   readonly boardIndices: number[] = Array.from({ length: ChessConstants.BOARD_SIZE }, (_, idx) => idx);
   @ViewChild('chessField') chessField: ElementRef;
-  @ViewChild('historyLog') historyLog: ElementRef<HTMLDivElement>;
+  @ViewChild('historyLog') historyLog: ChessBoardHistoryCardComponent | ElementRef<HTMLDivElement>;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
   dropLists: CdkDropList[] = [];
@@ -140,21 +159,23 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
 
+  private get previewRenderSize(): number {
+    return Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
+  }
+
   get renderedBoardRows(): number[] {
     if (!this.previewMode) {
       return this.boardIndices;
     }
-    const size = Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
-    const startIndex = this.previewRowAnchor === 'top' ? 0 : ChessConstants.BOARD_SIZE - size;
-    return this.boardIndices.slice(startIndex, startIndex + size);
+    const startIndex = this.previewRowAnchor === 'top' ? 0 : ChessConstants.BOARD_SIZE - this.previewRenderSize;
+    return this.boardIndices.slice(startIndex, startIndex + this.previewRenderSize);
   }
 
   get renderedBoardCols(): number[] {
     if (!this.previewMode) {
       return this.boardIndices;
     }
-    const size = Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
-    return this.boardIndices.slice(0, size);
+    return this.boardIndices.slice(0, this.previewRenderSize);
   }
 
   constructor(
@@ -697,8 +718,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (this.previewMode && this.previewPreset === 'piece-colors') {
       return this.getPieceColorPreviewCell(displayRow, displayCol);
     }
-    const boardRow = this.getBoardIndexForDisplay(displayRow);
-    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
     return this.chessBoardStateService.field[boardRow][boardCol];
   }
 
@@ -708,27 +728,30 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getDisplayFieldId(displayRow: number, displayCol: number): string {
-    const boardRow = this.getBoardIndexForDisplay(displayRow);
-    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
     return `${ChessBoardUiConstants.FIELD_ID_PREFIX}${boardRow}${boardCol}`;
   }
 
   getDisplaySquareHighlightClass(displayRow: number, displayCol: number): string {
-    const boardRow = this.getBoardIndexForDisplay(displayRow);
-    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
     return this.getSquareHighlightClass(boardRow, boardCol);
   }
 
   isDisplaySquareWhite(displayRow: number, displayCol: number): boolean {
-    const boardRow = this.getBoardIndexForDisplay(displayRow);
-    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
     return this.isWhiteSquare(boardRow, boardCol);
   }
 
   getDisplayNotation(displayRow: number, displayCol: number): string {
-    const boardRow = this.getBoardIndexForDisplay(displayRow);
-    const boardCol = this.getBoardIndexForDisplay(displayCol);
+    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
     return this.translateFieldNames(boardRow, boardCol);
+  }
+
+  private getDisplayBoardPosition(displayRow: number, displayCol: number): { row: number, col: number } {
+    return {
+      row: this.getBoardIndexForDisplay(displayRow),
+      col: this.getBoardIndexForDisplay(displayCol)
+    };
   }
 
   private getPieceColorPreviewCell(displayRow: number, displayCol: number): ChessPieceDto[] {
@@ -3238,12 +3261,26 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
     setTimeout(() => {
-      const historyElement = this.historyLog && this.historyLog.nativeElement ? this.historyLog.nativeElement : null;
+      const historyElement = this.resolveHistoryElement();
       if (!historyElement) {
         return;
       }
       historyElement.scrollTop = historyElement.scrollHeight;
     }, 0);
+  }
+
+  private resolveHistoryElement(): HTMLDivElement | null {
+    const historyRef = this.historyLog as ChessBoardHistoryCardComponent | ElementRef<HTMLDivElement> | null;
+    if (!historyRef) {
+      return null;
+    }
+    if (historyRef instanceof ElementRef) {
+      return historyRef.nativeElement;
+    }
+    if ('getHistoryElement' in historyRef && typeof historyRef.getHistoryElement === 'function') {
+      return historyRef.getHistoryElement();
+    }
+    return null;
   }
 
   private replaceActiveSnapshot(): void {

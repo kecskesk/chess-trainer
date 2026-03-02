@@ -42,6 +42,11 @@ const canDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCo
   );
 };
 
+const movePiece = (srcRow: number, srcCol: number, targetRow: number, targetCol: number): void => {
+  expect(canDropLike(srcRow, srcCol, targetRow, targetCol)).toBeTrue();
+  component.onDrop(createDropLike(srcRow, srcCol, targetRow, targetCol));
+};
+
 const createEnterLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
   return {
     item: {
@@ -92,8 +97,7 @@ describe('ChessBoardComponent opening recognition', () => {
 
     expect(component.getMockOpeningRecognition()).toBe('Waiting for opening line...');
 
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
+        movePiece(6, 3, 4, 3);
     expect(component.getMockOpeningRecognition()).toBe('Queen\'s Pawn Opening');
   });
 
@@ -118,8 +122,7 @@ describe('ChessBoardComponent opening recognition', () => {
       }
     ];
 
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
+        movePiece(6, 3, 4, 3);
 
     expect(component.getMockOpeningRecognition()).toBe('Queen\'s Pawn Opening');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Queen\'s Pawn Opening');
@@ -141,10 +144,8 @@ describe('ChessBoardComponent opening recognition', () => {
       }
     ];
 
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
-    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(1, 3, 3, 3));
+        movePiece(6, 3, 4, 3);
+        movePiece(1, 3, 3, 3);
 
     expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 2/3');
@@ -168,14 +169,10 @@ describe('ChessBoardComponent opening recognition', () => {
       }
     ];
 
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
-    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(1, 3, 3, 3));
-    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
-    component.onDrop(createDropLike(6, 2, 4, 2));
-    expect(canDropLike(1, 4, 2, 4)).toBeTrue();
-    component.onDrop(createDropLike(1, 4, 2, 4));
+        movePiece(6, 3, 4, 3);
+        movePiece(1, 3, 3, 3);
+        movePiece(6, 2, 4, 2);
+        movePiece(1, 4, 2, 4);
 
     expect(component.getMockOpeningRecognition()).toBe('Queen\'s Gambit Declined');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Queen\'s Gambit Declined');
@@ -288,8 +285,7 @@ describe('ChessBoardComponent capture transfer consistency', () => {
     chessBoardStateService.field[3][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
-    expect(canDropLike(4, 3, 3, 4)).toBeTrue();
-    component.onDrop(createDropLike(4, 3, 3, 4));
+        movePiece(4, 3, 3, 4);
     expect(chessBoardStateService.field[4][3].length).toBe(0);
     expect(chessBoardStateService.field[3][4].length).toBe(1);
     expect(chessBoardStateService.field[3][4][0].color).toBe(ChessColorsEnum.White);
@@ -301,8 +297,7 @@ describe('ChessBoardComponent capture transfer consistency', () => {
     chessBoardStateService.field[4][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
 
-    expect(canDropLike(3, 4, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(3, 4, 4, 3));
+        movePiece(3, 4, 4, 3);
     expect(chessBoardStateService.field[3][4].length).toBe(0);
     expect(chessBoardStateService.field[4][3].length).toBe(1);
     expect(chessBoardStateService.field[4][3][0].color).toBe(ChessColorsEnum.Black);
@@ -327,12 +322,9 @@ describe('ChessBoardComponent opening recognition - variation scenarios', () => 
       }
     ];
 
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
-    expect(canDropLike(1, 5, 3, 5)).toBeTrue();
-    component.onDrop(createDropLike(1, 5, 3, 5));
-    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
-    component.onDrop(createDropLike(6, 2, 4, 2));
+        movePiece(6, 3, 4, 3);
+        movePiece(1, 5, 3, 5);
+        movePiece(6, 2, 4, 2);
 
     expect(component.getMockOpeningRecognition()).toBe('Dutch Defense: Classical Variation');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Dutch Defense: Classical Variation');
@@ -356,12 +348,9 @@ describe('ChessBoardComponent opening recognition - variation scenarios', () => 
       }
     ];
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
-    expect(canDropLike(0, 6, 2, 5)).toBeTrue();
-    component.onDrop(createDropLike(0, 6, 2, 5));
-    expect(canDropLike(4, 4, 3, 4)).toBeTrue();
-    component.onDrop(createDropLike(4, 4, 3, 4));
+        movePiece(6, 4, 4, 4);
+        movePiece(0, 6, 2, 5);
+        movePiece(4, 4, 3, 4);
 
     expect(component.getMockOpeningRecognition()).toBe('Alekhine\'s Defense: Four Pawns Attack');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Alekhine\'s Defense: Four Pawns Attack');
@@ -385,10 +374,8 @@ describe('ChessBoardComponent opening recognition - variation scenarios', () => 
       }
     ];
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
-    expect(canDropLike(0, 6, 2, 5)).toBeTrue();
-    component.onDrop(createDropLike(0, 6, 2, 5));
+        movePiece(6, 4, 4, 4);
+        movePiece(0, 6, 2, 5);
 
     component.getMockOpeningRecognition();
 
@@ -414,14 +401,10 @@ describe('ChessBoardComponent opening recognition - variation scenarios (continu
       }
     ];
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
-    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(1, 3, 3, 3));
-    expect(canDropLike(4, 4, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(4, 4, 3, 3));
-    expect(canDropLike(0, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(0, 3, 3, 3));
+        movePiece(6, 4, 4, 4);
+        movePiece(1, 3, 3, 3);
+        movePiece(4, 4, 3, 3);
+        movePiece(0, 3, 3, 3);
 
     component.getMockOpeningRecognition();
 
@@ -447,12 +430,9 @@ describe('ChessBoardComponent opening recognition - variation scenarios (continu
       }
     ];
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
-    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(1, 3, 3, 3));
-    expect(canDropLike(4, 4, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(4, 4, 3, 3));
+        movePiece(6, 4, 4, 4);
+        movePiece(1, 3, 3, 3);
+        movePiece(4, 4, 3, 3);
 
     component.getMockOpeningRecognition();
 
@@ -492,20 +472,16 @@ describe('ChessBoardComponent opening recognition - Caro-Kann scenario', () => {
       }
     ];
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
-    expect(canDropLike(1, 2, 2, 2)).toBeTrue();
-    component.onDrop(createDropLike(1, 2, 2, 2));
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
+        movePiece(6, 4, 4, 4);
+        movePiece(1, 2, 2, 2);
+        movePiece(6, 3, 4, 3);
 
     expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/5');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
 
-    expect(canDropLike(1, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(1, 3, 3, 3));
+        movePiece(1, 3, 3, 3);
 
     expect(component.getMockOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
@@ -516,15 +492,13 @@ describe('ChessBoardComponent opening recognition - Caro-Kann scenario', () => {
 
 describe('ChessBoardComponent gameplay moves and rules', () => {
   it('supports d2d4, e7e5, and d4xe5 with capture highlight', () => {
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
+        movePiece(6, 3, 4, 3);
 
     expect(chessBoardStateService.boardHelper.colorTurn).toBe(ChessColorsEnum.Black);
     expect(chessBoardStateService.field[4][3][0].piece).toBe(ChessPiecesEnum.Pawn);
     expect(chessBoardStateService.field[4][3][0].color).toBe(ChessColorsEnum.White);
 
-    expect(canDropLike(1, 4, 3, 4)).toBeTrue();
-    component.onDrop(createDropLike(1, 4, 3, 4));
+        movePiece(1, 4, 3, 4);
 
     expect(chessBoardStateService.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
     expect(chessBoardStateService.field[3][4][0].piece).toBe(ChessPiecesEnum.Pawn);
@@ -541,17 +515,13 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
   });
 
   it('detects Fool\'s Mate and ends the game', () => {
-    expect(canDropLike(6, 5, 5, 5)).toBeTrue();
-    component.onDrop(createDropLike(6, 5, 5, 5));
+        movePiece(6, 5, 5, 5);
 
-    expect(canDropLike(1, 4, 3, 4)).toBeTrue();
-    component.onDrop(createDropLike(1, 4, 3, 4));
+        movePiece(1, 4, 3, 4);
 
-    expect(canDropLike(6, 6, 4, 6)).toBeTrue();
-    component.onDrop(createDropLike(6, 6, 4, 6));
+        movePiece(6, 6, 4, 6);
 
-    expect(canDropLike(0, 3, 4, 7)).toBeTrue();
-    component.onDrop(createDropLike(0, 3, 4, 7));
+        movePiece(0, 3, 4, 7);
 
     const history = chessBoardStateService.history;
     const lastMove = history[history.length - 1];
@@ -574,26 +544,20 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
   });
 
   it('supports d2d4 e7e5 d4d5 c7c5 d5xc6 e.p. d7xc6 sequence', () => {
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
+        movePiece(6, 3, 4, 3);
 
-    expect(canDropLike(1, 4, 3, 4)).toBeTrue();
-    component.onDrop(createDropLike(1, 4, 3, 4));
+        movePiece(1, 4, 3, 4);
 
-    expect(canDropLike(4, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(4, 3, 3, 3));
+        movePiece(4, 3, 3, 3);
 
-    expect(canDropLike(1, 2, 3, 2)).toBeTrue();
-    component.onDrop(createDropLike(1, 2, 3, 2));
+        movePiece(1, 2, 3, 2);
 
-    expect(canDropLike(3, 3, 2, 2)).toBeTrue();
-    component.onDrop(createDropLike(3, 3, 2, 2));
+        movePiece(3, 3, 2, 2);
     expect(chessBoardStateService.field[3][2].length).toBe(0);
     expect(chessBoardStateService.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
     expect(chessBoardStateService.field[2][2][0].color).toBe(ChessColorsEnum.White);
 
-    expect(canDropLike(1, 3, 2, 2)).toBeTrue();
-    component.onDrop(createDropLike(1, 3, 2, 2));
+        movePiece(1, 3, 2, 2);
 
     expect(chessBoardStateService.field[1][3].length).toBe(0);
     expect(chessBoardStateService.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
@@ -605,8 +569,7 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     chessBoardStateService.field[0][0] = [];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
-    expect(canDropLike(1, 0, 0, 0)).toBeTrue();
-    component.onDrop(createDropLike(1, 0, 0, 0));
+        movePiece(1, 0, 0, 0);
 
     expect(chessBoardStateService.boardHelper.canPromote).toBe(0);
     component.promotePiece(ChessPiecesEnum.Queen);
@@ -623,8 +586,7 @@ describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
     chessBoardStateService.field[7][7] = [];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
 
-    expect(canDropLike(6, 7, 7, 7)).toBeTrue();
-    component.onDrop(createDropLike(6, 7, 7, 7));
+        movePiece(6, 7, 7, 7);
 
     expect(chessBoardStateService.boardHelper.canPromote).toBe(7);
     component.promotePiece(ChessPiecesEnum.Queen);
@@ -640,8 +602,7 @@ describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
     chessBoardStateService.field[0][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
-    expect(canDropLike(1, 3, 1, 2)).toBeTrue();
-    component.onDrop(createDropLike(1, 3, 1, 2));
+        movePiece(1, 3, 1, 2);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
     expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
@@ -662,8 +623,7 @@ describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
     ];
 
     sequence.forEach(([srcRow, srcCol, targetRow, targetCol]) => {
-      expect(canDropLike(srcRow, srcCol, targetRow, targetCol)).toBeTrue();
-      component.onDrop(createDropLike(srcRow, srcCol, targetRow, targetCol));
+            movePiece(srcRow, srcCol, targetRow, targetCol);
     });
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
@@ -698,8 +658,7 @@ describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
     (component as any).repetitionCounts = { [targetPositionKey]: 4 };
     (component as any).trackedHistoryLength = chessBoardStateService.history.length;
 
-    expect(canDropLike(7, 6, 5, 5)).toBeTrue();
-    component.onDrop(createDropLike(7, 6, 5, 5));
+        movePiece(7, 6, 5, 5);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
     expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
@@ -724,8 +683,7 @@ describe('ChessBoardComponent gameplay moves and rules (draw rules)', () => {
       chessBoardStateService.boardHelper.history[`${i}`] = 'Ng1-f3';
     }
 
-    expect(canDropLike(0, 1, 2, 0)).toBeTrue();
-    component.onDrop(createDropLike(0, 1, 2, 0));
+        movePiece(0, 1, 2, 0);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.canClaimDraw()).toBeTrue();
@@ -752,8 +710,7 @@ describe('ChessBoardComponent gameplay moves and rules (draw rules)', () => {
       chessBoardStateService.boardHelper.history[`${i}`] = 'Ng1-f3';
     }
 
-    expect(canDropLike(0, 1, 2, 0)).toBeTrue();
-    component.onDrop(createDropLike(0, 1, 2, 0));
+        movePiece(0, 1, 2, 0);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
     expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
@@ -811,8 +768,7 @@ describe('ChessBoardComponent gameplay moves and rules (draw interactions)', () 
       chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
       const [srcRow, srcCol, targetRow, targetCol] = testCase.move;
-      expect(canDropLike(srcRow, srcCol, targetRow, targetCol)).toBeTrue();
-      component.onDrop(createDropLike(srcRow, srcCol, targetRow, targetCol));
+            movePiece(srcRow, srcCol, targetRow, targetCol);
 
       expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
       expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
@@ -878,8 +834,7 @@ describe('ChessBoardComponent gameplay moves and rules (result and turn state)',
     component.offerDraw();
     expect(component.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
+        movePiece(6, 4, 4, 4);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
     expect(component.pendingDrawOfferBy).toBeNull();
@@ -1226,10 +1181,8 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
   });
 
   it('supports undo and redo after resign', () => {
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
-    expect(canDropLike(1, 4, 3, 4)).toBeTrue();
-    component.onDrop(createDropLike(1, 4, 3, 4));
+        movePiece(6, 4, 4, 4);
+        movePiece(1, 4, 3, 4);
 
     const historyBeforeResign = [...chessBoardStateService.history];
 
@@ -1271,14 +1224,10 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
   it('restores castling rights through undo and redo over a king move', () => {
     expect(component.getDebugCastlingRights()).toBe('KQkq');
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
-    expect(canDropLike(1, 0, 2, 0)).toBeTrue();
-    component.onDrop(createDropLike(1, 0, 2, 0));
-    expect(canDropLike(7, 4, 6, 4)).toBeTrue();
-    component.onDrop(createDropLike(7, 4, 6, 4));
-    expect(canDropLike(2, 0, 3, 0)).toBeTrue();
-    component.onDrop(createDropLike(2, 0, 3, 0));
+        movePiece(6, 4, 4, 4);
+        movePiece(1, 0, 2, 0);
+        movePiece(7, 4, 6, 4);
+        movePiece(2, 0, 3, 0);
 
     expect(component.getDebugCastlingRights()).toBe('kq');
 
@@ -1293,14 +1242,10 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
   });
 
   it('restores en passant rights through undo and redo', () => {
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
-    expect(canDropLike(1, 0, 2, 0)).toBeTrue();
-    component.onDrop(createDropLike(1, 0, 2, 0));
-    expect(canDropLike(4, 3, 3, 3)).toBeTrue();
-    component.onDrop(createDropLike(4, 3, 3, 3));
-    expect(canDropLike(1, 2, 3, 2)).toBeTrue();
-    component.onDrop(createDropLike(1, 2, 3, 2));
+        movePiece(6, 3, 4, 3);
+        movePiece(1, 0, 2, 0);
+        movePiece(4, 3, 3, 3);
+        movePiece(1, 2, 3, 2);
 
     expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
 
@@ -1330,8 +1275,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls promo
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     (component as any).initializeSnapshotTimeline();
 
-    expect(canDropLike(1, 0, 0, 0)).toBeTrue();
-    component.onDrop(createDropLike(1, 0, 0, 0));
+        movePiece(1, 0, 0, 0);
     component.promotePiece(ChessPiecesEnum.Queen);
 
     expect(chessBoardStateService.field[0][0][0].piece).toBe(ChessPiecesEnum.Queen);
@@ -1914,8 +1858,7 @@ describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', 
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     chessBoardStateService.boardHelper.history = { '1': 'c2-c4' } as any;
 
-    expect(canDropLike(4, 3, 5, 2)).toBeTrue();
-    component.onDrop(createDropLike(4, 3, 5, 2));
+        movePiece(4, 3, 5, 2);
 
     expect(chessBoardStateService.field[4][2].length).toBe(0);
     expect(chessBoardStateService.field[5][2][0].color).toBe(ChessColorsEnum.Black);
@@ -1928,8 +1871,7 @@ describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', 
     chessBoardStateService.field[2][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
-    expect(canDropLike(2, 1, 1, 1)).toBeTrue();
-    component.onDrop(createDropLike(2, 1, 1, 1));
+        movePiece(2, 1, 1, 1);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
     expect(chessBoardStateService.boardHelper.checkmateColor).toBe(ChessColorsEnum.Black);
@@ -2000,8 +1942,7 @@ describe('ChessBoardComponent gameplay moves and rules (startup and loading)', (
     chessBoardStateService.field[0][6] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
 
-    expect(canDropLike(0, 1, 2, 2)).toBeTrue();
-    component.onDrop(createDropLike(0, 1, 2, 2));
+        movePiece(0, 1, 2, 2);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
     expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by insufficient material.');
@@ -2738,8 +2679,7 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
       resolveEval = resolve;
     }));
 
-    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
-    component.onDrop(createDropLike(6, 4, 4, 4));
+        movePiece(6, 4, 4, 4);
 
     tick(200);
     expect(stockfishServiceStub.evaluateFen).toHaveBeenCalledTimes(1);
@@ -2755,8 +2695,7 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
       setTimeout(() => reject(new Error('boom')), 0);
     }));
 
-    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
-    component.onDrop(createDropLike(6, 3, 4, 3));
+        movePiece(6, 3, 4, 3);
 
     tick(200);
     flushMicrotasks();
@@ -2766,8 +2705,7 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
   it('reuses cache for repeated refreshes and terminates worker on destroy', fakeAsync(() => {
     stockfishServiceStub.evaluateFen.and.returnValue(Promise.resolve('+0.21'));
 
-    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
-    component.onDrop(createDropLike(6, 2, 4, 2));
+        movePiece(6, 2, 4, 2);
     tick(200);
     flushMicrotasks();
     expect(component.getEvaluationForMove(0)).toBe('+0.21');

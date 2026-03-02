@@ -1,0 +1,127 @@
+:host {
+  display: contents;
+}
+
+.panel-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-card--wide {
+  grid-column: 1 / -1;
+}
+
+.tool-card {
+  background: rgba(18, 26, 46, 0.9);
+  border: 1px solid rgba(219, 230, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.section-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #f3f6ff;
+  letter-spacing: 0.2px;
+}
+
+.icon-actions-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.icon-actions-row--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.promote-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.icon-action-btn {
+  border: 1px solid rgba(189, 206, 255, 0.55);
+  background: linear-gradient(180deg, #4164be 0%, #304a8b 100%);
+  color: #f7f9ff;
+  border-radius: 8px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.icon-action-btn__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.icon-action-btn__text {
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.time-btn--selected {
+  border-color: rgba(255, 238, 167, 0.95);
+  box-shadow: 0 0 0 1px rgba(255, 238, 167, 0.35), inset 0 0 0 1px rgba(255, 238, 167, 0.22);
+}
+
+.recognition-line {
+  color: #dce5ff;
+  font-size: 12px;
+}
+
+.recognition-line--suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.recognition-line + .recognition-line {
+  margin-top: 6px;
+}
+
+.suggested-move {
+  border: 1px solid rgba(189, 206, 255, 0.45);
+  background: rgba(53, 87, 168, 0.45);
+  color: #f7f9ff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 4px 7px;
+}
+
+.suggested-move--capture {
+  border-color: rgba(255, 186, 123, 0.58);
+  background: rgba(193, 107, 47, 0.42);
+}
+
+.suggested-move--check {
+  border-color: rgba(255, 148, 148, 0.6);
+  background: rgba(181, 60, 60, 0.42);
+}
+
+.suggested-move--threat {
+  border-color: rgba(255, 227, 132, 0.58);
+  background: rgba(160, 125, 33, 0.4);
+}
+
+@media (max-width: 620px) {
+  .panel-card--wide {
+    grid-column: auto;
+  }
+
+  .tool-card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+}

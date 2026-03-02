@@ -1,0 +1,91 @@
+<div class="status-card panel-card panel-card--wide">
+  <h3 class="section-title">{{statusTitle}}</h3>
+  <div class="icon-actions-row icon-actions-row--compact icon-actions-row--status">
+    <button class="icon-action-btn"
+      (click)="showPossibleMoves.emit(currentTurnColor)"
+      [attr.title]="uiText.status.showPossibleMovesTitle"
+      [attr.aria-label]="uiText.status.showPossibleMovesAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-eye" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.showMoves}}</span>
+    </button>
+    <button class="icon-action-btn icon-action-btn--secondary"
+      (click)="showPossibleMoves.emit(null)"
+      [attr.title]="uiText.status.clearHighlightsTitle"
+      [attr.aria-label]="uiText.status.clearHighlightsAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-eraser" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.clearHighlights}}</span>
+    </button>
+    <button class="icon-action-btn icon-action-btn--secondary status-action-new-game"
+      *ngIf="pendingDrawOfferBy === null"
+      (click)="startNewGame.emit()"
+      [attr.title]="uiText.status.startNewGameTitle"
+      [attr.aria-label]="uiText.status.startNewGameAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-sync-alt" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.newGame}}</span>
+    </button>
+    <button class="icon-action-btn"
+      *ngIf="canOfferDraw"
+      (click)="offerDraw.emit()"
+      [attr.title]="uiText.status.offerDrawTitle"
+      [attr.aria-label]="uiText.status.offerDrawAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-handshake" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.offerDraw}}</span>
+    </button>
+    <button class="icon-action-btn"
+      *ngIf="canRespondToDrawOffer"
+      (click)="acceptDraw.emit()"
+      [attr.title]="uiText.status.acceptDrawTitle"
+      [attr.aria-label]="uiText.status.acceptDrawAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-check" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.acceptDraw}}</span>
+    </button>
+    <button class="icon-action-btn icon-action-btn--secondary"
+      *ngIf="canRespondToDrawOffer"
+      (click)="declineDraw.emit()"
+      [attr.title]="uiText.status.declineDrawTitle"
+      [attr.aria-label]="uiText.status.declineDrawAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-times" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.declineDraw}}</span>
+    </button>
+    <button class="icon-action-btn icon-action-btn--secondary"
+      *ngIf="canClaimDraw"
+      (click)="claimDraw.emit()"
+      [attr.title]="uiText.status.claimDrawTitle"
+      [attr.aria-label]="uiText.status.claimDrawAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-balance-scale" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.claimDraw}}</span>
+    </button>
+  </div>
+  <div class="icon-actions-row icon-actions-row--resign" *ngIf="clockRunning">
+    <button class="icon-action-btn icon-action-btn--danger"
+            [disabled]="!canResignWhite"
+            (click)="openResignConfirm.emit(chessColors.White)"
+            [attr.title]="uiText.status.whiteResignTitle"
+            [attr.aria-label]="uiText.status.whiteResignAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-chess-king" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.white}}</span>
+    </button>
+    <button class="icon-action-btn icon-action-btn--danger"
+            [disabled]="!canResignBlack"
+            (click)="openResignConfirm.emit(chessColors.Black)"
+            [attr.title]="uiText.status.blackResignTitle"
+            [attr.aria-label]="uiText.status.blackResignAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-chess-king" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.status.black}}</span>
+    </button>
+  </div>
+</div>
+
+<div class="status-card panel-card panel-card--wide" *ngIf="resignConfirmColor !== null" role="dialog" aria-modal="false" [attr.aria-label]="uiText.resignConfirm.dialogAriaLabel">
+  <h3 class="section-title">{{resignConfirmTitle}}</h3>
+  <div class="icon-actions-row icon-actions-row--compact">
+    <button class="icon-action-btn icon-action-btn--secondary" (click)="cancelResignConfirm.emit()" [attr.title]="uiText.resignConfirm.cancelTitle" [attr.aria-label]="uiText.resignConfirm.cancelAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-times" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.resignConfirm.cancel}}</span>
+    </button>
+    <button class="icon-action-btn icon-action-btn--danger" (click)="confirmResign.emit()" [attr.title]="uiText.resignConfirm.confirmTitle" [attr.aria-label]="uiText.resignConfirm.confirmAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-flag" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.resignConfirm.confirm}}</span>
+    </button>
+  </div>
+</div>

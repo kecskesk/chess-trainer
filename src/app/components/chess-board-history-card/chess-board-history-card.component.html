@@ -1,0 +1,30 @@
+<div class="history-card panel-card">
+  <h3 class="section-title">{{uiText.history.sectionTitle}}</h3>
+  <div class="icon-actions-row icon-actions-row--compact history-controls">
+    <button class="icon-action-btn" [disabled]="!canUndo" (click)="undo.emit()" [attr.title]="uiText.history.undoTitle" [attr.aria-label]="uiText.history.undoAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-undo" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.history.undo}}</span>
+    </button>
+    <button class="icon-action-btn" [disabled]="!canRedo" (click)="redo.emit()" [attr.title]="uiText.history.redoTitle" [attr.aria-label]="uiText.history.redoAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-redo" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.history.redo}}</span>
+    </button>
+  </div>
+  <div class="history-log" #historyLog>
+    <div class="history-entry"
+         [class.history-entry--white]="histIdx % 2 === 0"
+         [class.history-entry--black]="histIdx % 2 === 1"
+         *ngFor="let histItem of visibleHistory; index as histIdx">
+      <span class="history-move" [class.history-move--black]="histIdx % 2 === 1">
+        <span class="history-move-text">
+          <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
+          {{histItem}}
+        </span>
+        <span class="history-quality"
+              [ngClass]="getMoveQualityClass(histIdx)"
+              *ngIf="getMoveQualityLabel(histIdx) as quality">{{quality}}</span>
+      </span>
+      <span class="history-eval">SF {{getEvaluationForMove(histIdx)}}</span>
+    </div>
+  </div>
+</div>

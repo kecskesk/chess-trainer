@@ -1,0 +1,9 @@
+<details class="position-key-panel"
+         *ngIf="boardHelper"
+         [open]="isDebugPanelOpen"
+         (toggle)="onToggle($event)">
+  <summary>{{uiText.debugPanel.summary}}</summary>
+  <div class="position-key-value" *ngIf="boardHelper?.debugText"
+       [textContent]="boardHelper?.debugText || ''"></div>
+  <div class="position-key-value">{{debugPositionKey}}</div>
+</details>

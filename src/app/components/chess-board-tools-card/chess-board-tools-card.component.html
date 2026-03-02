@@ -1,0 +1,115 @@
+<div class="tool-card panel-card panel-card--wide" *ngIf="canPromote">
+  <h3 class="section-title">{{uiText.promotion.sectionTitle}}</h3>
+  <div class="icon-actions-row promote-row">
+    <button class="icon-action-btn" (click)="promotePiece.emit('rook')" [attr.title]="uiText.promotion.promoteToRookTitle" [attr.aria-label]="uiText.promotion.promoteToRookAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-chess-rook" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.promotion.rook}}</span>
+    </button>
+    <button class="icon-action-btn" (click)="promotePiece.emit('bishop')" [attr.title]="uiText.promotion.promoteToBishopTitle" [attr.aria-label]="uiText.promotion.promoteToBishopAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-chess-bishop" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.promotion.bishop}}</span>
+    </button>
+    <button class="icon-action-btn" (click)="promotePiece.emit('knight')" [attr.title]="uiText.promotion.promoteToKnightTitle" [attr.aria-label]="uiText.promotion.promoteToKnightAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-chess-knight" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.promotion.knight}}</span>
+    </button>
+    <button class="icon-action-btn" (click)="promotePiece.emit('queen')" [attr.title]="uiText.promotion.promoteToQueenTitle" [attr.aria-label]="uiText.promotion.promoteToQueenAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-chess-queen" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.promotion.queen}}</span>
+    </button>
+  </div>
+</div>
+
+<div class="tool-card panel-card">
+  <h3 class="section-title">{{uiText.magicToolkit.sectionTitle}}</h3>
+  <div class="icon-actions-row">
+    <button class="icon-action-btn"
+            [class.time-btn--selected]="activeTool==='threats-mine'"
+            (click)="showThreats.emit(false)" [attr.title]="uiText.magicToolkit.myThreatsTitle" [attr.aria-label]="uiText.magicToolkit.myThreatsAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-crosshairs" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicToolkit.mine}}</span>
+    </button>
+    <button class="icon-action-btn"
+            [class.time-btn--selected]="activeTool==='protected-mine'"
+            (click)="showProtected.emit(false)" [attr.title]="uiText.magicToolkit.myProtectedTitle" [attr.aria-label]="uiText.magicToolkit.myProtectedAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-shield-alt" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicToolkit.safe}}</span>
+    </button>
+    <button class="icon-action-btn"
+            [class.time-btn--selected]="activeTool==='threats-enemy'"
+            (click)="showThreats.emit(true)" [attr.title]="uiText.magicToolkit.enemyThreatsTitle" [attr.aria-label]="uiText.magicToolkit.enemyThreatsAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-skull-crossbones" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicToolkit.enemy}}</span>
+    </button>
+    <button class="icon-action-btn"
+            [class.time-btn--selected]="activeTool==='protected-enemy'"
+            (click)="showProtected.emit(true)" [attr.title]="uiText.magicToolkit.enemyProtectedTitle" [attr.aria-label]="uiText.magicToolkit.enemyProtectedAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-user-shield" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicToolkit.guarded}}</span>
+    </button>
+  </div>
+</div>
+
+<div class="tool-card panel-card">
+  <h3 class="section-title">{{uiText.magicerToolkit.sectionTitle}}</h3>
+  <div class="icon-actions-row icon-actions-row--compact">
+    <button class="icon-action-btn"
+            [class.time-btn--selected]="activeTool==='hanging-mine'"
+            (click)="showHangingPieces.emit(false)" [attr.title]="uiText.magicerToolkit.myHangingTitle" [attr.aria-label]="uiText.magicerToolkit.myHangingAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicerToolkit.blunder}}</span>
+    </button>
+    <button class="icon-action-btn"
+            [class.time-btn--selected]="activeTool==='hanging-enemy'"
+            (click)="showHangingPieces.emit(true)" [attr.title]="uiText.magicerToolkit.enemyHangingTitle" [attr.aria-label]="uiText.magicerToolkit.enemyHangingAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-bullseye" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicerToolkit.target}}</span>
+    </button>
+    <button class="icon-action-btn" (click)="showForkIdeas.emit()" [attr.title]="uiText.magicerToolkit.forkIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.forkIdeasAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-code-branch" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicerToolkit.fork}}</span>
+    </button>
+    <button class="icon-action-btn" (click)="showPinIdeas.emit()" [attr.title]="uiText.magicerToolkit.pinIdeasTitle" [attr.aria-label]="uiText.magicerToolkit.pinIdeasAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-thumbtack" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.magicerToolkit.pin}}</span>
+    </button>
+  </div>
+</div>
+
+<div class="tool-card panel-card">
+  <h3 class="section-title">{{uiText.gameTools.sectionTitle}}</h3>
+  <div class="icon-actions-row icon-actions-row--compact">
+    <button class="icon-action-btn" (click)="toggleBoardFlip.emit()"
+            [class.time-btn--selected]="isBoardFlipped"
+            [attr.title]="uiText.gameTools.flipBoardTitle" [attr.aria-label]="uiText.gameTools.flipBoardAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-exchange-alt" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.gameTools.flip}}</span>
+    </button>
+    <button class="icon-action-btn" (click)="exportPgn.emit()" [attr.title]="uiText.gameTools.exportPgnTitle" [attr.aria-label]="uiText.gameTools.exportPgnAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-download" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">PGN</span>
+    </button>
+    <button class="icon-action-btn" (click)="exportBoardImage.emit()" [attr.title]="uiText.gameTools.exportImageTitle" [attr.aria-label]="uiText.gameTools.exportImageAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-image" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">{{uiText.gameTools.image}}</span>
+    </button>
+    <button class="icon-action-btn" (click)="exportFen.emit()" [attr.title]="uiText.gameTools.exportFenTitle" [attr.aria-label]="uiText.gameTools.exportFenAriaLabel">
+      <span class="icon-action-btn__icon"><i class="fas fa-file-code" aria-hidden="true"></i></span>
+      <span class="icon-action-btn__text">FEN</span>
+    </button>
+  </div>
+</div>
+
+<div class="tool-card panel-card">
+  <h3 class="section-title">{{uiText.recognition.sectionTitle}}</h3>
+  <div class="recognition-line"><strong>{{uiText.recognition.openingLabel}}:</strong> {{openingRecognition}}</div>
+  <div class="recognition-line"><strong>{{uiText.recognition.endgameLabel}}:</strong> {{endgameRecognition}}</div>
+  <div class="recognition-line recognition-line--suggestions">
+    <strong>{{uiText.recognition.suggestedLabel}}:</strong>
+    <span class="suggested-move"
+          [ngClass]="getSuggestedMoveClass(move)"
+          (mouseenter)="previewMove.emit(move)"
+          (mouseleave)="clearPreview.emit()"
+          *ngFor="let move of suggestedMoves">{{move}}</span>
+  </div>
+</div>

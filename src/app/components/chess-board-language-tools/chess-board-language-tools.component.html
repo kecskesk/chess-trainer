@@ -1,0 +1,16 @@
+<div class="top-right-tools">
+  <div class="language-flags" [attr.aria-label]="uiText.language.ariaLabel">
+    <button class="language-flag-btn"
+            type="button"
+            [class.language-flag-btn--active]="selectedLocale === 'en_US'"
+            [disabled]="isLanguageSwitching"
+            [attr.aria-label]="uiText.language.english"
+            (click)="onLocaleClick('en_US')"><span class="flag flag--us" aria-hidden="true"></span></button>
+    <button class="language-flag-btn"
+            type="button"
+            [class.language-flag-btn--active]="selectedLocale === 'hu_HU'"
+            [disabled]="isLanguageSwitching"
+            [attr.aria-label]="uiText.language.hungarian"
+            (click)="onLocaleClick('hu_HU')"><span class="flag flag--hu" aria-hidden="true"></span></button>
+  </div>
+</div>

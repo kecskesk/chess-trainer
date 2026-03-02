@@ -1,0 +1,36 @@
+<div class="tool-card panel-card cct-card">
+  <h3 class="section-title">CCT</h3>
+  <div class="cct-row cct-row--capture" [attr.title]="uiText.cct.capturesRowTitle">
+    <span class="cct-row__icon" [attr.title]="uiText.cct.capturesIconTitle"><i class="fas fa-times" aria-hidden="true"></i></span>
+    <ng-container *ngIf="captures as captureRecs">
+      <span class="cct-step"
+            *ngFor="let rec of captureRecs"
+            [title]="rec.tooltip"
+            (mouseenter)="previewMove.emit(rec.move)"
+            (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
+      <span class="cct-empty" *ngIf="captureRecs.length < 1" [attr.title]="uiText.cct.noCapturesTitle">&mdash;</span>
+    </ng-container>
+  </div>
+  <div class="cct-row cct-row--check" [attr.title]="uiText.cct.checksRowTitle">
+    <span class="cct-row__icon" [attr.title]="uiText.cct.checksIconTitle"><i class="fas fa-chess-king" aria-hidden="true"></i></span>
+    <ng-container *ngIf="checks as checkRecs">
+      <span class="cct-step"
+            *ngFor="let rec of checkRecs"
+            [title]="rec.tooltip"
+            (mouseenter)="previewMove.emit(rec.move)"
+            (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
+      <span class="cct-empty" *ngIf="checkRecs.length < 1" [attr.title]="uiText.cct.noChecksTitle">&mdash;</span>
+    </ng-container>
+  </div>
+  <div class="cct-row cct-row--threat" [attr.title]="uiText.cct.threatsRowTitle">
+    <span class="cct-row__icon" [attr.title]="uiText.cct.threatsIconTitle"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></span>
+    <ng-container *ngIf="threats as threatRecs">
+      <span class="cct-step"
+            *ngFor="let rec of threatRecs"
+            [title]="rec.tooltip"
+            (mouseenter)="previewMove.emit(rec.move)"
+            (mouseleave)="clearPreview.emit()">{{rec.move}}</span>
+      <span class="cct-empty" *ngIf="threatRecs.length < 1" [attr.title]="uiText.cct.noThreatsTitle">&mdash;</span>
+    </ng-container>
+  </div>
+</div>

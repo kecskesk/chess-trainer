@@ -1,0 +1,66 @@
+<div class="clock-card panel-card panel-card--wide">
+  <div class="clock-card-header">
+    <h3 class="section-title">{{uiText.clock.sectionTitle}}</h3>
+    <div class="clock-brand" [attr.aria-label]="uiText.clock.brandAriaLabel">
+      <img class="clock-brand__logo" src="horse.svg" [attr.alt]="uiText.clock.logoAlt" />
+      <span class="clock-brand__title">{{uiText.app.brandTitle}}</span>
+    </div>
+  </div>
+  <div class="clock-layout">
+    <div class="clock-stack-wrap">
+      <div class="analysis-meter" [attr.aria-label]="'Analysis meter'">
+        <span class="analysis-meter__side analysis-meter__side--top">{{uiText.clock.black}}</span>
+        <div class="analysis-meter__bar">
+          <div class="analysis-meter__marker"
+               [style.top.%]="getAnalysisMeterOffsetPercent()"
+               [attr.title]="'SF ' + getCurrentAnalysisEvalText()"></div>
+        </div>
+        <span class="analysis-meter__side analysis-meter__side--bottom">{{uiText.clock.white}}</span>
+        <span class="analysis-meter__value">SF {{getCurrentAnalysisEvalText()}}</span>
+      </div>
+      <div class="clock-stack">
+        <div class="clock-display"
+             [class.clock-display--active]="isClockActive(chessColors.Black)"
+             [class.clock-display--low]="isClockLow(chessColors.Black)">
+          <div class="clock-meta">
+            <span class="clock-player">{{uiText.clock.black}}</span>
+            <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.Black)"></span>
+          </div>
+          <span class="clock-time">{{formatClock(blackClockMs)}}</span>
+        </div>
+        <div class="clock-display"
+             [class.clock-display--active]="isClockActive(chessColors.White)"
+             [class.clock-display--low]="isClockLow(chessColors.White)">
+          <div class="clock-meta">
+            <span class="clock-player">{{uiText.clock.white}}</span>
+            <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.White)"></span>
+          </div>
+          <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="clock-controls">
+      <div class="clock-controls-grid">
+        <button class="time-btn"
+          [disabled]="clockStarted"
+          [class.time-btn--selected]="selectedClockPresetLabel === '1+0'"
+          (click)="onPreset(1, 0, '1+0')">1+0</button>
+        <button class="time-btn"
+          [disabled]="clockStarted"
+          [class.time-btn--selected]="selectedClockPresetLabel === '3+2'"
+          (click)="onPreset(3, 2, '3+2')">3+2</button>
+        <button class="action-btn action-btn--large" (click)="toggleClock.emit()">{{getClockButtonLabel()}}</button>
+        <button class="time-btn"
+          [disabled]="clockStarted"
+          [class.time-btn--selected]="selectedClockPresetLabel === '5+0'"
+          (click)="onPreset(5, 0, '5+0')">5+0</button>
+        <button class="time-btn"
+          [disabled]="clockStarted"
+          [class.time-btn--selected]="selectedClockPresetLabel === '10+0'"
+          (click)="onPreset(10, 0, '10+0')">10+0</button>
+        <button class="action-btn action-btn--secondary action-btn--large" (click)="resetClock.emit()">{{uiText.clock.reset}}</button>
+      </div>
+    </div>
+  </div>
+</div>
