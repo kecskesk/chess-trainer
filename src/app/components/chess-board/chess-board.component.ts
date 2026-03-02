@@ -23,6 +23,7 @@ import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } fro
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
 import { UiTextLoaderService } from '../../services/ui-text-loader.service';
+import { StockfishService } from '../../services/stockfish.service';
 
 interface IBoardHelperSnapshot {
   debugText: string;
@@ -70,6 +71,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   readonly uiText = UiText;
   readonly boardIndices: number[] = Array.from({ length: ChessConstants.BOARD_SIZE }, (_, idx) => idx);
   @ViewChild('chessField') chessField: ElementRef;
+  @ViewChild('historyLog') historyLog: ElementRef<HTMLDivElement>;
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
 
   dropLists: CdkDropList[] = [];
@@ -117,9 +119,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     [CctCategoryEnum.Checks]: [],
     [CctCategoryEnum.Threats]: []
   };
-  private readonly mockEvalCycle: string[] = [
-    '+0.1', '+0.3', '+0.0', '-0.2', '+0.5', '+0.8', '-0.1', '+1.1'
-  ];
+  private readonly evalByHistoryIndex = new Map<number, string>();
+  private readonly evalCacheByFen = new Map<string, string>();
+  private readonly pendingEvalByHistoryIndex = new Set<number>();
+  private readonly evalErrorByHistoryIndex = new Set<number>();
+  private evaluationRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private evaluationRunToken = 0;
+  private readonly evaluationDebounceMs = 140;
+  private readonly pendingEvaluationPlaceholder = '...';
+  private readonly evaluationErrorPlaceholder = 'err';
+  private readonly analysisClampPawns = 10;
   openingsLoaded = false;
   private openings: IParsedOpening[] = [];
   private activeOpening: IParsedOpening | null = null;
@@ -152,7 +161,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     private readonly http: HttpClient,
     private readonly ngZone?: NgZone,
     private readonly cdr?: ChangeDetectorRef,
-    private readonly uiTextLoaderService?: UiTextLoaderService
+    private readonly uiTextLoaderService?: UiTextLoaderService,
+    private readonly stockfishService?: StockfishService
   ) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
@@ -166,8 +176,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.isDestroyed = true;
+    if (this.evaluationRefreshTimer !== null) {
+      clearTimeout(this.evaluationRefreshTimer);
+      this.evaluationRefreshTimer = null;
+    }
+    this.evaluationRunToken += 1;
     this.stopClock();
     this.syncFlippedDragClass();
+    this.stockfishService?.terminate();
   }
 
   ngAfterViewInit(): void {
@@ -176,6 +192,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         this.dropLists = this.dropListElements.toArray();
       }, 0);
     }
+    this.scheduleHistoryAutoScroll();
   }
 
   canDrop(drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean {
@@ -821,20 +838,58 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.chessBoardStateService.boardHelper.arrows = {};
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
-    if (ofColor) {
-      this.chessBoardStateService.field.forEach((row, rowIdx) => {
-        row.forEach((cell, cellIdx) => {
-          // All pieces of the color
-          if (cell && cell[0] && cell[0].color === ofColor) {
-            for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-              for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-                const data = this.chessBoardStateService.field[targetRow][targetCol];
-                ChessRulesService.canStepThere(targetRow, targetCol, data, rowIdx, cellIdx);
-              }
+    if (!ofColor) {
+      return;
+    }
+
+    const board = this.chessBoardStateService.field;
+    const enemyColor = this.getOpponentColor(ofColor);
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
+        const sourceCell = board[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === ofColor)) {
+          continue;
+        }
+        const sourcePiece = sourceCell[0];
+        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
+            if (srcRow === targetRow && srcCol === targetCol) {
+              continue;
+            }
+            const legalMove = this.canPlayLegalMove(
+              board,
+              srcRow,
+              srcCol,
+              targetRow,
+              targetCol,
+              ofColor,
+              sourcePiece
+            );
+            if (!legalMove) {
+              continue;
+            }
+
+            ChessBoardStateService.addPossible({ row: targetRow, col: targetCol });
+            const targetCell = board[targetRow][targetCol];
+            const isCapture = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
+            if (isCapture) {
+              ChessBoardStateService.addHit({ row: targetRow, col: targetCol });
+            }
+            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            if (this.isKingInCheck(afterMove, enemyColor)) {
+              ChessBoardStateService.addCheck({ row: targetRow, col: targetCol });
+              ChessBoardStateService.createArrowFromVisualization(
+                this.createVisualizationArrow(
+                  { row: 8 - srcRow, col: srcCol + 1 },
+                  { row: 8 - targetRow, col: targetCol + 1 },
+                  'red',
+                  0.25
+                )
+              );
             }
           }
-        });
-      });
+        }
+      }
     }
   }
 
@@ -1082,13 +1137,122 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.mockHistoryCursor = null;
     }
     this.restoreSnapshotForVisibleHistory();
+    this.scheduleHistoryAutoScroll();
   }
 
-  getMockEvaluationForMove(halfMoveIndex: number): string {
+  getEvaluationForMove(halfMoveIndex: number): string {
     if (halfMoveIndex < 0) {
-      return '+0.0';
+      return ChessBoardComponent.NA_PLACEHOLDER;
     }
-    return this.mockEvalCycle[halfMoveIndex % this.mockEvalCycle.length];
+
+    const fen = this.getFenForHistoryIndex(halfMoveIndex);
+    if (!fen) {
+      return ChessBoardComponent.NA_PLACEHOLDER;
+    }
+
+    const cachedByFen = this.evalCacheByFen.get(fen);
+    if (cachedByFen) {
+      this.evalByHistoryIndex.set(halfMoveIndex, cachedByFen);
+      this.evalErrorByHistoryIndex.delete(halfMoveIndex);
+      this.pendingEvalByHistoryIndex.delete(halfMoveIndex);
+      return cachedByFen;
+    }
+
+    if (this.pendingEvalByHistoryIndex.has(halfMoveIndex)) {
+      return this.pendingEvaluationPlaceholder;
+    }
+    if (this.evalErrorByHistoryIndex.has(halfMoveIndex)) {
+      return this.evaluationErrorPlaceholder;
+    }
+
+    const cachedByIndex = this.evalByHistoryIndex.get(halfMoveIndex);
+    if (cachedByIndex) {
+      return cachedByIndex;
+    }
+    return this.pendingEvaluationPlaceholder;
+  }
+
+  getMoveQualityLabel(halfMoveIndex: number): string {
+    const quality = this.getMoveQuality(halfMoveIndex);
+    return quality ? quality.label : '';
+  }
+
+  getMoveQualityClass(halfMoveIndex: number): string {
+    const quality = this.getMoveQuality(halfMoveIndex);
+    return quality ? quality.className : '';
+  }
+
+  getCurrentAnalysisEvalText(): string {
+    if (!this.stockfishService) {
+      return ChessBoardComponent.NA_PLACEHOLDER;
+    }
+    const currentMoveIndex = this.getCurrentVisibleMoveIndex();
+    if (currentMoveIndex < 0) {
+      return this.pendingEvaluationPlaceholder;
+    }
+    return this.getEvaluationForMove(currentMoveIndex);
+  }
+
+  getAnalysisMeterOffsetPercent(): number {
+    const evalText = this.getCurrentAnalysisEvalText();
+    const pawns = this.parseEvaluationPawns(evalText);
+    if (pawns === null) {
+      return 50;
+    }
+    const clamped = Math.max(-this.analysisClampPawns, Math.min(this.analysisClampPawns, pawns));
+    return ((clamped + this.analysisClampPawns) / (2 * this.analysisClampPawns)) * 100;
+  }
+
+  private parseEvaluationPawns(evalText: string): number | null {
+    if (!evalText || evalText === this.pendingEvaluationPlaceholder ||
+      evalText === this.evaluationErrorPlaceholder || evalText === ChessBoardComponent.NA_PLACEHOLDER) {
+      return null;
+    }
+    if (evalText.startsWith('#')) {
+      return evalText.includes('-') ? -this.analysisClampPawns : this.analysisClampPawns;
+    }
+    const numeric = Number(evalText);
+    if (Number.isNaN(numeric)) {
+      return null;
+    }
+    return numeric;
+  }
+
+  private getMoveQuality(halfMoveIndex: number): { label: string; className: string } | null {
+    if (halfMoveIndex < 1) {
+      return null;
+    }
+
+    const previousEval = this.parseEvaluationPawns(this.getEvaluationForMove(halfMoveIndex - 1));
+    const currentEval = this.parseEvaluationPawns(this.getEvaluationForMove(halfMoveIndex));
+    if (previousEval === null || currentEval === null) {
+      return null;
+    }
+
+    const movedByWhite = (halfMoveIndex % 2) === 0;
+    const improvement = movedByWhite
+      ? (currentEval - previousEval)
+      : (previousEval - currentEval);
+
+    if (improvement >= 3) {
+      return { label: 'genius', className: 'history-quality--genius' };
+    }
+    if (improvement >= 1) {
+      return { label: 'great', className: 'history-quality--great' };
+    }
+    if (improvement >= 0.5) {
+      return { label: 'good', className: 'history-quality--good' };
+    }
+    if (improvement <= -3) {
+      return { label: 'blunder', className: 'history-quality--blunder' };
+    }
+    if (improvement <= -1) {
+      return { label: 'mistake', className: 'history-quality--mistake' };
+    }
+    if (improvement <= -0.5) {
+      return { label: 'small error', className: 'history-quality--small-error' };
+    }
+    return null;
   }
 
   toggleBoardFlip(): void {
@@ -2110,23 +2274,20 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     rowIdx: number,
     cellIdx: number,
     ofColor: ChessColorsEnum,
-    _enemyColor: ChessColorsEnum
+    enemyColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
     const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
+    const board = this.chessBoardStateService.field;
     for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
       for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
-          const targetCell = this.chessBoardStateService.field[targetRow][targetCol];
-          const currentPiece = { color: ofColor, piece: cell[0].piece } as ChessPieceDto;
-          const canStepThere = ChessRulesService.canStepThere(
-            targetRow,
-            targetCol,
-            targetCell,
-            rowIdx,
-            cellIdx,
-            currentPiece
-          );
-          if (canStepThere && targetCell && targetCell[0]) {
+          const targetCell = board[targetRow][targetCol];
+          const isEnemyTarget = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
+          if (!isEnemyTarget) {
+            continue;
+          }
+          const legalMove = this.canPlayLegalMove(board, rowIdx, cellIdx, targetRow, targetCol, ofColor, cell[0]);
+          if (legalMove) {
             threats.push({pos: new ChessPositionDto(targetRow, targetCol), piece: targetCell[0].piece});
           }
         }
@@ -2139,22 +2300,29 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     cell: ChessPieceDto[],
     rowIdx: number,
     cellIdx: number,
-    ofColor: ChessColorsEnum,
-    _enemyColor: ChessColorsEnum
+    _defendedColor: ChessColorsEnum,
+    attackerColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
     const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
+    const board = this.chessBoardStateService.field;
     for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
       for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
         if (cellIdx !== targetCol || rowIdx !== targetRow) {
-          const targetCell = this.chessBoardStateService.field[targetRow][targetCol];
-          const currentPiece = { color: ofColor, piece: cell[0].piece } as ChessPieceDto;
-          const canStepThere = ChessRulesService.canStepThere(
-            rowIdx, cellIdx,
-            [ currentPiece ],
-            targetRow, targetCol,
-            targetCell[0]);
-          if (canStepThere && targetCell && targetCell[0]) {
-            threats.push({pos: new ChessPositionDto(targetRow, targetCol), piece: targetCell[0].piece});
+          const attackerCell = board[targetRow][targetCol];
+          if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
+            continue;
+          }
+          const legalMove = this.canPlayLegalMove(
+            board,
+            targetRow,
+            targetCol,
+            rowIdx,
+            cellIdx,
+            attackerColor,
+            attackerCell[0]
+          );
+          if (legalMove) {
+            threats.push({pos: new ChessPositionDto(targetRow, targetCol), piece: cell[0].piece});
           }
         }
       }
@@ -2321,6 +2489,34 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       }
       return [new ChessPieceDto(cell[0].color, cell[0].piece)];
     }));
+  }
+
+  private canPlayLegalMove(
+    board: ChessPieceDto[][][],
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    forColor: ChessColorsEnum,
+    sourcePiece: ChessPieceDto
+  ): boolean {
+    const targetCell = board[targetRow][targetCol];
+    const canStepThere = this.withBoardContext(board, forColor, () =>
+      ChessRulesService.canStepThere(
+        targetRow,
+        targetCol,
+        targetCell,
+        srcRow,
+        srcCol,
+        new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+      )
+    );
+    if (!canStepThere) {
+      return false;
+    }
+
+    const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+    return !this.isKingInCheck(afterMove, forColor);
   }
 
   private simulateMove(
@@ -2743,6 +2939,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.moveSnapshots = [];
     this.moveSnapshots.push(this.captureCurrentSnapshot());
     this.mockHistoryCursor = null;
+    this.resetEvaluationState();
+    this.scheduleEvaluationRefresh();
+    this.scheduleHistoryAutoScroll();
   }
 
   private pushSnapshotForCurrentState(): void {
@@ -2752,6 +2951,21 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     this.moveSnapshots.push(this.captureCurrentSnapshot());
     this.mockHistoryCursor = null;
+    this.scheduleEvaluationRefresh();
+    this.scheduleHistoryAutoScroll();
+  }
+
+  private scheduleHistoryAutoScroll(): void {
+    if (this.previewMode || this.mockHistoryCursor !== null) {
+      return;
+    }
+    setTimeout(() => {
+      const historyElement = this.historyLog && this.historyLog.nativeElement ? this.historyLog.nativeElement : null;
+      if (!historyElement) {
+        return;
+      }
+      historyElement.scrollTop = historyElement.scrollHeight;
+    }, 0);
   }
 
   private replaceActiveSnapshot(): void {
@@ -2761,6 +2975,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.moveSnapshots[activeSnapshotIndex] = this.captureCurrentSnapshot();
+    this.scheduleEvaluationRefresh();
   }
 
   private restoreSnapshotForVisibleHistory(): void {
@@ -2769,6 +2984,126 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.restoreSnapshot(this.moveSnapshots[targetSnapshotIndex]);
+    this.scheduleEvaluationRefresh();
+  }
+
+  private resetEvaluationState(): void {
+    this.evalByHistoryIndex.clear();
+    this.pendingEvalByHistoryIndex.clear();
+    this.evalErrorByHistoryIndex.clear();
+    this.evalCacheByFen.clear();
+    if (this.evaluationRefreshTimer !== null) {
+      clearTimeout(this.evaluationRefreshTimer);
+      this.evaluationRefreshTimer = null;
+    }
+    this.evaluationRunToken += 1;
+  }
+
+  private scheduleEvaluationRefresh(): void {
+    if (!this.stockfishService || this.previewMode) {
+      return;
+    }
+    if (this.evaluationRefreshTimer !== null) {
+      clearTimeout(this.evaluationRefreshTimer);
+      this.evaluationRefreshTimer = null;
+    }
+    const runToken = ++this.evaluationRunToken;
+    this.evaluationRefreshTimer = setTimeout(() => {
+      this.evaluationRefreshTimer = null;
+      void this.refreshVisibleHistoryEvaluations(runToken);
+    }, this.evaluationDebounceMs);
+  }
+
+  private async refreshVisibleHistoryEvaluations(runToken: number): Promise<void> {
+    if (!this.stockfishService) {
+      return;
+    }
+
+    const visibleHistory = this.getVisibleHistory();
+    if (visibleHistory.length < 1) {
+      return;
+    }
+
+    for (let idx = 0; idx < visibleHistory.length; idx++) {
+      if (runToken !== this.evaluationRunToken) {
+        return;
+      }
+
+      const fen = this.getFenForHistoryIndex(idx);
+      if (!fen) {
+        this.evalByHistoryIndex.set(idx, ChessBoardComponent.NA_PLACEHOLDER);
+        this.pendingEvalByHistoryIndex.delete(idx);
+        this.evalErrorByHistoryIndex.delete(idx);
+        continue;
+      }
+
+      const cachedScore = this.evalCacheByFen.get(fen);
+      if (cachedScore) {
+        this.evalByHistoryIndex.set(idx, cachedScore);
+        this.pendingEvalByHistoryIndex.delete(idx);
+        this.evalErrorByHistoryIndex.delete(idx);
+        continue;
+      }
+
+      this.pendingEvalByHistoryIndex.add(idx);
+      this.evalErrorByHistoryIndex.delete(idx);
+      this.requestClockRender();
+
+      try {
+        const score = await this.stockfishService.evaluateFen(fen);
+        if (runToken !== this.evaluationRunToken) {
+          return;
+        }
+        this.evalCacheByFen.set(fen, score);
+        this.evalByHistoryIndex.set(idx, score);
+      } catch {
+        if (runToken !== this.evaluationRunToken) {
+          return;
+        }
+        this.evalErrorByHistoryIndex.add(idx);
+      } finally {
+        if (runToken === this.evaluationRunToken) {
+          this.pendingEvalByHistoryIndex.delete(idx);
+          this.requestClockRender();
+        }
+      }
+    }
+  }
+
+  private getFenForHistoryIndex(halfMoveIndex: number): string {
+    if (halfMoveIndex < 0) {
+      return '';
+    }
+    const snapshotIndex = halfMoveIndex + 1;
+    if (snapshotIndex < 0 || snapshotIndex >= this.moveSnapshots.length) {
+      return '';
+    }
+    return this.generateFenFromSnapshot(this.moveSnapshots[snapshotIndex]);
+  }
+
+  private generateFenFromSnapshot(snapshot: IGameplaySnapshot): string {
+    if (!(snapshot && snapshot.boardHelper && snapshot.field)) {
+      return '8/8/8/8/8/8/8/8 w - - 0 1';
+    }
+    const historyEntries = snapshot.boardHelper.history || {};
+    const history = Object.values(historyEntries);
+    const castlingRights = ChessRulesService.getCastlingRightsNotation(snapshot.field, historyEntries);
+    const enPassantRights = ChessRulesService.getEnPassantRightsNotation(
+      snapshot.field,
+      historyEntries,
+      snapshot.boardHelper.colorTurn
+    );
+    const plyCount = ChessFenUtils.getPlyCountFromHistory(history);
+    const fullmoveNumber = ChessFenUtils.getFullmoveNumberFromPlyCount(plyCount);
+    const halfmoveClock = ChessFenUtils.getHalfmoveClockFromHistory(history);
+    return ChessFenUtils.generateFen(
+      snapshot.field,
+      snapshot.boardHelper.colorTurn,
+      castlingRights,
+      enPassantRights,
+      halfmoveClock,
+      fullmoveNumber
+    );
   }
 
   private getActiveSnapshotIndex(): number {

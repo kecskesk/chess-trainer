@@ -92,24 +92,36 @@
         </div>
       </div>
       <div class="clock-layout">
-        <div class="clock-stack">
-          <div class="clock-display"
-               [class.clock-display--active]="isClockActive(chessColors.Black)"
-               [class.clock-display--low]="isClockLow(chessColors.Black)">
-            <div class="clock-meta">
-              <span class="clock-player">{{uiText.clock.black}}</span>
-              <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.Black)"></span>
+        <div class="clock-stack-wrap">
+          <div class="analysis-meter" [attr.aria-label]="'Analysis meter'">
+            <span class="analysis-meter__side analysis-meter__side--top">{{uiText.clock.black}}</span>
+            <div class="analysis-meter__bar">
+              <div class="analysis-meter__marker"
+                   [style.top.%]="getAnalysisMeterOffsetPercent()"
+                   [attr.title]="'SF ' + getCurrentAnalysisEvalText()"></div>
             </div>
-            <span class="clock-time">{{formatClock(blackClockMs)}}</span>
+            <span class="analysis-meter__side analysis-meter__side--bottom">{{uiText.clock.white}}</span>
+            <span class="analysis-meter__value">SF {{getCurrentAnalysisEvalText()}}</span>
           </div>
-          <div class="clock-display"
-               [class.clock-display--active]="isClockActive(chessColors.White)"
-               [class.clock-display--low]="isClockLow(chessColors.White)">
-            <div class="clock-meta">
-              <span class="clock-player">{{uiText.clock.white}}</span>
-              <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.White)"></span>
+          <div class="clock-stack">
+            <div class="clock-display"
+                 [class.clock-display--active]="isClockActive(chessColors.Black)"
+                 [class.clock-display--low]="isClockLow(chessColors.Black)">
+              <div class="clock-meta">
+                <span class="clock-player">{{uiText.clock.black}}</span>
+                <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.Black)"></span>
+              </div>
+              <span class="clock-time">{{formatClock(blackClockMs)}}</span>
             </div>
-            <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
+            <div class="clock-display"
+                 [class.clock-display--active]="isClockActive(chessColors.White)"
+                 [class.clock-display--low]="isClockLow(chessColors.White)">
+              <div class="clock-meta">
+                <span class="clock-player">{{uiText.clock.white}}</span>
+                <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.White)"></span>
+              </div>
+              <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
+            </div>
           </div>
         </div>
 
@@ -360,16 +372,21 @@
           <span class="icon-action-btn__text">{{uiText.history.redo}}</span>
         </button>
       </div>
-      <div class="history-log">
+      <div class="history-log" #historyLog>
         <div class="history-entry"
              [class.history-entry--white]="histIdx % 2 === 0"
              [class.history-entry--black]="histIdx % 2 === 1"
              *ngFor="let histItem of getVisibleHistory(); index as histIdx">
           <span class="history-move" [class.history-move--black]="histIdx % 2 === 1">
-            <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
-            {{histItem}}
+            <span class="history-move-text">
+              <span *ngIf="histIdx % 2 === 0">{{(histIdx / 2) + 1}}. </span>
+              {{histItem}}
+            </span>
+            <span class="history-quality"
+                  [ngClass]="getMoveQualityClass(histIdx)"
+                  *ngIf="getMoveQualityLabel(histIdx) as quality">{{quality}}</span>
           </span>
-          <span class="history-eval">SF {{getMockEvaluationForMove(histIdx)}}</span>
+          <span class="history-eval">SF {{getEvaluationForMove(histIdx)}}</span>
         </div>
       </div>
     </div>

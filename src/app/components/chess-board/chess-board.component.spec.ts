@@ -4,10 +4,12 @@ import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { Observable, of, throwError } from 'rxjs';
+import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
 let component: ChessBoardComponent;
+let stockfishServiceStub: { evaluateFen: jasmine.Spy; terminate: jasmine.Spy };
 
 const createDropLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
   return {
@@ -61,10 +63,14 @@ const clearBoard = (): void => {
 };
 
 beforeEach(() => {
+  stockfishServiceStub = {
+    evaluateFen: jasmine.createSpy('evaluateFen').and.returnValue(Promise.resolve('+0.18')),
+    terminate: jasmine.createSpy('terminate')
+  };
   chessBoardStateService = new ChessBoardStateService();
   component = new ChessBoardComponent(chessBoardStateService, {
     get: () => of([])
-  } as any);
+  } as any, undefined, undefined, undefined, stockfishServiceStub as any);
   chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 });
 
@@ -1496,9 +1502,9 @@ describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () =>
     expect(displayed).toBe('Sicilian Defense: Najdorf');
   });
 
-  it('covers mock-eval negative index and empty-history cursor branches', () => {
-    expect(component.getMockEvaluationForMove(-1)).toBe('+0.0');
-    expect(typeof component.getMockEvaluationForMove(3)).toBe('string');
+  it('covers eval fallback and empty-history cursor branches', () => {
+    expect(component.getEvaluationForMove(-1)).toBe('n/a');
+    expect(typeof component.getEvaluationForMove(3)).toBe('string');
 
     chessBoardStateService.boardHelper.history = {} as any;
     component.mockHistoryCursor = 2;
@@ -1571,7 +1577,7 @@ describe('ChessBoardComponent gameplay moves and rules (position and analysis)',
   it('returns mock opening and endgame defaults', () => {
     (component as any).openingsLoaded = false;
     expect(component.getMockOpeningRecognition()).toBe('Waiting for opening line...');
-    expect(component.getMockEndgameRecognition()).toBe('Not endgame yet (mock)');
+    expect(component.getMockEndgameRecognition()).toBe('Not endgame yet');
   });
 
   it('evaluates board via showPossibleMoves and clears overlays', () => {
@@ -1941,7 +1947,7 @@ describe('ChessBoardComponent branch coverage helpers (guard and fallback paths)
     chessBoardStateService.field[4][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
     chessBoardStateService.field[4][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
     chessBoardStateService.field[4][2] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any];
-    expect(component.getMockEndgameRecognition()).toBe('Transition phase (mock)');
+    expect(component.getMockEndgameRecognition()).toBe('Transition phase');
 
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     expect(component.getMockSuggestedMoves()[0]).toContain('...');
@@ -2584,6 +2590,72 @@ describe('ChessBoardComponent branch coverage helpers (locale and asset loading 
     const kingSpy = spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
     (component as any).previewHoverMateInOne(6, 4, 5, 4, true);
     expect(kingSpy).toHaveBeenCalled();
+  });
+});
+
+describe('ChessBoardComponent stockfish evaluation states', () => {
+  it('shows pending placeholder, then resolved score', fakeAsync(() => {
+    let resolveEval: ((value: string) => void) | null = null;
+    stockfishServiceStub.evaluateFen.and.callFake(() => new Promise<string>(resolve => {
+      resolveEval = resolve;
+    }));
+
+    expect(canDropLike(6, 4, 4, 4)).toBeTrue();
+    component.onDrop(createDropLike(6, 4, 4, 4));
+
+    tick(200);
+    expect(stockfishServiceStub.evaluateFen).toHaveBeenCalledTimes(1);
+    expect(component.getEvaluationForMove(0)).toBe('...');
+
+    resolveEval?.('+0.33');
+    flushMicrotasks();
+    expect(component.getEvaluationForMove(0)).toBe('+0.33');
+  }));
+
+  it('shows error placeholder when evaluation fails', fakeAsync(() => {
+    stockfishServiceStub.evaluateFen.and.callFake(() => new Promise((_resolve, reject) => {
+      setTimeout(() => reject(new Error('boom')), 0);
+    }));
+
+    expect(canDropLike(6, 3, 4, 3)).toBeTrue();
+    component.onDrop(createDropLike(6, 3, 4, 3));
+
+    tick(200);
+    flushMicrotasks();
+    expect(component.getEvaluationForMove(0)).toBe('err');
+  }));
+
+  it('reuses cache for repeated refreshes and terminates worker on destroy', fakeAsync(() => {
+    stockfishServiceStub.evaluateFen.and.returnValue(Promise.resolve('+0.21'));
+
+    expect(canDropLike(6, 2, 4, 2)).toBeTrue();
+    component.onDrop(createDropLike(6, 2, 4, 2));
+    tick(200);
+    flushMicrotasks();
+    expect(component.getEvaluationForMove(0)).toBe('+0.21');
+    expect(stockfishServiceStub.evaluateFen).toHaveBeenCalledTimes(1);
+
+    (component as any).scheduleEvaluationRefresh();
+    tick(200);
+    flushMicrotasks();
+    expect(stockfishServiceStub.evaluateFen).toHaveBeenCalledTimes(1);
+
+    component.ngOnDestroy();
+    expect(stockfishServiceStub.terminate).toHaveBeenCalled();
+  }));
+
+  it('classifies move quality from eval swings for both sides', () => {
+    const evalByIndex: Record<number, string> = {
+      0: '+0.00',
+      1: '+0.60',
+      2: '+3.80',
+      3: '-0.20'
+    };
+    spyOn(component, 'getEvaluationForMove').and.callFake((index: number) => evalByIndex[index] ?? '...');
+
+    expect(component.getMoveQualityLabel(1)).toBe('small error');
+    expect(component.getMoveQualityLabel(2)).toBe('genius');
+    expect(component.getMoveQualityLabel(3)).toBe('genius');
   });
 });
 
