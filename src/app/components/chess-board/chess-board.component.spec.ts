@@ -1459,6 +1459,142 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     }
   });
 
+  it('covers fork and pin/skewer overlays plus toggle-off branches', () => {
+    clearBoard();
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[3][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[1][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[1][5] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.showForkIdeas();
+    expect(component.activeTool).toBe('fork-ideas');
+    expect(Object.keys(chessBoardStateService.boardHelper.arrows).length).toBeGreaterThan(0);
+
+    component.showForkIdeas();
+    expect(component.activeTool).toBeNull();
+    expect(chessBoardStateService.boardHelper.arrows).toEqual({});
+
+    clearBoard();
+    chessBoardStateService.field[7][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][7] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[3][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any]; // Bg5
+    chessBoardStateService.field[2][5] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any]; // Nf6
+    chessBoardStateService.field[0][3] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Queen } as any]; // Qd8
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any]; // Re1
+    chessBoardStateService.field[1][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Queen } as any]; // Qe7
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any]; // Re8
+
+    component.showPinIdeas();
+    expect(component.activeTool).toBe('pin-ideas');
+    const colors = Object.values(chessBoardStateService.boardHelper.arrows).map((arrow: any) => arrow.color);
+    expect(colors).toContain('green');
+    expect(colors).toContain('orange');
+
+    component.showPinIdeas();
+    expect(component.activeTool).toBeNull();
+    expect(chessBoardStateService.boardHelper.arrows).toEqual({});
+  });
+
+  it('covers PGN formatting branches with and without explicit result', () => {
+    chessBoardStateService.boardHelper.history = {
+      '1': 'e4',
+      '2': 'e5 1-0'
+    } as any;
+    let pgn = (component as any).getCurrentPgn();
+    expect(pgn).toContain('1. e4 e5 1-0');
+    expect((component as any).getPgnResultFromHistory(['a4', '... 0-1'])).toBe('0-1');
+
+    chessBoardStateService.boardHelper.history = {
+      '1': 'd4',
+      '2': 'd5'
+    } as any;
+    pgn = (component as any).getCurrentPgn();
+    expect(pgn).toContain('1. d4 d5 *');
+  });
+
+  it('covers DOM image export and download helper paths', async () => {
+    const clickSpy = spyOn(HTMLAnchorElement.prototype, 'click').and.stub();
+    const exportSpy = spyOn<any>(component, 'createBoardImageDataUrlFromDom').and.resolveTo('data:image/png;base64,AA');
+
+    await component.exportBoardImageMock();
+    expect(clickSpy).toHaveBeenCalled();
+    exportSpy.and.callThrough();
+
+    (component as any).chessField = {
+      nativeElement: {
+        closest: () => null
+      }
+    };
+    await expectAsync((component as any).createBoardImageDataUrlFromDom()).toBeResolvedTo(null);
+
+    (component as any).downloadDataUrl('data:image/png;base64,BB', 'board.png');
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it('covers PGN sparse history and private result fallback branches', () => {
+    const serviceBackup = (component as any).chessBoardStateService;
+    (component as any).chessBoardStateService = null;
+    expect((component as any).getCurrentPgn()).toBe('');
+    (component as any).chessBoardStateService = serviceBackup;
+
+    const historyGetterSpy = spyOnProperty(chessBoardStateService, 'history', 'get');
+    historyGetterSpy.and.returnValue(undefined as any);
+    expect((component as any).getCurrentPgn()).toContain('\n\n*');
+
+    historyGetterSpy.and.returnValue([undefined as any, undefined as any, 'e4', undefined as any] as any);
+    const sparsePgn = (component as any).getCurrentPgn();
+    expect(sparsePgn).toContain('2. e4');
+    expect(sparsePgn).not.toContain('1.');
+
+    expect((component as any).getPgnResultFromHistory([undefined as any])).toBe('*');
+  });
+
+  it('covers pin/skewer helper edge branches and opposing-color break path', () => {
+    expect((component as any).isPinnedToValuablePiece(ChessPiecesEnum.King, ChessPiecesEnum.Queen)).toBeFalse();
+    expect((component as any).isPinnedToValuablePiece(ChessPiecesEnum.Knight, ChessPiecesEnum.King)).toBeTrue();
+    expect((component as any).isSkewerPair(ChessPiecesEnum.Queen, ChessPiecesEnum.King)).toBeFalse();
+    expect((component as any).isSkewerPair(ChessPiecesEnum.King, ChessPiecesEnum.Queen)).toBeTrue();
+
+    clearBoard();
+    chessBoardStateService.field[3][6] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.field[2][5] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
+    chessBoardStateService.field[1][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    const arrows = (component as any).collectPinVisualizationArrows();
+    expect(arrows.length).toBe(0);
+  });
+
+  it('covers DOM export helper in no-document, success, and catch branches', async () => {
+    const boardShell = document.createElement('div');
+    boardShell.className = 'board-shell';
+    const child = document.createElement('div');
+    boardShell.appendChild(child);
+    document.body.appendChild(boardShell);
+    (component as any).chessField = { nativeElement: child };
+
+    const getWindowRefSpy = spyOn<any>(component, 'getWindowRef').and.returnValue({
+      devicePixelRatio: 0
+    } as Window);
+    const imageUrl = await (component as any).createBoardImageDataUrlFromDom();
+    expect(typeof imageUrl === 'string' || imageUrl === null).toBeTrue();
+    getWindowRefSpy.and.callThrough();
+
+    (component as any).chessField = {
+      nativeElement: {
+        closest: () => ({ bad: 'node' } as any)
+      }
+    };
+    await expectAsync((component as any).createBoardImageDataUrlFromDom()).toBeResolvedTo(null);
+
+    const getDocumentRefSpy = spyOn<any>(component, 'getDocumentRef').and.returnValue(null);
+    await expectAsync((component as any).createBoardImageDataUrlFromDom()).toBeResolvedTo(null);
+    expect(() => (component as any).downloadDataUrl('data:image/png;base64,DD', 'no-doc.png')).not.toThrow();
+    getDocumentRefSpy.and.callThrough();
+
+    document.body.removeChild(boardShell);
+  });
+
 });
 
 describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () => {

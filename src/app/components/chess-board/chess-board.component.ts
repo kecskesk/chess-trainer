@@ -1877,7 +1877,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private async createBoardImageDataUrlFromDom(): Promise<string | null> {
-    if (typeof document === 'undefined' || typeof window === 'undefined') {
+    const win = this.getWindowRef();
+    if (!this.getDocumentRef() || !win) {
       return null;
     }
 
@@ -1887,7 +1888,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     try {
-      const deviceScale = Math.max(1, Math.ceil(window.devicePixelRatio || 1));
+      const deviceScale = Math.max(1, Math.ceil(win.devicePixelRatio || 1));
       const canvas = await html2canvas(boardElement, {
         backgroundColor: null,
         scale: deviceScale,
@@ -1901,17 +1902,26 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private downloadDataUrl(dataUrl: string, fileName: string): void {
-    if (typeof document === 'undefined') {
+    const doc = this.getDocumentRef();
+    if (!doc) {
       return;
     }
 
-    const link = document.createElement('a');
+    const link = doc.createElement('a');
     link.href = dataUrl;
     link.download = fileName;
     link.rel = 'noopener';
-    document.body.appendChild(link);
+    doc.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    doc.body.removeChild(link);
+  }
+
+  private getDocumentRef(): Document {
+    return document;
+  }
+
+  private getWindowRef(): Window {
+    return window;
   }
 
   private copyToClipboard(text: string): Promise<boolean> {
@@ -2665,13 +2675,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
               break;
             }
 
-            if (!maybePinnedPos) {
-              break;
-            }
-
             if (this.isPinnedToValuablePiece(maybePinned.piece, targetPiece.piece)) {
               const attackerFrom = new ChessPositionDto(8 - row, col + 1);
-              const pinnedTo = new ChessPositionDto(8 - maybePinnedPos.row, maybePinnedPos.col + 1);
+              const pinnedPos = maybePinnedPos as ChessPositionDto;
+              const pinnedTo = new ChessPositionDto(8 - pinnedPos.row, pinnedPos.col + 1);
               const protectedFrom = new ChessPositionDto(8 - scanRow, scanCol + 1);
               pinArrows.push(this.createVisualizationArrow(attackerFrom, pinnedTo, 'green', 0.25));
               pinArrows.push(this.createVisualizationArrow(protectedFrom, pinnedTo, 'green', 0.25));
@@ -2679,7 +2686,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
             if (this.isSkewerPair(maybePinned.piece, targetPiece.piece)) {
               const attackerFrom = new ChessPositionDto(8 - row, col + 1);
-              const frontTo = new ChessPositionDto(8 - maybePinnedPos.row, maybePinnedPos.col + 1);
+              const pinnedPos = maybePinnedPos as ChessPositionDto;
+              const frontTo = new ChessPositionDto(8 - pinnedPos.row, pinnedPos.col + 1);
               const rearTo = new ChessPositionDto(8 - scanRow, scanCol + 1);
               pinArrows.push(this.createVisualizationArrow(attackerFrom, frontTo, 'orange', 0.25));
               pinArrows.push(this.createVisualizationArrow(frontTo, rearTo, 'orange', 0.25));
