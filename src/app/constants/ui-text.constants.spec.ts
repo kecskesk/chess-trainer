@@ -1,4 +1,5 @@
 import { UiText, mergeUiText, resetUiText } from './ui-text.constants';
+import { ChessBoardMessageConstants } from './chess.constants';
 
 const initialUiTextSnapshot = JSON.parse(JSON.stringify(UiText));
 
@@ -38,5 +39,14 @@ describe('ui-text.constants', () => {
     expect(UiText.app.brandTitle).toBe('');
     expect(UiText.recognition.loadingOpenings).toBe('');
     expect(UiText.message.checkmateWinner).toBe('');
+  });
+
+  it('formats check-aware no-legal-target message template', () => {
+    mergeUiText({
+      message: { noLegalTargetsWhileInCheckTemplate: 'In check: {piece} cannot solve it.' }
+    } as any);
+
+    expect(ChessBoardMessageConstants.noLegalTargetsWhileInCheckMessage('rook'))
+      .toBe('In check: rook cannot solve it.');
   });
 });

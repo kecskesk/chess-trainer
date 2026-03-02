@@ -13,6 +13,8 @@ import { ChessBoardCctUtils } from '../../utils/chess-board-cct.utils';
 import { ChessBoardHistoryService } from '../../services/chess-board-history.service';
 import { ChessBoardLogicUtils } from '../../utils/chess-board-logic.utils';
 import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
+import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
+import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -270,14 +272,14 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
   it('covers guard-return and active-status branches explicitly', () => {
     const source = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
     const target: any[] = [];
-    (component as any).movePieceBetweenCells(null, target);
+    ChessBoardComponentUtils.movePieceBetweenCells(null as any, target);
     expect(target.length).toBe(0);
 
     chessBoardStateService.boardHelper.gameOver = false;
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     expect(component.getStatusTitle()).toBe(`${component.uiText.status.white} ${component.uiText.status.toMoveSuffix}`);
 
-    (component as any).movePieceBetweenCells(source, target);
+    ChessBoardComponentUtils.movePieceBetweenCells(source, target);
     expect(source.length).toBe(0);
     expect(target.length).toBe(1);
   });
@@ -1331,6 +1333,23 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     expect(document.body.classList.contains('board-flipped-drag-active')).toBeFalse();
   });
 
+  it('runs requestAnimationFrame sync callback when flipping board', () => {
+    const originalRaf = (window as any).requestAnimationFrame;
+    (window as any).requestAnimationFrame = (cb: FrameRequestCallback) => {
+      cb(0);
+      return 0;
+    };
+    const syncSpy = spyOn<any>(component, 'syncFlippedDragClass').and.callThrough();
+    component.isDragPreviewActive = true;
+
+    try {
+      component.toggleBoardFlip();
+      expect(syncSpy.calls.count()).toBeGreaterThanOrEqual(2);
+    } finally {
+      (window as any).requestAnimationFrame = originalRaf;
+    }
+  });
+
   it('returns debug castling rights notation', () => {
     const castlingRights = component.getDebugCastlingRights();
     expect(typeof castlingRights).toBe('string');
@@ -2238,17 +2257,34 @@ describe('ChessBoardComponent branch coverage helpers (castling and debug guards
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     expect((component as any).getDragFailureReason(0, 0, { color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any))
       .toContain('white');
-    expect((component as any).parseFieldId('bad')).toBeNull();
-    expect((component as any).parseFieldId('fieldx0')).toBeNull();
+    expect(ChessBoardComponentUtils.parseFieldId('bad')).toBeNull();
+    expect(ChessBoardComponentUtils.parseFieldId('fieldx0')).toBeNull();
+  });
+
+  it('covers in-check drag-failure reason and active black status title branch', () => {
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    chessBoardStateService.boardHelper.gameOver = false;
+    expect(component.getStatusTitle()).toBe(`${component.uiText.status.black} ${component.uiText.status.toMoveSuffix}`);
+
+    const targetCountSpy = spyOn<any>(component, 'getLegalTargetCount').and.returnValue(0);
+    const inCheckSpy = spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
+    const reason = (component as any).getDragFailureReason(
+      0,
+      0,
+      { color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any
+    );
+    expect(reason).toBe(component.uiText.message.noLegalTargetsWhileInCheckTemplate.replace('{piece}', ChessPiecesEnum.Knight));
+    expect(targetCountSpy).toHaveBeenCalled();
+    expect(inCheckSpy).toHaveBeenCalled();
   });
 
   it('covers localStorage catch branches for debug panel persistence', () => {
     const getSpy = spyOn(localStorage, 'getItem').and.throwError('denied');
-    expect((component as any).readDebugPanelOpenState()).toBeFalse();
+    expect(ChessBoardStorageService.readDebugPanelOpenState('debug-panel-open')).toBeFalse();
     getSpy.and.callThrough();
 
     const setSpy = spyOn(localStorage, 'setItem').and.throwError('denied');
-    (component as any).persistDebugPanelOpenState(true);
+    ChessBoardStorageService.persistDebugPanelOpenState('debug-panel-open', true);
     setSpy.and.callThrough();
   });
 
@@ -3004,10 +3040,10 @@ describe('ChessBoardComponent preview presets and render slices', () => {
       piece: ChessPiecesEnum.Knight
     }));
 
-    expect((component as any).getPieceColorPreviewCell(7, 7)).toEqual([]);
+    expect(ChessBoardComponentUtils.getPieceColorPreviewCell(7, 7, component.renderedBoardRows, component.renderedBoardCols)).toEqual([]);
 
     component.previewBoardSize = 3;
-    expect((component as any).getPieceColorPreviewCell(2, 2)).toEqual([]);
+    expect(ChessBoardComponentUtils.getPieceColorPreviewCell(2, 2, component.renderedBoardRows, component.renderedBoardCols)).toEqual([]);
 
     component.previewRowAnchor = 'bottom';
     component.previewBoardSize = 2;

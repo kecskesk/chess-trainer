@@ -40,6 +40,8 @@ import { ChessBoardHistoryService } from '../../services/chess-board-history.ser
 import { ChessBoardOpeningUtils } from '../../utils/chess-board-opening.utils';
 import { ChessBoardInitializationUtils } from '../../utils/chess-board-initialization.utils';
 import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
+import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
+import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 
 @Component({
   selector: 'app-chess-board',
@@ -173,7 +175,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   ) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
-    this.isDebugPanelOpen = this.readDebugPanelOpenState();
+    this.isDebugPanelOpen = ChessBoardStorageService.readDebugPanelOpenState(this.debugPanelStorageKey);
     if (this.uiTextLoaderService) {
       this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
     }
@@ -217,8 +219,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    const targetPosition = this.parseFieldId(drop.id);
-    const sourcePosition = this.parseFieldId(drag.dropContainer.id);
+    const targetPosition = ChessBoardComponentUtils.parseFieldId(drop.id);
+    const sourcePosition = ChessBoardComponentUtils.parseFieldId(drag.dropContainer.id);
     if (!targetPosition || !sourcePosition) {
       return false;
     }
@@ -262,8 +264,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       !sourceId.startsWith(ChessBoardUiConstants.FIELD_ID_PREFIX) || !targetId.startsWith(ChessBoardUiConstants.FIELD_ID_PREFIX)) {
       return;
     }
-    const sourcePosition = this.parseFieldId(sourceId);
-    const targetPosition = this.parseFieldId(targetId);
+    const sourcePosition = ChessBoardComponentUtils.parseFieldId(sourceId);
+    const targetPosition = ChessBoardComponentUtils.parseFieldId(targetId);
     if (!sourcePosition || !targetPosition) {
       return;
     }
@@ -293,7 +295,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    const sourcePosition = this.parseFieldId(event.source.dropContainer.id);
+    const sourcePosition = ChessBoardComponentUtils.parseFieldId(event.source.dropContainer.id);
     if (!sourcePosition) {
       return;
     }
@@ -356,18 +358,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.applyPromotionAvailability(moveContext);
 
     const moveFlags = this.applyPreTransferBoardState(event, moveContext);
-    this.movePieceBetweenCells(event.previousContainer.data, event.container.data);
+    ChessBoardComponentUtils.movePieceBetweenCells(event.previousContainer.data, event.container.data);
     this.finalizeDropState(moveContext, moveFlags);
-  }
-
-  private movePieceBetweenCells(sourceCell: ChessPieceDto[], targetCell: ChessPieceDto[]): void {
-    if (!sourceCell || !targetCell || !sourceCell[0]) {
-      return;
-    }
-    const movingPiece = sourceCell[0];
-    sourceCell.splice(0, sourceCell.length);
-    targetCell.splice(0, targetCell.length);
-    targetCell.push(movingPiece);
   }
 
   private canProcessDropEvent(event: CdkDragDrop<ChessPieceDto[]>): boolean {
@@ -392,8 +384,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     srcPiece: ChessPiecesEnum;
     srcColor: ChessColorsEnum;
   } | null {
-    const targetPosition = this.parseFieldId(event.container.id);
-    const sourcePosition = this.parseFieldId(event.previousContainer.id);
+    const targetPosition = ChessBoardComponentUtils.parseFieldId(event.container.id);
+    const sourcePosition = ChessBoardComponentUtils.parseFieldId(event.previousContainer.id);
     const sourceData = event.previousContainer.data[0];
     if (!targetPosition || !sourcePosition || !sourceData) {
       return null;
@@ -631,39 +623,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return legalTargetCount;
   }
 
-  private parseFieldId(fieldId: string): { row: number, col: number } | null {
-    // Expected id format: `fieldRC`, where R=row digit and C=column digit.
-    // Example: `field34` => row=3, col=4.
-    if (!fieldId || !fieldId.startsWith(ChessBoardUiConstants.FIELD_ID_PREFIX) ||
-      fieldId.length < ChessBoardUiConstants.FIELD_ID_MIN_LENGTH) {
-      return null;
-    }
-    const row = Number(fieldId.charAt(ChessBoardUiConstants.FIELD_ID_ROW_INDEX));
-    const col = Number(fieldId.charAt(ChessBoardUiConstants.FIELD_ID_COL_INDEX));
-    if (isNaN(row) || isNaN(col) ||
-      row < ChessConstants.MIN_INDEX || row > ChessConstants.MAX_INDEX ||
-      col < ChessConstants.MIN_INDEX || col > ChessConstants.MAX_INDEX) {
-      return null;
-    }
-    return { row, col };
-  }
-
-  private readDebugPanelOpenState(): boolean {
-    try {
-      return localStorage.getItem(this.debugPanelStorageKey) === ChessBoardUiConstants.STORAGE_OPEN;
-    } catch {
-      return false;
-    }
-  }
-
-  private persistDebugPanelOpenState(isOpen: boolean): void {
-    try {
-      localStorage.setItem(this.debugPanelStorageKey, isOpen ? ChessBoardUiConstants.STORAGE_OPEN : ChessBoardUiConstants.STORAGE_CLOSED);
-    } catch {
-      return;
-    }
-  }
-
   isTarget(targetRow: number, targetCol: number): boolean {
     return this.hasBoardHighlight(targetRow, targetCol, 'possible');
   }
@@ -706,9 +665,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   getDisplayCell(displayRow: number, displayCol: number): ChessPieceDto[] {
     if (this.previewMode && this.previewPreset === 'piece-colors') {
-      return this.getPieceColorPreviewCell(displayRow, displayCol);
+      return ChessBoardComponentUtils.getPieceColorPreviewCell(
+        displayRow,
+        displayCol,
+        this.renderedBoardRows,
+        this.renderedBoardCols
+      );
     }
-    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
+    const { row: boardRow, col: boardCol } = ChessBoardComponentUtils.getDisplayBoardPosition(
+      displayRow,
+      displayCol,
+      this.isBoardFlipped
+    );
     return this.chessBoardStateService.field[boardRow][boardCol];
   }
 
@@ -718,52 +686,39 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getDisplayFieldId(displayRow: number, displayCol: number): string {
-    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
+    const { row: boardRow, col: boardCol } = ChessBoardComponentUtils.getDisplayBoardPosition(
+      displayRow,
+      displayCol,
+      this.isBoardFlipped
+    );
     return `${ChessBoardUiConstants.FIELD_ID_PREFIX}${boardRow}${boardCol}`;
   }
 
   getDisplaySquareHighlightClass(displayRow: number, displayCol: number): string {
-    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
+    const { row: boardRow, col: boardCol } = ChessBoardComponentUtils.getDisplayBoardPosition(
+      displayRow,
+      displayCol,
+      this.isBoardFlipped
+    );
     return this.getSquareHighlightClass(boardRow, boardCol);
   }
 
   isDisplaySquareWhite(displayRow: number, displayCol: number): boolean {
-    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
+    const { row: boardRow, col: boardCol } = ChessBoardComponentUtils.getDisplayBoardPosition(
+      displayRow,
+      displayCol,
+      this.isBoardFlipped
+    );
     return this.isWhiteSquare(boardRow, boardCol);
   }
 
   getDisplayNotation(displayRow: number, displayCol: number): string {
-    const { row: boardRow, col: boardCol } = this.getDisplayBoardPosition(displayRow, displayCol);
+    const { row: boardRow, col: boardCol } = ChessBoardComponentUtils.getDisplayBoardPosition(
+      displayRow,
+      displayCol,
+      this.isBoardFlipped
+    );
     return this.translateFieldNames(boardRow, boardCol);
-  }
-
-  private getDisplayBoardPosition(displayRow: number, displayCol: number): { row: number, col: number } {
-    return {
-      row: ChessBoardDisplayUtils.getBoardIndexForDisplay(displayRow, this.isBoardFlipped),
-      col: ChessBoardDisplayUtils.getBoardIndexForDisplay(displayCol, this.isBoardFlipped)
-    };
-  }
-
-  private getPieceColorPreviewCell(displayRow: number, displayCol: number): ChessPieceDto[] {
-    const rowIndex = this.renderedBoardRows.indexOf(displayRow);
-    const colIndex = this.renderedBoardCols.indexOf(displayCol);
-    if (rowIndex < 0 || colIndex < 0) {
-      return [];
-    }
-
-    if (rowIndex === 0 && colIndex === 0) {
-      return [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Rook)];
-    }
-    if (rowIndex === 0 && colIndex === 1) {
-      return [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)];
-    }
-    if (rowIndex === 1 && colIndex === 0) {
-      return [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
-    }
-    if (rowIndex === 1 && colIndex === 1) {
-      return [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)];
-    }
-    return [];
   }
 
   getArrowTopForDisplay(arrow: ChessArrowDto): string {
@@ -782,7 +737,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   onDebugPanelToggle(event: Event): void {
     const detailsElement = event && event.target ? event.target as HTMLDetailsElement : null;
     this.isDebugPanelOpen = !!(detailsElement && detailsElement.open);
-    this.persistDebugPanelOpenState(this.isDebugPanelOpen);
+    ChessBoardStorageService.persistDebugPanelOpenState(this.debugPanelStorageKey, this.isDebugPanelOpen);
   }
 
   getStatusTitle(): string {
@@ -1212,7 +1167,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   getAnalysisMeterOffsetPercent(): number {
     const evalText = this.getCurrentAnalysisEvalText();
-    const pawns = this.parseEvaluationPawns(evalText);
+    const pawns = ChessBoardComponentUtils.parseEvaluationPawns(
+      evalText,
+      this.pendingEvaluationPlaceholder,
+      this.evaluationErrorPlaceholder,
+      ChessBoardComponent.NA_PLACEHOLDER,
+      this.analysisClampPawns
+    );
     if (pawns === null) {
       return 50;
     }
@@ -1220,56 +1181,22 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return ((clamped + this.analysisClampPawns) / (2 * this.analysisClampPawns)) * 100;
   }
 
-  private parseEvaluationPawns(evalText: string): number | null {
-    if (!evalText || evalText === this.pendingEvaluationPlaceholder ||
-      evalText === this.evaluationErrorPlaceholder || evalText === ChessBoardComponent.NA_PLACEHOLDER) {
-      return null;
-    }
-    if (evalText.startsWith('#')) {
-      return evalText.includes('-') ? -this.analysisClampPawns : this.analysisClampPawns;
-    }
-    const numeric = Number(evalText);
-    if (Number.isNaN(numeric)) {
-      return null;
-    }
-    return numeric;
-  }
-
   private getMoveQuality(halfMoveIndex: number): { label: string; className: string } | null {
-    if (halfMoveIndex < 1) {
-      return null;
-    }
-
-    const previousEval = this.parseEvaluationPawns(this.getEvaluationForMove(halfMoveIndex - 1));
-    const currentEval = this.parseEvaluationPawns(this.getEvaluationForMove(halfMoveIndex));
-    if (previousEval === null || currentEval === null) {
-      return null;
-    }
-
-    const movedByWhite = (halfMoveIndex % 2) === 0;
-    const improvement = movedByWhite
-      ? (currentEval - previousEval)
-      : (previousEval - currentEval);
-
-    if (improvement >= 3) {
-      return { label: 'genius', className: 'history-quality--genius' };
-    }
-    if (improvement >= 1) {
-      return { label: 'great', className: 'history-quality--great' };
-    }
-    if (improvement >= 0.5) {
-      return { label: 'good', className: 'history-quality--good' };
-    }
-    if (improvement <= -3) {
-      return { label: 'blunder', className: 'history-quality--blunder' };
-    }
-    if (improvement <= -1) {
-      return { label: 'mistake', className: 'history-quality--mistake' };
-    }
-    if (improvement <= -0.5) {
-      return { label: 'small error', className: 'history-quality--small-error' };
-    }
-    return null;
+    const previousEval = ChessBoardComponentUtils.parseEvaluationPawns(
+      this.getEvaluationForMove(halfMoveIndex - 1),
+      this.pendingEvaluationPlaceholder,
+      this.evaluationErrorPlaceholder,
+      ChessBoardComponent.NA_PLACEHOLDER,
+      this.analysisClampPawns
+    );
+    const currentEval = ChessBoardComponentUtils.parseEvaluationPawns(
+      this.getEvaluationForMove(halfMoveIndex),
+      this.pendingEvaluationPlaceholder,
+      this.evaluationErrorPlaceholder,
+      ChessBoardComponent.NA_PLACEHOLDER,
+      this.analysisClampPawns
+    );
+    return ChessBoardComponentUtils.getMoveQuality(halfMoveIndex, previousEval, currentEval);
   }
 
   toggleBoardFlip(): void {

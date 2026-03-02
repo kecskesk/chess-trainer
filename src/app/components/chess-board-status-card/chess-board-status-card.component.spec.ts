@@ -29,6 +29,13 @@ describe('ChessBoardStatusCardComponent', () => {
 
     component.boardState = {
       colorTurn: ChessColorsEnum.Black,
+      gameOver: false,
+      checkmateColor: null
+    };
+    expect(component.statusTitle).toBe(`${component.uiText.status.black} ${component.uiText.status.toMoveSuffix}`);
+
+    component.boardState = {
+      colorTurn: ChessColorsEnum.Black,
       gameOver: true,
       checkmateColor: ChessColorsEnum.White
     };
