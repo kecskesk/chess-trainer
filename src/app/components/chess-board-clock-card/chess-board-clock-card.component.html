@@ -12,28 +12,31 @@
         <span class="analysis-meter__side analysis-meter__side--top">{{uiText.clock.black}}</span>
         <div class="analysis-meter__bar">
           <div class="analysis-meter__marker"
-               [style.top.%]="getAnalysisMeterOffsetPercent()"
-               [attr.title]="'SF ' + getCurrentAnalysisEvalText()"></div>
+               [style.top.%]="analysisMeterOffsetPercent"
+               [attr.title]="'SF ' + currentAnalysisEvalText"></div>
         </div>
         <span class="analysis-meter__side analysis-meter__side--bottom">{{uiText.clock.white}}</span>
-        <span class="analysis-meter__value">SF {{getCurrentAnalysisEvalText()}}</span>
+        <span class="analysis-meter__value">
+          <span class="analysis-meter__label">SF</span>
+          <span class="analysis-meter__score">{{currentAnalysisEvalText}}</span>
+        </span>
       </div>
       <div class="clock-stack">
         <div class="clock-display"
-             [class.clock-display--active]="isClockActive(chessColors.Black)"
-             [class.clock-display--low]="isClockLow(chessColors.Black)">
+             [class.clock-display--active]="isBlackClockActive"
+             [class.clock-display--low]="isBlackClockLow">
           <div class="clock-meta">
             <span class="clock-player">{{uiText.clock.black}}</span>
-            <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.Black)"></span>
+            <span class="clock-status" [class.clock-status--running]="isBlackClockActive"></span>
           </div>
           <span class="clock-time">{{formatClock(blackClockMs)}}</span>
         </div>
         <div class="clock-display"
-             [class.clock-display--active]="isClockActive(chessColors.White)"
-             [class.clock-display--low]="isClockLow(chessColors.White)">
+             [class.clock-display--active]="isWhiteClockActive"
+             [class.clock-display--low]="isWhiteClockLow">
           <div class="clock-meta">
             <span class="clock-player">{{uiText.clock.white}}</span>
-            <span class="clock-status" [class.clock-status--running]="isClockActive(chessColors.White)"></span>
+            <span class="clock-status" [class.clock-status--running]="isWhiteClockActive"></span>
           </div>
           <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
         </div>

@@ -153,11 +153,26 @@
 }
 
 .analysis-meter__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10px;
   font-weight: 700;
   color: #d7e7ff;
   letter-spacing: 0.3px;
   white-space: nowrap;
+}
+
+.analysis-meter__label {
+  opacity: 0.92;
+}
+
+.analysis-meter__score {
+  display: inline-block;
+  width: 6ch;
+  text-align: right;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .clock-controls {
@@ -187,13 +202,12 @@
   background: rgba(9, 14, 28, 0.88);
   padding: 8px 10px;
   gap: 4px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .clock-display--active {
   border-color: rgba(148, 187, 255, 0.78);
   box-shadow: 0 0 0 1px rgba(148, 187, 255, 0.24), 0 0 10px rgba(65, 100, 190, 0.22);
-  transform: translateY(-1px);
 }
 
 .clock-display--low {

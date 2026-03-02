@@ -17,7 +17,6 @@ export class ChessBoardToolsCardComponent {
   @Input() suggestedMoves: string[] = [];
   @Input() openingRecognition = '';
   @Input() endgameRecognition = '';
-  @Input() getSuggestedMoveClass!: (move: string) => string;
 
   @Output() promotePiece = new EventEmitter<string>();
   @Output() showThreats = new EventEmitter<boolean>();
@@ -31,4 +30,18 @@ export class ChessBoardToolsCardComponent {
   @Output() exportFen = new EventEmitter<void>();
   @Output() previewMove = new EventEmitter<string>();
   @Output() clearPreview = new EventEmitter<void>();
+
+  getSuggestedMoveClass(move: string): string {
+    if (!move) {
+      return 'suggested-move--threat';
+    }
+    const normalized = move.replace(/^\.\.\./, '');
+    if (normalized.includes('+')) {
+      return 'suggested-move--check';
+    }
+    if (normalized.includes('x')) {
+      return 'suggested-move--capture';
+    }
+    return 'suggested-move--threat';
+  }
 }
