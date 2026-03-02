@@ -6,6 +6,7 @@ import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { Observable, of, throwError } from 'rxjs';
 import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
+import { ElementRef } from '@angular/core';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -3008,6 +3009,21 @@ describe('ChessBoardComponent preview presets and render slices', () => {
     component.previewBoardSize = 0;
     expect(component.renderedBoardRows).toEqual([7]);
     expect(component.renderedBoardCols).toEqual([0]);
+  });
+});
+
+describe('ChessBoardComponent branch coverage helpers (history element resolution)', () => {
+  it('returns native element when historyLog is an ElementRef', () => {
+    const nativeElement = document.createElement('div');
+    (component as any).historyLog = new ElementRef<HTMLDivElement>(nativeElement);
+
+    expect((component as any).resolveHistoryElement()).toBe(nativeElement);
+  });
+
+  it('returns null for non-element historyLog without getHistoryElement', () => {
+    (component as any).historyLog = { value: 1 };
+
+    expect((component as any).resolveHistoryElement()).toBeNull();
   });
 });
 

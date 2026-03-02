@@ -17,4 +17,11 @@ describe('ChessBoardToolsCardComponent', () => {
     expect(previewSpy).toHaveBeenCalledWith('Qh5+');
     expect(clearSpy).toHaveBeenCalled();
   });
+
+  it('classifies suggested moves by notation markers', () => {
+    expect(component.getSuggestedMoveClass('')).toBe('suggested-move--threat');
+    expect(component.getSuggestedMoveClass('...Qh5+')).toBe('suggested-move--check');
+    expect(component.getSuggestedMoveClass('Nxe5')).toBe('suggested-move--capture');
+    expect(component.getSuggestedMoveClass('Re1')).toBe('suggested-move--threat');
+  });
 });
