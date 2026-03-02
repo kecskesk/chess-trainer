@@ -32,29 +32,10 @@ import { ChessBoardStatusCardComponent } from '../chess-board-status-card/chess-
 import { ChessBoardToolsCardComponent } from '../chess-board-tools-card/chess-board-tools-card.component';
 import { ChessBoardHistoryCardComponent } from '../chess-board-history-card/chess-board-history-card.component';
 import { ChessBoardCctCardComponent } from '../chess-board-cct-card/chess-board-cct-card.component';
-
-interface IBoardHelperSnapshot {
-  debugText: string;
-  history: {[name: string]: string};
-  colorTurn: ChessColorsEnum;
-  canPromote: number | null;
-  justDidEnPassant: ChessPositionDto | null;
-  justDidCastle: ChessPositionDto | null;
-  gameOver: boolean;
-  checkmateColor: ChessColorsEnum | null;
-}
-
-interface IGameplaySnapshot {
-  field: ChessPieceDto[][][];
-  boardHelper: IBoardHelperSnapshot;
-  repetitionCounts: {[positionKey: string]: number};
-  trackedHistoryLength: number;
-  pendingDrawOfferBy: ChessColorsEnum | null;
-  clockStarted: boolean;
-  clockRunning: boolean;
-  whiteClockMs: number;
-  blackClockMs: number;
-}
+import { IGameplaySnapshot } from '../../model/interfaces/chess-board-gameplay-snapshot.interface';
+import { ChessBoardLogicUtils } from '../../utils/chess-board-logic.utils';
+import { ChessBoardSnapshotService } from '../../services/chess-board-snapshot.service';
+import { ChessBoardCctUtils } from '../../utils/chess-board-cct.utils';
 
 @Component({
   selector: 'app-chess-board',
@@ -2068,52 +2049,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private parseSuggestedMove(move: string): { piece: ChessPiecesEnum, targetRow: number, targetCol: number } | null {
-    const normalized = move.replace(/^\.\.\./, '').replace(/[+#?!]/g, '');
-    const targetMatch = normalized.match(/([a-h][1-8])$/);
-    if (!targetMatch) {
-      return null;
-    }
-
-    const targetSquare = targetMatch[1];
-    const fileChar = targetSquare.charAt(0);
-    const rankChar = targetSquare.charAt(1);
-    const targetCol = fileChar.charCodeAt(0) - 'a'.charCodeAt(0);
-    const targetRow = ChessConstants.BOARD_SIZE - Number(rankChar);
-    if (targetCol < ChessConstants.MIN_INDEX || targetCol > ChessConstants.MAX_INDEX ||
-      targetRow < ChessConstants.MIN_INDEX || targetRow > ChessConstants.MAX_INDEX) {
-      return null;
-    }
-
-    const pieceChar = normalized.charAt(0);
-    let piece = ChessPiecesEnum.Pawn;
-    if (pieceChar === 'K') {
-      piece = ChessPiecesEnum.King;
-    } else if (pieceChar === 'Q') {
-      piece = ChessPiecesEnum.Queen;
-    } else if (pieceChar === 'R') {
-      piece = ChessPiecesEnum.Rook;
-    } else if (pieceChar === 'B') {
-      piece = ChessPiecesEnum.Bishop;
-    } else if (pieceChar === 'N') {
-      piece = ChessPiecesEnum.Knight;
-    }
-
-    return { piece, targetRow, targetCol };
+    return ChessBoardCctUtils.parseSuggestedMove(move);
   }
 
   private pickTopCctRecommendations(items: ICctRecommendationScored[]): ICctRecommendation[] {
-    const bestByMove: {[move: string]: ICctRecommendationScored} = {};
-    items.forEach(item => {
-      const existing = bestByMove[item.move];
-      if (!existing || item.score > existing.score) {
-        bestByMove[item.move] = item;
-      }
-    });
-
-    return Object.values(bestByMove)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
-      .map(item => ({ move: item.move, tooltip: item.tooltip }));
+    return ChessBoardCctUtils.pickTopRecommendations(items);
   }
 
   private getThreatenedEnemyPiecesByMovedPiece(
@@ -2123,37 +2063,24 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     attackerColor: ChessColorsEnum,
     enemyColor: ChessColorsEnum
   ): ChessPiecesEnum[] {
-    const sourceCell = board[sourceRow][sourceCol];
-    if (!(sourceCell && sourceCell[0])) {
-      return [];
-    }
-
-    const sourcePiece = sourceCell[0];
-    const threatenedPieces: ChessPiecesEnum[] = [];
-    for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-      for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-        const targetCell = board[targetRow][targetCol];
-        if (!(targetCell && targetCell[0] && targetCell[0].color === enemyColor)) {
-          continue;
-        }
-
-        const canAttack = this.withBoardContext(board, attackerColor, () =>
+    return ChessBoardCctUtils.getThreatenedEnemyPiecesByMovedPiece(
+      board,
+      sourceRow,
+      sourceCol,
+      attackerColor,
+      enemyColor,
+      (targetRow, targetCol, targetCell, sourceRowArg, sourceColArg, sourcePiece, attackerColorArg) =>
+        this.withBoardContext(board, attackerColorArg, () =>
           ChessRulesService.canStepThere(
             targetRow,
             targetCol,
             targetCell,
-            sourceRow,
-            sourceCol,
+            sourceRowArg,
+            sourceColArg,
             new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
           )
-        );
-        if (canAttack) {
-          threatenedPieces.push(targetCell[0].piece);
-        }
-      }
-    }
-
-    return threatenedPieces;
+        )
+    );
   }
 
   private formatCctMove(
@@ -2165,66 +2092,19 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     isCapture: boolean,
     isCheck: boolean
   ): string {
-    const to = this.toAlgebraicSquare(targetRow, targetCol);
-    const pieceNotation = this.pieceNotation(piece);
-    let notation = '';
-
-    if (piece === ChessPiecesEnum.Pawn) {
-      const from = this.toAlgebraicSquare(srcRow, srcCol);
-      notation = isCapture ? `${from.charAt(0)}x${to}` : to;
-    } else {
-      notation = `${pieceNotation}${isCapture ? 'x' : ''}${to}`;
-    }
-
-    if (isCheck) {
-      notation += '+';
-    }
-
-    return notation;
+    return ChessBoardCctUtils.formatCctMove(piece, srcRow, srcCol, targetRow, targetCol, isCapture, isCheck);
   }
 
   private toAlgebraicSquare(row: number, col: number): string {
-    const file = String.fromCharCode('a'.charCodeAt(0) + col);
-    const rank = ChessConstants.BOARD_SIZE - row;
-    return `${file}${rank}`;
+    return ChessBoardCctUtils.toAlgebraicSquare(row, col);
   }
 
   private pieceNotation(piece: ChessPiecesEnum): string {
-    if (piece === ChessPiecesEnum.King) {
-      return 'K';
-    }
-    if (piece === ChessPiecesEnum.Queen) {
-      return 'Q';
-    }
-    if (piece === ChessPiecesEnum.Rook) {
-      return 'R';
-    }
-    if (piece === ChessPiecesEnum.Bishop) {
-      return 'B';
-    }
-    if (piece === ChessPiecesEnum.Knight) {
-      return 'N';
-    }
-    return '';
+    return ChessBoardCctUtils.pieceNotation(piece);
   }
 
   private pieceName(piece: ChessPiecesEnum): string {
-    if (piece === ChessPiecesEnum.King) {
-      return 'king';
-    }
-    if (piece === ChessPiecesEnum.Queen) {
-      return 'queen';
-    }
-    if (piece === ChessPiecesEnum.Rook) {
-      return 'rook';
-    }
-    if (piece === ChessPiecesEnum.Bishop) {
-      return 'bishop';
-    }
-    if (piece === ChessPiecesEnum.Knight) {
-      return 'knight';
-    }
-    return 'pawn';
+    return ChessBoardCctUtils.pieceName(piece);
   }
 
   resign(color: ChessColorsEnum): void {
@@ -3397,28 +3277,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private generateFenFromSnapshot(snapshot: IGameplaySnapshot): string {
-    if (!(snapshot && snapshot.boardHelper && snapshot.field)) {
-      return '8/8/8/8/8/8/8/8 w - - 0 1';
-    }
-    const historyEntries = snapshot.boardHelper.history || {};
-    const history = Object.values(historyEntries);
-    const castlingRights = ChessRulesService.getCastlingRightsNotation(snapshot.field, historyEntries);
-    const enPassantRights = ChessRulesService.getEnPassantRightsNotation(
-      snapshot.field,
-      historyEntries,
-      snapshot.boardHelper.colorTurn
-    );
-    const plyCount = ChessFenUtils.getPlyCountFromHistory(history);
-    const fullmoveNumber = ChessFenUtils.getFullmoveNumberFromPlyCount(plyCount);
-    const halfmoveClock = ChessFenUtils.getHalfmoveClockFromHistory(history);
-    return ChessFenUtils.generateFen(
-      snapshot.field,
-      snapshot.boardHelper.colorTurn,
-      castlingRights,
-      enPassantRights,
-      halfmoveClock,
-      fullmoveNumber
-    );
+    return ChessBoardLogicUtils.generateFenFromSnapshot(snapshot);
   }
 
   private getActiveSnapshotIndex(): number {
@@ -3434,60 +3293,31 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private captureCurrentSnapshot(): IGameplaySnapshot {
-    const boardHelper = this.chessBoardStateService.boardHelper;
-    return {
-      field: this.cloneField(this.chessBoardStateService.field),
-      boardHelper: {
-        debugText: boardHelper ? boardHelper.debugText : '',
-        history: boardHelper && boardHelper.history ? { ...boardHelper.history } : {},
-        colorTurn: boardHelper ? boardHelper.colorTurn : ChessColorsEnum.White,
-        canPromote: boardHelper && boardHelper.canPromote !== undefined ? boardHelper.canPromote : null,
-        justDidEnPassant: this.clonePosition(boardHelper ? boardHelper.justDidEnPassant : null),
-        justDidCastle: this.clonePosition(boardHelper ? boardHelper.justDidCastle : null),
-        gameOver: !!(boardHelper && boardHelper.gameOver),
-        checkmateColor: boardHelper ? boardHelper.checkmateColor : null
-      },
-      repetitionCounts: { ...this.repetitionCounts },
-      trackedHistoryLength: this.trackedHistoryLength,
-      pendingDrawOfferBy: this.pendingDrawOfferBy,
-      clockStarted: this.clockStarted,
-      clockRunning: this.clockRunning,
-      whiteClockMs: this.whiteClockMs,
-      blackClockMs: this.blackClockMs
-    };
+    return ChessBoardSnapshotService.captureSnapshot(
+      this.chessBoardStateService,
+      this.repetitionCounts,
+      this.trackedHistoryLength,
+      this.pendingDrawOfferBy,
+      this.clockStarted,
+      this.clockRunning,
+      this.whiteClockMs,
+      this.blackClockMs
+    );
   }
 
   private restoreSnapshot(snapshot: IGameplaySnapshot): void {
-    if (!snapshot || !this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+    const restoredState = ChessBoardSnapshotService.restoreSnapshot(snapshot, this.chessBoardStateService);
+    if (!restoredState) {
       return;
     }
-
-    this.chessBoardStateService.field = this.cloneField(snapshot.field);
-    ChessBoardStateService.CHESS_FIELD = this.chessBoardStateService.field;
-
-    const boardHelper = this.chessBoardStateService.boardHelper;
-    boardHelper.debugText = snapshot.boardHelper.debugText;
-    boardHelper.possibles = {};
-    boardHelper.hits = {};
-    boardHelper.checks = {};
-    boardHelper.arrows = {};
-    boardHelper.history = { ...snapshot.boardHelper.history };
-    boardHelper.colorTurn = snapshot.boardHelper.colorTurn;
-    boardHelper.canPromote = snapshot.boardHelper.canPromote;
-    boardHelper.justDidEnPassant = this.clonePosition(snapshot.boardHelper.justDidEnPassant);
-    boardHelper.justDidCastle = this.clonePosition(snapshot.boardHelper.justDidCastle);
-    boardHelper.gameOver = snapshot.boardHelper.gameOver;
-    boardHelper.checkmateColor = snapshot.boardHelper.checkmateColor;
-    ChessBoardStateService.BOARD_HELPER = boardHelper;
-
-    this.pendingDrawOfferBy = snapshot.pendingDrawOfferBy;
+    this.pendingDrawOfferBy = restoredState.pendingDrawOfferBy;
     this.resignConfirmColor = null;
-    this.repetitionCounts = { ...snapshot.repetitionCounts };
-    this.trackedHistoryLength = snapshot.trackedHistoryLength;
-    this.clockStarted = snapshot.clockStarted;
-    this.whiteClockMs = snapshot.whiteClockMs;
-    this.blackClockMs = snapshot.blackClockMs;
-    if (snapshot.clockRunning) {
+    this.repetitionCounts = restoredState.repetitionCounts;
+    this.trackedHistoryLength = restoredState.trackedHistoryLength;
+    this.clockStarted = restoredState.clockStarted;
+    this.whiteClockMs = restoredState.whiteClockMs;
+    this.blackClockMs = restoredState.blackClockMs;
+    if (restoredState.shouldRunClock) {
       this.startClock();
     } else {
       this.stopClock();
@@ -3495,34 +3325,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private cloneField(field: ChessPieceDto[][][]): ChessPieceDto[][][] {
-    if (!field) {
-      return [];
-    }
-    return field.map(row => row.map(cell => {
-      if (!(cell && cell[0])) {
-        return [];
-      }
-      return [new ChessPieceDto(cell[0].color, cell[0].piece)];
-    }));
+    return ChessBoardLogicUtils.cloneField(field);
   }
 
   private clonePosition(position: ChessPositionDto | null): ChessPositionDto | null {
-    if (!position) {
-      return null;
-    }
-    return { row: position.row, col: position.col };
+    return ChessBoardLogicUtils.clonePosition(position);
   }
 
   private getCurrentPieceCount(): number {
-    let totalPieces = 0;
-    this.chessBoardStateService.field.forEach(row => {
-      row.forEach(cell => {
-        if (cell && cell[0]) {
-          totalPieces += 1;
-        }
-      });
-    });
-    return totalPieces;
+    return ChessBoardLogicUtils.getCurrentPieceCount(this.chessBoardStateService.field);
   }
 
   private ensureRepetitionTrackingState(): void {
@@ -3583,27 +3394,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getPositionKey(board: ChessPieceDto[][][], turn: ChessColorsEnum): string {
-    const squares: string[] = [];
-    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
-      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
-        const cell = board[row][col];
-        if (!(cell && cell[0])) {
-          continue;
-        }
-        const piece = cell[0];
-        squares.push(`${row}${col}:${piece.color}${piece.piece}`);
-      }
-    }
-    const castlingRights = ChessRulesService.getCastlingRightsNotation(
+    return ChessBoardLogicUtils.getPositionKey(
       board,
+      turn,
       this.chessBoardStateService.boardHelper ? this.chessBoardStateService.boardHelper.history : {}
     );
-    const enPassantRights = ChessRulesService.getEnPassantRightsNotation(
-      board,
-      this.chessBoardStateService.boardHelper ? this.chessBoardStateService.boardHelper.history : {},
-      turn
-    );
-    return `${turn}|${castlingRights}|${enPassantRights}|${squares.join('|')}`;
   }
 
   private isFiftyMoveRule(): boolean {
@@ -3625,79 +3420,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private isNonPawnNonCaptureMove(notation: string): boolean {
-    if (!notation || !ChessMoveNotation.isValidLongNotation(notation) || notation.includes('x')) {
-      return false;
-    }
-
-    if (notation === 'O-O' || notation === 'O-O-O') {
-      return true;
-    }
-
-    const pieceMovePrefix = notation.charAt(0);
-    return pieceMovePrefix === 'K' || pieceMovePrefix === 'Q' || pieceMovePrefix === 'R' ||
-      pieceMovePrefix === 'B' || pieceMovePrefix === 'N';
+    return ChessBoardLogicUtils.isNonPawnNonCaptureMove(notation);
   }
 
   private isInsufficientMaterial(board: ChessPieceDto[][][]): boolean {
-    const whiteMinorPieces: {piece: ChessPiecesEnum, row: number, col: number}[] = [];
-    const blackMinorPieces: {piece: ChessPiecesEnum, row: number, col: number}[] = [];
-    let whiteHasMajorOrPawn = false;
-    let blackHasMajorOrPawn = false;
-
-    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
-      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
-        const cell = board[row][col];
-        if (!(cell && cell[0])) {
-          continue;
-        }
-        const piece = cell[0];
-        if (piece.piece === ChessPiecesEnum.King) {
-          continue;
-        }
-        const isMinorPiece = piece.piece === ChessPiecesEnum.Bishop || piece.piece === ChessPiecesEnum.Knight;
-        if (!isMinorPiece) {
-          if (piece.color === ChessColorsEnum.White) {
-            whiteHasMajorOrPawn = true;
-          } else {
-            blackHasMajorOrPawn = true;
-          }
-          continue;
-        }
-        if (piece.color === ChessColorsEnum.White) {
-          whiteMinorPieces.push({ piece: piece.piece, row, col });
-        } else {
-          blackMinorPieces.push({ piece: piece.piece, row, col });
-        }
-      }
-    }
-
-    if (whiteHasMajorOrPawn || blackHasMajorOrPawn) {
-      return false;
-    }
-
-    const totalMinorCount = whiteMinorPieces.length + blackMinorPieces.length;
-    if (totalMinorCount === 0) {
-      return true;
-    }
-
-    if (totalMinorCount === 1) {
-      return true;
-    }
-
-    if (totalMinorCount === 2) {
-      if (whiteMinorPieces.length === 1 && blackMinorPieces.length === 1) {
-        return true;
-      }
-
-      if (whiteMinorPieces.length === 2 && blackMinorPieces.length === 0) {
-        return whiteMinorPieces.every(minorPiece => minorPiece.piece === ChessPiecesEnum.Knight);
-      }
-
-      if (blackMinorPieces.length === 2 && whiteMinorPieces.length === 0) {
-        return blackMinorPieces.every(minorPiece => minorPiece.piece === ChessPiecesEnum.Knight);
-      }
-    }
-
-    return false;
+    return ChessBoardLogicUtils.isInsufficientMaterial(board);
   }
 }
