@@ -176,6 +176,7 @@ const UiTextDefaults = {
     checkmateCallout: '',
     turnMessageTemplate: '',
     noLegalTargetsTemplate: '',
+    noLegalTargetsWhileInCheckTemplate: '',
     checkmateWinner: '',
     resigns: '',
     resignsNoPeriod: '',

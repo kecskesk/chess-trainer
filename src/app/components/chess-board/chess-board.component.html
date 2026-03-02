@@ -73,6 +73,7 @@
   <section class="sidebar-panel" *ngIf="!previewMode">
     <app-chess-board-clock-card
       [uiText]="uiText"
+      [selectedLocale]="selectedLocale"
       [chessColors]="chessColors"
       [selectedClockPresetLabel]="selectedClockPresetLabel"
       [clockStarted]="clockStarted"
@@ -91,6 +92,7 @@
 
     <app-chess-board-status-card
       [uiText]="uiText"
+      [selectedLocale]="selectedLocale"
       [boardState]="chessBoardStateService.boardHelper"
       [currentTurnColor]="chessBoardStateService.boardHelper.colorTurn"
       [pendingDrawOfferBy]="pendingDrawOfferBy"

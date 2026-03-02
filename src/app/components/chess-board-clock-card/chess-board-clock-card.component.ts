@@ -13,6 +13,7 @@ import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 })
 export class ChessBoardClockCardComponent {
   @Input() uiText: typeof UiText = UiText;
+  @Input() selectedLocale = '';
   @Input() chessColors: typeof ChessColorsEnum = ChessColorsEnum;
   @Input() selectedClockPresetLabel = '';
   @Input() clockStarted = false;

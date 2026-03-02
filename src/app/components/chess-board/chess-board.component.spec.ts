@@ -7,6 +7,12 @@ import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { Observable, of, throwError } from 'rxjs';
 import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { ElementRef } from '@angular/core';
+import { ChessBoardDisplayUtils } from '../../utils/chess-board-display.utils';
+import { ChessBoardOpeningUtils } from '../../utils/chess-board-opening.utils';
+import { ChessBoardCctUtils } from '../../utils/chess-board-cct.utils';
+import { ChessBoardHistoryService } from '../../services/chess-board-history.service';
+import { ChessBoardLogicUtils } from '../../utils/chess-board-logic.utils';
+import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -215,18 +221,18 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
 
   it('covers private flip mapping branches and related helpers', () => {
     component.isBoardFlipped = false;
-    expect((component as any).mapPercentCoordinateForDisplay('25%')).toBe('25%');
-    expect((component as any).mapRotationForDisplay('30deg')).toBe('30deg');
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('25%', component.isBoardFlipped)).toBe('25%');
+    expect(ChessBoardDisplayUtils.mapRotationForDisplay('30deg', component.isBoardFlipped)).toBe('30deg');
 
     component.isBoardFlipped = true;
-    expect((component as any).getBoardIndexForDisplay(2)).toBe(5);
-    expect((component as any).mapPercentCoordinateForDisplay('')).toBe('');
-    expect((component as any).mapPercentCoordinateForDisplay('text')).toBe('text');
-    expect((component as any).mapPercentCoordinateForDisplay('-20%')).toBe('120%');
+    expect(ChessBoardDisplayUtils.getBoardIndexForDisplay(2, component.isBoardFlipped)).toBe(5);
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('', component.isBoardFlipped)).toBe('');
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('text', component.isBoardFlipped)).toBe('text');
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('-20%', component.isBoardFlipped)).toBe('120%');
 
-    expect((component as any).mapRotationForDisplay('text')).toBe('text');
-    expect((component as any).mapRotationForDisplay('-300deg')).toBe('240deg');
-    expect((component as any).mapRotationForDisplay('540deg')).toBe('0deg');
+    expect(ChessBoardDisplayUtils.mapRotationForDisplay('text', component.isBoardFlipped)).toBe('text');
+    expect(ChessBoardDisplayUtils.mapRotationForDisplay('-300deg', component.isBoardFlipped)).toBe('240deg');
+    expect(ChessBoardDisplayUtils.mapRotationForDisplay('540deg', component.isBoardFlipped)).toBe('0deg');
 
     expect(component.translateFieldNames(6, 4)).toBe('e2');
     expect(component.formatClock(65000)).toBe('01:05');
@@ -269,7 +275,7 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
 
     chessBoardStateService.boardHelper.gameOver = false;
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-    expect(component.getStatusTitle()).toBe(`${ChessColorsEnum.White} ${component.uiText.status.toMoveSuffix}`);
+    expect(component.getStatusTitle()).toBe(`${component.uiText.status.white} ${component.uiText.status.toMoveSuffix}`);
 
     (component as any).movePieceBetweenCells(source, target);
     expect(source.length).toBe(0);
@@ -1449,7 +1455,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     } as any;
     let pgn = (component as any).getCurrentPgn();
     expect(pgn).toContain('1. e4 e5 1-0');
-    expect((component as any).getPgnResultFromHistory(['a4', '... 0-1'])).toBe('0-1');
+    expect(ChessBoardExportUtils.getPgnResultFromHistory(['a4', '... 0-1'])).toBe('0-1');
 
     chessBoardStateService.boardHelper.history = {
       '1': 'd4',
@@ -1493,7 +1499,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
     expect(sparsePgn).toContain('2. e4');
     expect(sparsePgn).not.toContain('1.');
 
-    expect((component as any).getPgnResultFromHistory([undefined as any])).toBe('*');
+    expect(ChessBoardExportUtils.getPgnResultFromHistory([undefined as any])).toBe('*');
   });
 
   it('covers pin/skewer helper edge branches and opposing-color break path', () => {
@@ -1581,7 +1587,7 @@ describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () =>
       }
     } as any;
 
-    const displayed = (component as any).getDisplayedOpeningName(opening, ['e2-e4', 'c7-c5']);
+    const displayed = ChessBoardOpeningUtils.getDisplayedOpeningName(opening, ['e2-e4', 'c7-c5']);
     expect(displayed).toBe('Sicilian Defense: Najdorf');
   });
 
@@ -1595,10 +1601,10 @@ describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () =>
   });
 
   it('covers opening-name prefix and debug-line fallback branches', () => {
-    expect((component as any).shouldPrefixSuggestedOpeningName('', 'Sicilian Defense')).toBeFalse();
-    expect((component as any).shouldPrefixSuggestedOpeningName('Sicilian Defense', '')).toBeFalse();
-    expect((component as any).shouldPrefixSuggestedOpeningName('Sicilian Defense', 'Sicilian Defense: Najdorf')).toBeFalse();
-    expect((component as any).shouldPrefixSuggestedOpeningName('Italian Game', 'Sicilian Defense')).toBeTrue();
+    expect(ChessBoardOpeningUtils.shouldPrefixSuggestedOpeningName('', 'Sicilian Defense')).toBeFalse();
+    expect(ChessBoardOpeningUtils.shouldPrefixSuggestedOpeningName('Sicilian Defense', '')).toBeFalse();
+    expect(ChessBoardOpeningUtils.shouldPrefixSuggestedOpeningName('Sicilian Defense', 'Sicilian Defense: Najdorf')).toBeFalse();
+    expect(ChessBoardOpeningUtils.shouldPrefixSuggestedOpeningName('Italian Game', 'Sicilian Defense')).toBeTrue();
 
     const formatted = (component as any).formatOpeningDebugText(
       {
@@ -1618,7 +1624,7 @@ describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () =>
   });
 
   it('covers CCT recommendation ranking and notation capture branch', () => {
-    const ranked = (component as any).pickTopCctRecommendations([
+    const ranked = ChessBoardCctUtils.pickTopRecommendations([
       { move: 'Nf3', tooltip: 'low', score: 1 },
       { move: 'Nf3', tooltip: 'high', score: 3 },
       { move: 'Qh5+', tooltip: 'check', score: 2 }
@@ -2054,11 +2060,11 @@ describe('ChessBoardComponent branch coverage helpers (private helpers)', () => 
   });
 
   it('covers piece notation/name remaining branches', () => {
-    expect((component as any).pieceNotation(ChessPiecesEnum.Bishop)).toBe('B');
-    expect((component as any).pieceName(ChessPiecesEnum.King)).toBe('king');
-    expect((component as any).pieceName(ChessPiecesEnum.Rook)).toBe('rook');
-    expect((component as any).pieceName(ChessPiecesEnum.Knight)).toBe('knight');
-    expect((component as any).pieceName(ChessPiecesEnum.Pawn)).toBe('pawn');
+    expect(ChessBoardCctUtils.pieceNotation(ChessPiecesEnum.Bishop)).toBe('B');
+    expect(ChessBoardCctUtils.pieceName(ChessPiecesEnum.King)).toBe('king');
+    expect(ChessBoardCctUtils.pieceName(ChessPiecesEnum.Rook)).toBe('rook');
+    expect(ChessBoardCctUtils.pieceName(ChessPiecesEnum.Knight)).toBe('knight');
+    expect(ChessBoardCctUtils.pieceName(ChessPiecesEnum.Pawn)).toBe('pawn');
   });
 
   it('covers simulateMove branches for empty source and promotion update', () => {
@@ -2272,13 +2278,13 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
   });
 
   it('covers opening parsing/formatting fallback branches', () => {
-    expect((component as any).parseOpeningsPayload(null)).toEqual([]);
-    expect((component as any).normalizeNotationToken('')).toBe('');
-    expect((component as any).getDisplayedOpeningName(null, [])).toBe('');
+    expect(ChessBoardOpeningUtils.parseOpeningsPayload(null as any)).toEqual([]);
+    expect(ChessBoardOpeningUtils.normalizeNotationToken('')).toBe('');
+    expect(ChessBoardOpeningUtils.getDisplayedOpeningName(null as any, [])).toBe('');
     expect((component as any).formatOpeningDebugText(null, 0, [])).toBe('');
     const opening = { name: 'X', steps: ['e2-e4'], raw: { suggested_best_response_name: 'Y', suggested_best_response_notation_step: '2... e7-e5' } };
-    expect((component as any).getDisplayedOpeningName(opening, ['d2-d4'])).toBe('X');
-    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4'])).toBe('X');
+    expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['d2-d4'])).toBe('X');
+    expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['e2-e4'])).toBe('X');
   });
 
   it('covers snapshot helper guard and fallback branches', () => {
@@ -2313,8 +2319,8 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     anyComponent.restoreSnapshot(baseSnapshot);
     anyComponent.chessBoardStateService = savedService;
 
-    expect(anyComponent.cloneField(null)).toEqual([]);
-    expect(anyComponent.clonePosition({ row: 2, col: 3 })).toEqual({ row: 2, col: 3 });
+    expect(ChessBoardLogicUtils.cloneField(null as any)).toEqual([]);
+    expect(ChessBoardLogicUtils.clonePosition({ row: 2, col: 3 } as any)).toEqual({ row: 2, col: 3 });
   });
 
 });
@@ -2530,10 +2536,10 @@ describe('ChessBoardComponent branch coverage helpers (index and evaluation bran
   it('covers move-index helpers, debug key guards, notation rule branches and insufficient-material terminal false', () => {
     const savedHistory = { ...(chessBoardStateService.boardHelper.history as any) };
     chessBoardStateService.history.splice(0, chessBoardStateService.history.length);
-    expect((component as any).getCurrentVisibleMoveIndex()).toBe(-1);
+    expect(ChessBoardHistoryService.getCurrentVisibleMoveIndex((component as any).getMaxMoveIndex(), component.mockHistoryCursor)).toBe(-1);
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     component.mockHistoryCursor = 5;
-    expect((component as any).getCurrentVisibleMoveIndex()).toBe(0);
+    expect(ChessBoardHistoryService.getCurrentVisibleMoveIndex((component as any).getMaxMoveIndex(), component.mockHistoryCursor)).toBe(0);
     chessBoardStateService.boardHelper.history = savedHistory as any;
 
     const savedService = (component as any).chessBoardStateService;
@@ -2542,8 +2548,8 @@ describe('ChessBoardComponent branch coverage helpers (index and evaluation bran
     expect(component.getDebugCastlingRights()).toBe('-');
     (component as any).chessBoardStateService = savedService;
 
-    expect((component as any).isNonPawnNonCaptureMove('')).toBeFalse();
-    expect((component as any).isNonPawnNonCaptureMove('O-O')).toBeTrue();
+    expect(ChessBoardLogicUtils.isNonPawnNonCaptureMove('')).toBeFalse();
+    expect(ChessBoardLogicUtils.isNonPawnNonCaptureMove('O-O')).toBeTrue();
 
     clearBoard();
     chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
@@ -2551,12 +2557,12 @@ describe('ChessBoardComponent branch coverage helpers (index and evaluation bran
     chessBoardStateService.field[7][2] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
     chessBoardStateService.field[0][2] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Bishop } as any];
     chessBoardStateService.field[6][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Knight } as any];
-    expect((component as any).isInsufficientMaterial(chessBoardStateService.field)).toBeFalse();
+    expect(ChessBoardLogicUtils.isInsufficientMaterial(chessBoardStateService.field)).toBeFalse();
 
     clearBoard();
     chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
     chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
-    expect((component as any).isInsufficientMaterial(chessBoardStateService.field)).toBeTrue();
+    expect(ChessBoardLogicUtils.isInsufficientMaterial(chessBoardStateService.field)).toBeTrue();
   });
 
   it('covers opening helper direct-return branches and color-init ternaries', () => {
@@ -2565,8 +2571,8 @@ describe('ChessBoardComponent branch coverage helpers (index and evaluation bran
       steps: ['e2-e4'],
       raw: { name: 'OnlyName', suggested_best_response_name: 'Some Line', suggested_best_response_notation_step: '' }
     };
-    expect((component as any).getDisplayedOpeningName(opening, ['d2-d4'])).toBe('OnlyName');
-    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4'])).toBe('OnlyName');
+    expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['d2-d4'])).toBe('OnlyName');
+    expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['e2-e4'])).toBe('OnlyName');
     expect((component as any).formatOpeningDebugText(opening, 1, ['e2-e4'])).toContain('Opening');
 
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
@@ -2633,8 +2639,8 @@ describe('ChessBoardComponent branch coverage helpers (drop validation and openi
         suggested_best_response_notation_step: '2. Ng1-f3 Nb8-c6'
       }
     };
-    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4', 'c7-c5', 'Ng1-f3'])).toBe('Main');
-    expect((component as any).getDisplayedOpeningName(opening, ['e2-e4', 'e7-e5', 'd2-d4'])).toBe('Main');
+    expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['e2-e4', 'c7-c5', 'Ng1-f3'])).toBe('Main');
+    expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['e2-e4', 'e7-e5', 'd2-d4'])).toBe('Main');
   });
 
 });
@@ -2750,11 +2756,11 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
   });
 
   it('covers fen generation fallback branches from snapshots', () => {
-    expect((component as any).generateFenFromSnapshot(null)).toBe('8/8/8/8/8/8/8/8 w - - 0 1');
+    expect(ChessBoardLogicUtils.generateFenFromSnapshot(null as any)).toBe('8/8/8/8/8/8/8/8 w - - 0 1');
 
     const snapshot = (component as any).captureCurrentSnapshot();
     delete snapshot.boardHelper.history;
-    const generatedFen = (component as any).generateFenFromSnapshot(snapshot);
+    const generatedFen = ChessBoardLogicUtils.generateFenFromSnapshot(snapshot);
     expect(generatedFen).toContain(' w ');
   });
 
@@ -2878,7 +2884,8 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
   });
 
   it('returns current move eval text when engine exists and cursor is on a move', () => {
-    spyOn<any>(component, 'getCurrentVisibleMoveIndex').and.returnValue(0);
+    chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
+    component.mockHistoryCursor = 0;
     spyOn(component, 'getEvaluationForMove').and.returnValue('+0.22');
     expect(component.getCurrentAnalysisEvalText()).toBe('+0.22');
   });

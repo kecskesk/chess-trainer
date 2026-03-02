@@ -19,6 +19,7 @@ interface IStatusBoardState {
 })
 export class ChessBoardStatusCardComponent {
   @Input() uiText: typeof UiText = UiText;
+  @Input() selectedLocale = '';
   @Input() boardState: IStatusBoardState | null = null;
   @Input() currentTurnColor: ChessColorsEnum | null = null;
   @Input() pendingDrawOfferBy: ChessColorsEnum | null = null;
@@ -46,7 +47,10 @@ export class ChessBoardStatusCardComponent {
       return '';
     }
     if (!this.boardState.gameOver) {
-      return `${this.boardState.colorTurn} ${this.uiText.status.toMoveSuffix}`;
+      const activeColorName = this.boardState.colorTurn === ChessColorsEnum.White
+        ? this.uiText.status.white
+        : this.uiText.status.black;
+      return `${activeColorName} ${this.uiText.status.toMoveSuffix}`;
     }
     if (this.boardState.checkmateColor !== null) {
       return `${this.uiText.status.checkmatePrefix} - ${this.boardState.checkmateColor === ChessColorsEnum.White ? this.uiText.status.black : this.uiText.status.white} ${this.uiText.message.checkmateWinner}`;

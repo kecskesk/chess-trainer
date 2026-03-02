@@ -154,4 +154,9 @@ export class ChessBoardMessageConstants {
   static noLegalTargetsMessage(piece: string): string {
     return UiText.message.noLegalTargetsTemplate.replace('{piece}', piece);
   }
+
+  /** Builds message shown when selected piece has zero legal moves while king is in check. */
+  static noLegalTargetsWhileInCheckMessage(piece: string): string {
+    return UiText.message.noLegalTargetsWhileInCheckTemplate.replace('{piece}', piece);
+  }
 }
