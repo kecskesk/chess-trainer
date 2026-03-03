@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { UiText } from '../../constants/ui-text.constants';
 import { ICctRecommendation } from '../../model/interfaces/cct-recommendation.interface';
+import { ChessMoveBadgeUtils } from '../../utils/chess-move-badge.utils';
 
 @Component({
   selector: 'app-chess-board-cct-card',
@@ -22,27 +23,10 @@ export class ChessBoardCctCardComponent {
   @Output() clearPreview = new EventEmitter<void>();
 
   getMoveClass(move: string): string {
-    if (!move) {
-      return '';
-    }
-    const qualityClass = this.moveQualityByMove[move];
-    if (qualityClass) {
-      return qualityClass;
-    }
-    const normalized = move.replace(/^\.\.\./, '');
-    if (normalized.includes('+')) {
-      return 'suggested-move--check';
-    }
-    if (normalized.includes('x')) {
-      return 'suggested-move--capture';
-    }
-    return 'suggested-move--threat';
+    return ChessMoveBadgeUtils.getMoveClass(move, this.moveQualityByMove);
   }
 
   getMoveScore(move: string): string {
-    if (!move) {
-      return '';
-    }
-    return this.moveEvalByMove[move] || '';
+    return ChessMoveBadgeUtils.getMoveScore(move, this.moveEvalByMove);
   }
 }

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { UiText } from '../../constants/ui-text.constants';
+import { ChessMoveBadgeUtils } from '../../utils/chess-move-badge.utils';
 
 @Component({
   selector: 'app-chess-board-tools-card',
@@ -34,27 +35,10 @@ export class ChessBoardToolsCardComponent {
   @Output() clearPreview = new EventEmitter<void>();
 
   getSuggestedMoveClass(move: string): string {
-    const qualityClass = move ? this.suggestedMoveQualityByMove[move] : '';
-    if (qualityClass) {
-      return qualityClass;
-    }
-    if (!move) {
-      return 'suggested-move--threat';
-    }
-    const normalized = move.replace(/^\.\.\./, '');
-    if (normalized.includes('+')) {
-      return 'suggested-move--check';
-    }
-    if (normalized.includes('x')) {
-      return 'suggested-move--capture';
-    }
-    return 'suggested-move--threat';
+    return ChessMoveBadgeUtils.getMoveClass(move, this.suggestedMoveQualityByMove, 'suggested-move--threat');
   }
 
   getSuggestedMoveScore(move: string): string {
-    if (!move) {
-      return '';
-    }
-    return this.suggestedMoveEvalByMove[move] || '';
+    return ChessMoveBadgeUtils.getMoveScore(move, this.suggestedMoveEvalByMove);
   }
 }

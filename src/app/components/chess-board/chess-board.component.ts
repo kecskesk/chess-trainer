@@ -53,6 +53,8 @@ import { ChessBoardVisualizationFacade } from '../../utils/chess-board-visualiza
 import { ChessBoardTimelineFacade } from '../../utils/chess-board-timeline.facade';
 import { ChessBoardClockGameStateFacade } from '../../utils/chess-board-clock-game-state.facade';
 import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
+import { ChessBoardOverlayFacade } from '../../utils/chess-board-overlay.facade';
+import { ChessMoveBadgeUtils } from '../../utils/chess-move-badge.utils';
 
 @Component({
   selector: 'app-chess-board',
@@ -741,7 +743,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     ChessBoardStorageService.persistDebugPanelOpenState(this.debugPanelStorageKey, this.isDebugPanelOpen);
   }
 
-  getStatusTitle(): string {
+  private getStatusTitle(): string {
     const boardHelper = this.chessBoardStateService.boardHelper;
     if (!boardHelper) {
       return '';
@@ -962,7 +964,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.applyTimeControl(selectedPreset.baseMinutes, selectedPreset.incrementSeconds, selectedPreset.label);
   }
 
-  getClockButtonLabel(): string {
+  private getClockButtonLabel(): string {
     return this.clockRunning ? this.uiText.clock.pause : this.uiText.clock.start;
   }
 
@@ -973,7 +975,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.uiText.resignConfirm.titleTemplate.replace('{color}', colorName);
   }
 
-  formatClock(clockMs: number): string {
+  private formatClock(clockMs: number): string {
     return ChessBoardClockUtils.formatClock(clockMs);
   }
 
@@ -1100,12 +1102,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  getMoveQualityLabel(halfMoveIndex: number): string {
+  private getMoveQualityLabel(halfMoveIndex: number): string {
     const quality = this.getMoveQuality(halfMoveIndex);
     return quality ? quality.label : '';
   }
 
-  getMoveQualityClass(halfMoveIndex: number): string {
+  private getMoveQualityClass(halfMoveIndex: number): string {
     const quality = this.getMoveQuality(halfMoveIndex);
     return quality ? quality.className : '';
   }
@@ -1260,33 +1262,19 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return ['...Qh4+', '...Nxe4', '...d5'];
   }
 
-  getSuggestedMoveClass(move: string): string {
-    if (!move) {
-      return 'suggested-move--threat';
-    }
-
-    const normalized = move.replace(/^\.\.\./, '');
-    if (normalized.includes('+')) {
-      return 'suggested-move--check';
-    }
-    if (normalized.includes('x')) {
-      return 'suggested-move--capture';
-    }
-    return 'suggested-move--threat';
+  private getSuggestedMoveClass(move: string): string {
+    return ChessMoveBadgeUtils.getMoveClass(move, {}, 'suggested-move--threat');
   }
 
-  getSuggestionQualityClass(move: string): string {
+  private getSuggestionQualityClass(move: string): string {
     if (!move) {
       return '';
     }
     return this.suggestionQualityByMove[move] || '';
   }
 
-  getSuggestionEvalText(move: string): string {
-    if (!move) {
-      return '';
-    }
-    return this.suggestionEvalTextByMove[move] || '';
+  private getSuggestionEvalText(move: string): string {
+    return ChessMoveBadgeUtils.getMoveScore(move, this.suggestionEvalTextByMove);
   }
 
   previewSuggestedMoveArrows(move: string): void {
@@ -1360,32 +1348,32 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   showForkIdeas(): void {
-    const key = 'fork-ideas';
-    if (this.activeTool === key) {
-      this.clearOverlay();
-      return;
-    }
-    this.clearOverlay();
-    const forkArrows = this.collectForkVisualizationArrows();
-    forkArrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
-    if (forkArrows.length > 0) {
-      this.activeTool = key;
-    }
+    ChessBoardOverlayFacade.applyOverlayTool({
+      activeTool: this.activeTool,
+      key: 'fork-ideas',
+      clearOverlay: () => this.clearOverlay(),
+      buildArrows: () => this.collectForkVisualizationArrows(),
+      addArrow: (arrow) => ChessBoardStateService.createArrowFromVisualization(arrow),
+      setActiveTool: (tool) => {
+        this.activeTool = tool;
+      },
+      setActiveWhenEmpty: false
+    });
     this.chessBoardStateService.boardHelper.debugText = this.uiText.message.forkIdeas;
   }
 
   showPinIdeas(): void {
-    const key = 'pin-ideas';
-    if (this.activeTool === key) {
-      this.clearOverlay();
-      return;
-    }
-    this.clearOverlay();
-    const pinArrows = this.collectPinVisualizationArrows();
-    pinArrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
-    if (pinArrows.length > 0) {
-      this.activeTool = key;
-    }
+    ChessBoardOverlayFacade.applyOverlayTool({
+      activeTool: this.activeTool,
+      key: 'pin-ideas',
+      clearOverlay: () => this.clearOverlay(),
+      buildArrows: () => this.collectPinVisualizationArrows(),
+      addArrow: (arrow) => ChessBoardStateService.createArrowFromVisualization(arrow),
+      setActiveTool: (tool) => {
+        this.activeTool = tool;
+      },
+      setActiveWhenEmpty: false
+    });
     this.chessBoardStateService.boardHelper.debugText = this.uiText.message.pinIdeas;
   }
 
@@ -1877,25 +1865,25 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   showThreats(ofEnemy = false): void {
     const key = ofEnemy ? 'threats-enemy' : 'threats-mine';
-    if (this.activeTool === key) {
-      // toggle off
-      this.clearOverlay();
-      return;
-    }
-
-    // clicking a new tool should clear whatever was there previously
-    this.clearOverlay();
-
-    const { ofColor, enemyColor } = this.initColors(ofEnemy);
-    const arrows = ChessBoardVisualizationFacade.buildThreatArrows(
-      this.chessBoardStateService.field,
-      ofColor,
-      enemyColor,
-      (cell, rowIdx, cellIdx, srcColor, dstColor) => this.getThreatsBy(cell, rowIdx, cellIdx, srcColor, dstColor),
-      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy)
-    );
-    arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
-    this.activeTool = key;
+    ChessBoardOverlayFacade.applyOverlayTool({
+      activeTool: this.activeTool,
+      key,
+      clearOverlay: () => this.clearOverlay(),
+      buildArrows: () => {
+        const { ofColor, enemyColor } = this.initColors(ofEnemy);
+        return ChessBoardVisualizationFacade.buildThreatArrows(
+          this.chessBoardStateService.field,
+          ofColor,
+          enemyColor,
+          (cell, rowIdx, cellIdx, srcColor, dstColor) => this.getThreatsBy(cell, rowIdx, cellIdx, srcColor, dstColor),
+          (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy)
+        );
+      },
+      addArrow: (arrow) => ChessBoardStateService.createArrowFromVisualization(arrow),
+      setActiveTool: (tool) => {
+        this.activeTool = tool;
+      }
+    });
   }
 
   getThreatsBy(
@@ -1937,23 +1925,26 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   showProtected(ofEnemy = false): void {
     const key = ofEnemy ? 'protected-enemy' : 'protected-mine';
-    if (this.activeTool === key) {
-      this.clearOverlay();
-      return;
-    }
-
-    this.clearOverlay();
-    const { ofColor, enemyColor } = this.initColors(ofEnemy);
-    const arrows = ChessBoardVisualizationFacade.buildProtectedArrows(
-      this.chessBoardStateService.field,
-      ofColor,
-      enemyColor,
-      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy),
-      (cell, rowIdx, cellIdx, defendedColor, attackerColor) =>
-        this.getThreatsOn(cell, rowIdx, cellIdx, defendedColor, attackerColor)
-    );
-    arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
-    this.activeTool = key;
+    ChessBoardOverlayFacade.applyOverlayTool({
+      activeTool: this.activeTool,
+      key,
+      clearOverlay: () => this.clearOverlay(),
+      buildArrows: () => {
+        const { ofColor, enemyColor } = this.initColors(ofEnemy);
+        return ChessBoardVisualizationFacade.buildProtectedArrows(
+          this.chessBoardStateService.field,
+          ofColor,
+          enemyColor,
+          (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy),
+          (cell, rowIdx, cellIdx, defendedColor, attackerColor) =>
+            this.getThreatsOn(cell, rowIdx, cellIdx, defendedColor, attackerColor)
+        );
+      },
+      addArrow: (arrow) => ChessBoardStateService.createArrowFromVisualization(arrow),
+      setActiveTool: (tool) => {
+        this.activeTool = tool;
+      }
+    });
   }
 
   getProtectors(
@@ -1975,22 +1966,26 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   showHangingPieces(ofEnemy = false): void {
     const key = ofEnemy ? 'hanging-enemy' : 'hanging-mine';
-    if (this.activeTool === key) {
-      this.clearOverlay();
-      return;
-    }
-
-    this.clearOverlay();
-    const { ofColor, enemyColor } = this.initColors(ofEnemy);
-    const arrows = ChessBoardVisualizationFacade.buildHangingArrows(
-      this.chessBoardStateService.field,
-      ofColor,
-      enemyColor,
-      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy),
-      (cell, rowIdx, cellIdx, defendedColor, attackerColor) => this.getThreatsOn(cell, rowIdx, cellIdx, defendedColor, attackerColor)
-    );
-    arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
-    this.activeTool = key;
+    ChessBoardOverlayFacade.applyOverlayTool({
+      activeTool: this.activeTool,
+      key,
+      clearOverlay: () => this.clearOverlay(),
+      buildArrows: () => {
+        const { ofColor, enemyColor } = this.initColors(ofEnemy);
+        return ChessBoardVisualizationFacade.buildHangingArrows(
+          this.chessBoardStateService.field,
+          ofColor,
+          enemyColor,
+          (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy),
+          (cell, rowIdx, cellIdx, defendedColor, attackerColor) =>
+            this.getThreatsOn(cell, rowIdx, cellIdx, defendedColor, attackerColor)
+        );
+      },
+      addArrow: (arrow) => ChessBoardStateService.createArrowFromVisualization(arrow),
+      setActiveTool: (tool) => {
+        this.activeTool = tool;
+      }
+    });
   }
 
   private initColors(ofEnemy: boolean): { ofColor: ChessColorsEnum, enemyColor: ChessColorsEnum} {

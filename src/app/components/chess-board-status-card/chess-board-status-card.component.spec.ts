@@ -65,4 +65,37 @@ describe('ChessBoardStatusCardComponent', () => {
     component.resignConfirmColor = ChessColorsEnum.Black;
     expect(component.resignConfirmTitle).toContain(component.uiText.status.black);
   });
+
+  it('computes draw offer and resign availability from board state', () => {
+    component.boardState = null;
+    expect(component.canOfferDraw).toBeFalse();
+    expect(component.canRespondToDrawOffer).toBeFalse();
+    expect(component.canResignWhite).toBeFalse();
+    expect(component.canResignBlack).toBeFalse();
+
+    component.boardState = {
+      colorTurn: ChessColorsEnum.White,
+      gameOver: false,
+      checkmateColor: null
+    };
+    component.pendingDrawOfferBy = null;
+    expect(component.canOfferDraw).toBeTrue();
+    expect(component.canRespondToDrawOffer).toBeFalse();
+    expect(component.canResignWhite).toBeTrue();
+    expect(component.canResignBlack).toBeTrue();
+
+    component.pendingDrawOfferBy = ChessColorsEnum.Black;
+    expect(component.canOfferDraw).toBeFalse();
+    expect(component.canRespondToDrawOffer).toBeTrue();
+
+    component.boardState = {
+      colorTurn: ChessColorsEnum.White,
+      gameOver: true,
+      checkmateColor: ChessColorsEnum.Black
+    };
+    expect(component.canOfferDraw).toBeFalse();
+    expect(component.canRespondToDrawOffer).toBeFalse();
+    expect(component.canResignWhite).toBeFalse();
+    expect(component.canResignBlack).toBeFalse();
+  });
 });

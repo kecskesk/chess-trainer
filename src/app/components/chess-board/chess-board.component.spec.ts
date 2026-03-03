@@ -239,7 +239,7 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
     expect(ChessBoardDisplayUtils.mapRotationForDisplay('540deg', component.isBoardFlipped)).toBe('0deg');
 
     expect(component.translateFieldNames(6, 4)).toBe('e2');
-    expect(component.formatClock(65000)).toBe('01:05');
+    expect((component as any).formatClock(65000)).toBe('01:05');
     component.whiteClockMs = 9000;
     component.blackClockMs = 12000;
     expect(component.isClockLow(ChessColorsEnum.White)).toBeTrue();
@@ -247,11 +247,11 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
 
     const boardHelperBackup = chessBoardStateService.boardHelper;
     (chessBoardStateService as any).boardHelper = null;
-    expect(component.getStatusTitle()).toBe('');
+    expect((component as any).getStatusTitle()).toBe('');
     component.onSquarePointerDown([] as any);
     (chessBoardStateService as any).boardHelper = boardHelperBackup;
     chessBoardStateService.boardHelper.gameOver = false;
-    expect(component.getStatusTitle()).toContain(component.uiText.status.toMoveSuffix);
+    expect((component as any).getStatusTitle()).toContain(component.uiText.status.toMoveSuffix);
   });
 
   it('covers lifecycle hooks used by template wiring', (done: DoneFn) => {
@@ -279,7 +279,7 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
 
     chessBoardStateService.boardHelper.gameOver = false;
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-    expect(component.getStatusTitle()).toBe(`${component.uiText.status.white} ${component.uiText.status.toMoveSuffix}`);
+    expect((component as any).getStatusTitle()).toBe(`${component.uiText.status.white} ${component.uiText.status.toMoveSuffix}`);
 
     ChessBoardComponentUtils.movePieceBetweenCells(source, target);
     expect(source.length).toBe(0);
@@ -1615,10 +1615,10 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls expor
 
 describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () => {
   it('returns move class based on suggested move notation', () => {
-    expect(component.getSuggestedMoveClass('Qh5+')).toBe('suggested-move--check');
-    expect(component.getSuggestedMoveClass('Nxe5')).toBe('suggested-move--capture');
-    expect(component.getSuggestedMoveClass('d4')).toBe('suggested-move--threat');
-    expect(component.getSuggestedMoveClass('')).toBe('suggested-move--threat');
+    expect((component as any).getSuggestedMoveClass('Qh5+')).toBe('suggested-move--check');
+    expect((component as any).getSuggestedMoveClass('Nxe5')).toBe('suggested-move--capture');
+    expect((component as any).getSuggestedMoveClass('d4')).toBe('suggested-move--threat');
+    expect((component as any).getSuggestedMoveClass('')).toBe('suggested-move--threat');
   });
 
   it('covers parseSuggestedMove piece parsing and invalid input branches', () => {
@@ -1859,9 +1859,9 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
 
   it('covers clock and board-orientation helper branches', () => {
     component.clockRunning = false;
-    expect(component.getClockButtonLabel()).toBe('Start Clock');
+    expect((component as any).getClockButtonLabel()).toBe('Start Clock');
     component.clockRunning = true;
-    expect(component.getClockButtonLabel()).toBe('Pause Clock');
+    expect((component as any).getClockButtonLabel()).toBe('Pause Clock');
 
     component.isBoardFlipped = false;
     expect(component.isWhiteSquare(0, 0)).toBeTrue();
@@ -2038,15 +2038,15 @@ describe('ChessBoardComponent branch coverage helpers (guard and fallback paths)
   it('covers status-title branches for null helper, checkmate, and draw fallback', () => {
     const savedHelper = chessBoardStateService.boardHelper;
     (chessBoardStateService as any).boardHelper = null;
-    expect(component.getStatusTitle()).toBe('');
+    expect((component as any).getStatusTitle()).toBe('');
 
     (chessBoardStateService as any).boardHelper = savedHelper;
     chessBoardStateService.boardHelper.gameOver = true;
     chessBoardStateService.boardHelper.checkmateColor = ChessColorsEnum.White;
-    expect(component.getStatusTitle()).toContain('Checkmate - Black wins');
+    expect((component as any).getStatusTitle()).toContain('Checkmate - Black wins');
     chessBoardStateService.boardHelper.checkmateColor = null;
     chessBoardStateService.boardHelper.debugText = '';
-    expect(component.getStatusTitle()).toBe('Draw');
+    expect((component as any).getStatusTitle()).toBe('Draw');
   });
 
   it('covers draw-offer guard paths and response toggles', () => {
@@ -2082,7 +2082,7 @@ describe('ChessBoardComponent branch coverage helpers (guard and fallback paths)
   });
 
   it('covers formatClock sub-minute formatting and mock opening loading/no-match branches', () => {
-    expect(component.formatClock(5900)).toContain('.');
+    expect((component as any).formatClock(5900)).toContain('.');
     (component as any).openingsLoaded = false;
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     expect(component.getMockOpeningRecognition()).toBe('Loading openings...');
@@ -2323,7 +2323,7 @@ describe('ChessBoardComponent branch coverage helpers (castling and debug guards
   it('covers in-check drag-failure reason and active black status title branch', () => {
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     chessBoardStateService.boardHelper.gameOver = false;
-    expect(component.getStatusTitle()).toBe(`${component.uiText.status.black} ${component.uiText.status.toMoveSuffix}`);
+    expect((component as any).getStatusTitle()).toBe(`${component.uiText.status.black} ${component.uiText.status.toMoveSuffix}`);
 
     const targetCountSpy = spyOn<any>(component, 'getLegalTargetCount').and.returnValue(0);
     const inCheckSpy = spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
@@ -2353,7 +2353,7 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
   it('covers status title branch for black checkmate color', () => {
     chessBoardStateService.boardHelper.gameOver = true;
     chessBoardStateService.boardHelper.checkmateColor = ChessColorsEnum.Black;
-    expect(component.getStatusTitle()).toContain('Checkmate - White wins');
+    expect((component as any).getStatusTitle()).toContain('Checkmate - White wins');
   });
 
   it('covers draw offer and history cursor edge branches', () => {
@@ -2831,9 +2831,9 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
     };
     spyOn(component, 'getEvaluationForMove').and.callFake((index: number) => evalByIndex[index] ?? '...');
 
-    expect(component.getMoveQualityLabel(1)).toBe('small error');
-    expect(component.getMoveQualityLabel(2)).toBe('genius');
-    expect(component.getMoveQualityLabel(3)).toBe('genius');
+    expect((component as any).getMoveQualityLabel(1)).toBe('small error');
+    expect((component as any).getMoveQualityLabel(2)).toBe('genius');
+    expect((component as any).getMoveQualityLabel(3)).toBe('genius');
   });
 
   it('covers move quality fallback and class mapping', () => {
@@ -2845,9 +2845,9 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
       className: 'quality-great'
     } as any);
 
-    expect(component.getMoveQualityLabel(4)).toBe('great');
-    expect(component.getMoveQualityClass(4)).toBe('');
-    expect(component.getMoveQualityClass(4)).toBe('quality-great');
+    expect((component as any).getMoveQualityLabel(4)).toBe('great');
+    expect((component as any).getMoveQualityClass(4)).toBe('');
+    expect((component as any).getMoveQualityClass(4)).toBe('quality-great');
   });
 });
 
@@ -2892,15 +2892,15 @@ describe('ChessBoardComponent stockfish evaluation thresholds', () => {
       return table[index] ?? '...';
     });
 
-    expect(component.getMoveQualityLabel(0)).toBe('');
-    expect(component.getMoveQualityLabel(1)).toBe('');
-    expect(component.getMoveQualityLabel(2)).toBe('good');
-    expect(component.getMoveQualityLabel(3)).toBe('mistake');
-    expect(component.getMoveQualityLabel(4)).toBe('mistake');
-    expect(component.getMoveQualityLabel(5)).toBe('');
-    expect(component.getMoveQualityLabel(6)).toBe('small error');
-    expect(component.getMoveQualityLabel(7)).toBe('');
-    expect(component.getMoveQualityLabel(8)).toBe('');
+    expect((component as any).getMoveQualityLabel(0)).toBe('');
+    expect((component as any).getMoveQualityLabel(1)).toBe('');
+    expect((component as any).getMoveQualityLabel(2)).toBe('good');
+    expect((component as any).getMoveQualityLabel(3)).toBe('mistake');
+    expect((component as any).getMoveQualityLabel(4)).toBe('mistake');
+    expect((component as any).getMoveQualityLabel(5)).toBe('');
+    expect((component as any).getMoveQualityLabel(6)).toBe('small error');
+    expect((component as any).getMoveQualityLabel(7)).toBe('');
+    expect((component as any).getMoveQualityLabel(8)).toBe('');
   });
 
   it('covers move quality great and blunder branches', () => {
@@ -2914,8 +2914,8 @@ describe('ChessBoardComponent stockfish evaluation thresholds', () => {
       return table[index] ?? '...';
     });
 
-    expect(component.getMoveQualityLabel(2)).toBe('great');
-    expect(component.getMoveQualityLabel(3)).toBe('blunder');
+    expect((component as any).getMoveQualityLabel(2)).toBe('great');
+    expect((component as any).getMoveQualityLabel(3)).toBe('blunder');
   });
 });
 
@@ -3236,13 +3236,13 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
   it('covers suggestion getters and white mock suggested branch', () => {
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     expect(component.getMockSuggestedMoves()).toEqual(['Qh5+', 'Nxe5', 'd4']);
-    expect(component.getSuggestionQualityClass('')).toBe('');
-    expect(component.getSuggestionEvalText('')).toBe('');
+    expect((component as any).getSuggestionQualityClass('')).toBe('');
+    expect((component as any).getSuggestionEvalText('')).toBe('');
 
     (component as any).suggestionQualityByMove = { Nf3: 'history-quality--great' };
     (component as any).suggestionEvalTextByMove = { Nf3: '+0.42' };
-    expect(component.getSuggestionQualityClass('Nf3')).toBe('history-quality--great');
-    expect(component.getSuggestionEvalText('Nf3')).toBe('+0.42');
+    expect((component as any).getSuggestionQualityClass('Nf3')).toBe('history-quality--great');
+    expect((component as any).getSuggestionEvalText('Nf3')).toBe('+0.42');
   });
 
   it('covers refreshSuggestedMoves cached branch and refresh delegation', async () => {
@@ -3261,7 +3261,7 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
     refreshQualitySpy.calls.reset();
     await (component as any).refreshSuggestedMoves(7);
     expect(refreshQualitySpy).not.toHaveBeenCalled();
-    expect(component.getSuggestionEvalText('Nf3')).toBe('+0.20');
+    expect((component as any).getSuggestionEvalText('Nf3')).toBe('+0.20');
   });
 
   it('covers refreshSuggestedMoves success and catch branches', async () => {
@@ -3597,10 +3597,10 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
 
     (component as any).suggestionQualityByMove = { Nf3: 'history-quality--great' };
     (component as any).suggestionEvalTextByMove = { Nf3: '+0.30' };
-    expect(component.getSuggestionQualityClass('Nf3')).toBe('history-quality--great');
-    expect(component.getSuggestionEvalText('Nf3')).toBe('+0.30');
-    expect(component.getSuggestionQualityClass('e4')).toBe('');
-    expect(component.getSuggestionEvalText('e4')).toBe('');
+    expect((component as any).getSuggestionQualityClass('Nf3')).toBe('history-quality--great');
+    expect((component as any).getSuggestionEvalText('Nf3')).toBe('+0.30');
+    expect((component as any).getSuggestionQualityClass('e4')).toBe('');
+    expect((component as any).getSuggestionEvalText('e4')).toBe('');
   });
 
   it('covers refreshSuggestedMoves callback branch with explicit move arrays', async () => {
@@ -3691,5 +3691,39 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
     (local as any).pushUniquePreviewArrow(arrows, seen, arrow);
     expect(arrows.length).toBe(1);
   });
+
+  it('covers residual board component branches for coverage', () => {
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
+
+    spyOnProperty((local as any).chessBoardStateService, 'history', 'get').and.returnValue(['e2-e4']);
+    spyOn<any>(local, 'getEvaluationForMove').and.returnValue('+0.20');
+    expect(local.allHistoryEvaluations).toEqual(['+0.20']);
+
+    const localWithNoHistory = new ChessBoardComponent(new ChessBoardStateService(), { get: () => of([]) } as any);
+    spyOnProperty((localWithNoHistory as any).chessBoardStateService, 'history', 'get').and.returnValue(null as any);
+    spyOn<any>(localWithNoHistory, 'getEvaluationForMove').and.returnValue('+0.10');
+    expect(localWithNoHistory.allHistoryEvaluations).toEqual([]);
+
+    expect(() =>
+      (ChessBoardComponent.prototype as any).appendCheckmateResultIfNeeded.call({ chessBoardStateService: null })
+    ).not.toThrow();
+
+    const appendSpy = jasmine.createSpy('append');
+    (ChessBoardComponent.prototype as any).appendCheckmateResultIfNeeded.call({
+      chessBoardStateService: { boardHelper: { checkmateColor: ChessColorsEnum.Black } },
+      uiText: { status: { checkmatePrefix: '' } },
+      appendGameResultToLastMove: appendSpy
+    });
+    (ChessBoardComponent.prototype as any).appendCheckmateResultIfNeeded.call({
+      chessBoardStateService: { boardHelper: { checkmateColor: ChessColorsEnum.White } },
+      uiText: { status: { checkmatePrefix: '   ' } },
+      appendGameResultToLastMove: appendSpy
+    });
+
+    expect(local.getSquareHighlightClass(0, 0)).toBe('');
+    spyOn(local, 'getDisplayCell').and.returnValue([] as any);
+    expect(local.getDisplayPiece(0, 0)).toBeNull();
+  });
 });
+
 

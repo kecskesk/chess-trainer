@@ -40,4 +40,20 @@ describe('ChessBoardHistoryCardComponent', () => {
     (component as any).historyLogRef = new ElementRef<HTMLDivElement>(el);
     expect(component.getHistoryElement()).toBe(el);
   });
+
+  it('derives visible history and undo/redo flags from timeline inputs', () => {
+    component.history = ['e4', 'e5', 'Nf3'];
+    component.historyCursor = 1;
+    component.maxMoveIndex = 2;
+
+    expect(component.visibleHistory).toEqual(['e4', 'e5']);
+    expect(component.canUndo).toBeTrue();
+    expect(component.canRedo).toBeTrue();
+  });
+
+  it('falls back to empty history when history input is falsy', () => {
+    (component as any).history = null;
+    component.historyCursor = 3;
+    expect(component.visibleHistory).toEqual([]);
+  });
 });

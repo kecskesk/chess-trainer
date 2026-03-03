@@ -57,6 +57,32 @@ describe('ChessBoardEvaluationUtils', () => {
       evaluationErrorPlaceholder: 'err'
     });
     expect(error).toBe('err');
+
+    const byIndex = ChessBoardEvaluationUtils.getEvaluationForMove({
+      halfMoveIndex: 4,
+      getFenForHistoryIndex: () => 'fen-4',
+      evalByHistoryIndex: new Map<number, string>([[4, '-0.33']]),
+      evalCacheByFen: new Map<string, string>(),
+      pendingEvalByHistoryIndex: new Set<number>(),
+      evalErrorByHistoryIndex: new Set<number>(),
+      naPlaceholder: 'n/a',
+      pendingEvaluationPlaceholder: '...',
+      evaluationErrorPlaceholder: 'err'
+    });
+    expect(byIndex).toBe('-0.33');
+
+    const na = ChessBoardEvaluationUtils.getEvaluationForMove({
+      halfMoveIndex: -1,
+      getFenForHistoryIndex: () => '',
+      evalByHistoryIndex: new Map<number, string>(),
+      evalCacheByFen: new Map<string, string>(),
+      pendingEvalByHistoryIndex: new Set<number>(),
+      evalErrorByHistoryIndex: new Set<number>(),
+      naPlaceholder: 'n/a',
+      pendingEvaluationPlaceholder: '...',
+      evaluationErrorPlaceholder: 'err'
+    });
+    expect(na).toBe('n/a');
   });
 
   it('calculates move quality from adjacent evaluations', () => {
@@ -92,6 +118,65 @@ describe('ChessBoardEvaluationUtils', () => {
     );
 
     expect(quality).toBeNull();
+  });
+
+  it('propagates sign from previous #0 to current eval when needed', () => {
+    const quality = ChessBoardEvaluationUtils.getMoveQuality(
+      5,
+      (idx) => {
+        if (idx === 4) {
+          return '#0';
+        }
+        if (idx === 5) {
+          return '+0.20';
+        }
+        return 'n/a';
+      },
+      '...',
+      'err',
+      'n/a',
+      10
+    );
+
+    expect(quality).toEqual({ label: 'genius', className: 'history-quality--genius' });
+  });
+
+  it('handles both #0 sign propagation branch directions', () => {
+    const currentMateZeroFromPositive = ChessBoardEvaluationUtils.getMoveQuality(
+      7,
+      (idx) => {
+        if (idx === 6) {
+          return '+3.00';
+        }
+        if (idx === 7) {
+          return '#0';
+        }
+        return 'n/a';
+      },
+      '...',
+      'err',
+      'n/a',
+      10
+    );
+    expect(currentMateZeroFromPositive).not.toBeNull();
+
+    const previousMateZeroFromNegative = ChessBoardEvaluationUtils.getMoveQuality(
+      9,
+      (idx) => {
+        if (idx === 8) {
+          return '#0';
+        }
+        if (idx === 9) {
+          return '-0.20';
+        }
+        return 'n/a';
+      },
+      '...',
+      'err',
+      'n/a',
+      10
+    );
+    expect(previousMateZeroFromNegative).not.toBeNull();
   });
 });
 
