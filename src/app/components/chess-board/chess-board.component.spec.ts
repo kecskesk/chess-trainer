@@ -958,6 +958,24 @@ describe('ChessBoardComponent gameplay moves and rules (threat overlays)', () =>
     expect(hasRedCheckArrow).toBeTrue();
   });
 
+  it('shows green arrows for overloaded protectors in SAFE view', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
+    chessBoardStateService.field[4][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any];
+    chessBoardStateService.field[6][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[4][1] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Bishop } as any];
+    chessBoardStateService.field[6][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.field[0][1] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Rook } as any];
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.showProtected(false);
+
+    const arrows = Object.values(chessBoardStateService.boardHelper.arrows);
+    const greenArrows = arrows.filter(arrow => arrow.color === 'green');
+    expect(greenArrows.length).toBeGreaterThan(0);
+  });
+
   it('toggles threat overlay off when invoked twice and tracks activeTool', () => {
     clearBoard();
     chessBoardStateService.field[4][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];

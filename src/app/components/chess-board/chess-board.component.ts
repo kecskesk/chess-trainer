@@ -1973,6 +1973,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
    */
   clearOverlay(): void {
     this.chessBoardStateService.boardHelper.arrows = {};
+    this.suggestedMoveArrowSnapshot = null;
     this.activeTool = null;
   }
 
@@ -2049,7 +2050,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.chessBoardStateService.field,
       ofColor,
       enemyColor,
-      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy)
+      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy),
+      (cell, rowIdx, cellIdx, defendedColor, attackerColor) =>
+        this.getThreatsOn(cell, rowIdx, cellIdx, defendedColor, attackerColor)
     );
     arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
     this.activeTool = key;

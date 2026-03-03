@@ -221,9 +221,22 @@ export class ChessBoardVisualizationFacade {
       cellAIdx: number,
       color: ChessColorsEnum,
       enemy: ChessColorsEnum
-    ) => ChessPositionDto[]
+    ) => ChessPositionDto[],
+    getThreatsOn?: (
+      cell: ChessPieceDto[],
+      rowIdx: number,
+      cellIdx: number,
+      defendedColor: ChessColorsEnum,
+      attackerColor: ChessColorsEnum
+    ) => { pos: ChessPositionDto; piece: ChessPiecesEnum }[]
   ): IVisualizationArrow[] {
     const arrows: IVisualizationArrow[] = [];
+    const protectedByMap: {
+      [protectorKey: string]: {
+        protector: ChessPositionDto;
+        targets: Array<{ row: number; col: number; piece: ChessPiecesEnum }>;
+      };
+    } = {};
     board.forEach((row, rowAIdx) => {
       row.forEach((cellA, cellAIdx) => {
         if (!(cellA && cellA[0] && cellA[0].color === ofColor)) {
@@ -234,9 +247,53 @@ export class ChessBoardVisualizationFacade {
           const posFrom = new ChessPositionDto(8 - cellB.row, cellB.col + 1);
           const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
           arrows.push(this.createVisualizationArrow(posFrom, posTo, 'gold', 0.25));
+
+          const protectorKey = `${cellB.row}${cellB.col}`;
+          if (!protectedByMap[protectorKey]) {
+            protectedByMap[protectorKey] = {
+              protector: cellB,
+              targets: []
+            };
+          }
+          protectedByMap[protectorKey].targets.push({
+            row: rowAIdx,
+            col: cellAIdx,
+            piece: cellA[0].piece
+          });
         });
       });
     });
+
+    Object.values(protectedByMap).forEach((entry) => {
+      if (entry.targets.length < 2) {
+        return;
+      }
+      const criticalTargets = entry.targets.filter(target => {
+        if (target.piece === ChessPiecesEnum.King) {
+          return true;
+        }
+        if (!getThreatsOn) {
+          return true;
+        }
+        const threatsOnTarget = getThreatsOn(
+          board[target.row][target.col],
+          target.row,
+          target.col,
+          ofColor,
+          enemyColor
+        );
+        return threatsOnTarget.length > 0;
+      });
+      if (criticalTargets.length < 2) {
+        return;
+      }
+      criticalTargets.forEach(target => {
+        const from = new ChessPositionDto(8 - entry.protector.row, entry.protector.col + 1);
+        const to = new ChessPositionDto(8 - target.row, target.col + 1);
+        arrows.push(this.createVisualizationArrow(from, to, 'green', 0.45));
+      });
+    });
+
     return arrows;
   }
 
