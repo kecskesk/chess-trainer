@@ -233,6 +233,39 @@ describe('ChessBoardStateService branch coverage helpers', () => {
     restoreContext();
   });
 
+  it('handles falsy repetitionCounts in repetition checks', () => {
+    chessBoardStateService.repetitionCounts = null as any;
+    expect(chessBoardStateService.isThreefoldRepetition()).toBeFalse();
+    expect(chessBoardStateService.isFivefoldRepetition()).toBeFalse();
+  });
+
+  it('ensureRepetitionTrackingState returns early when tracking is up-to-date and resets otherwise', () => {
+    // when tracked length matches and repetitionCounts has entries, it should return early
+    chessBoardStateService.trackedHistoryLength = chessBoardStateService.history.length;
+    chessBoardStateService.repetitionCounts = { foo: 1 } as any;
+    chessBoardStateService.ensureRepetitionTrackingState();
+    expect(chessBoardStateService.repetitionCounts).toEqual({ foo: 1 } as any);
+
+    // when not up-to-date it should reset and record current position
+    chessBoardStateService.trackedHistoryLength = -1;
+    chessBoardStateService.repetitionCounts = {} as any;
+    chessBoardStateService.ensureRepetitionTrackingState();
+    expect(Object.keys(chessBoardStateService.repetitionCounts || {}).length).toBeGreaterThanOrEqual(1);
+    expect(chessBoardStateService.trackedHistoryLength).toBe(chessBoardStateService.history.length);
+
+    // when trackedHistoryLength matches but repetitionCounts is empty, it should not return early
+    chessBoardStateService.trackedHistoryLength = chessBoardStateService.history.length;
+    chessBoardStateService.repetitionCounts = {} as any;
+    chessBoardStateService.ensureRepetitionTrackingState();
+    expect(Object.keys(chessBoardStateService.repetitionCounts || {}).length).toBeGreaterThanOrEqual(1);
+
+    // also cover when repetitionCounts is null (falsy) while trackedHistoryLength matches
+    chessBoardStateService.trackedHistoryLength = chessBoardStateService.history.length;
+    chessBoardStateService.repetitionCounts = null as any;
+    chessBoardStateService.ensureRepetitionTrackingState();
+    expect(Object.keys(chessBoardStateService.repetitionCounts || {}).length).toBeGreaterThanOrEqual(1);
+  });
+
   it('handles null highlight and deep path guard branches', () => {
     const warnSpy = spyOn(console, 'warn');
     ChessBoardStateService.addHighlight(null as any);

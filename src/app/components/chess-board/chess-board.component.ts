@@ -90,7 +90,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   mateInOneBlunderTargets: {[key: string]: boolean} = {};
   isDragPreviewActive = false;
   private lastMatePreviewKey = '';
-  private trackedHistoryLength = -1;
+  
   private moveSnapshots: IGameplaySnapshot[] = [];
   private isFinalizingDropState = false;
   chessColors = ChessColorsEnum;
@@ -421,7 +421,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.ensureRepetitionTrackingState();
+    this.chessBoardStateService.ensureRepetitionTrackingState();
     const moveContext = this.buildDropMoveContext(event);
     if (!moveContext) {
       return;
@@ -835,7 +835,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (this.chessBoardStateService.boardHelper.gameOver) {
       return false;
     }
-    this.ensureRepetitionTrackingState();
+    this.chessBoardStateService.ensureRepetitionTrackingState();
     return ChessBoardClockGameStateFacade.getClaimDrawReason(
       this.chessBoardStateService.isThreefoldRepetition(),
       this.chessBoardStateService.isFiftyMoveRule()
@@ -1816,7 +1816,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       hasLegalMovesForCurrentTurn,
       isCurrentTurnInCheck,
       field: this.chessBoardStateService.field,
-      recordCurrentPosition: () => this.recordCurrentPosition(),
+      recordCurrentPosition: () => this.chessBoardStateService.recordCurrentPosition(),
       isFivefoldRepetition: () => this.chessBoardStateService.isFivefoldRepetition(),
       isSeventyFiveMoveRule: () => this.chessBoardStateService.isSeventyFiveMoveRule(),
       setDrawState: (message, reason) => this.setDrawState(message, reason)
@@ -2148,7 +2148,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       buildDisplayToUciMap: (topMovesUci, topMovesDisplay) => this.buildDisplayToUciMap(topMovesUci, topMovesDisplay),
       evaluateUciMovesForQuality: (token, fenArg, uniqueMoves) => this.evaluateUciMovesForQuality(token, fenArg, uniqueMoves),
       turnColor: this.chessBoardStateService.boardHelper.colorTurn,
-      classifySuggestionLoss: (loss) => this.classifySuggestionLoss(loss),
+      classifySuggestionLoss: (loss) => ChessBoardSuggestionFacade.classifySuggestionLoss(loss),
       requestRender: () => this.requestClockRender()
     });
     this.suggestionQualityByMove = result.suggestionQualityByMove;
@@ -2182,10 +2182,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
       analysisClampPawns: this.analysisClampPawns
     });
-  }
-
-  private classifySuggestionLoss(loss: number): string {
-    return ChessBoardSuggestionFacade.classifySuggestionLoss(loss);
   }
 
   private formatEngineSuggestions(uciMoves: string[]): string[] {
@@ -2225,7 +2221,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private captureCurrentSnapshot(): IGameplaySnapshot {
     return ChessBoardSnapshotService.captureSnapshot(
       this.chessBoardStateService,
-      this.trackedHistoryLength,
+      this.chessBoardStateService.trackedHistoryLength,
       this.pendingDrawOfferBy,
       this.clockStarted,
       this.clockRunning,
@@ -2242,7 +2238,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.pendingDrawOfferBy = restoredState.pendingDrawOfferBy;
     this.resignConfirmColor = null;
     this.chessBoardStateService.repetitionCounts = restoredState.repetitionCounts;
-    this.trackedHistoryLength = restoredState.trackedHistoryLength;
+    this.chessBoardStateService.trackedHistoryLength = restoredState.trackedHistoryLength;
     this.clockStarted = restoredState.clockStarted;
     this.whiteClockMs = restoredState.whiteClockMs;
     this.blackClockMs = restoredState.blackClockMs;
@@ -2253,40 +2249,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private ensureRepetitionTrackingState(): void {
-    const historyLength = this.chessBoardStateService.history.length;
-    if (this.trackedHistoryLength === historyLength && Object.keys(this.chessBoardStateService.repetitionCounts || {}).length > 0) {
-      return;
-    }
-
-    this.chessBoardStateService.repetitionCounts = {};
-    this.recordPositionKey(this.getPositionKey(this.chessBoardStateService.field, this.chessBoardStateService.boardHelper.colorTurn));
-    this.trackedHistoryLength = historyLength;
-  }
-
-  private recordCurrentPosition(): void {
-    const positionKey = this.getPositionKey(
-      this.chessBoardStateService.field,
-      this.chessBoardStateService.boardHelper.colorTurn
-    );
-    this.recordPositionKey(positionKey);
-    this.trackedHistoryLength = this.chessBoardStateService.history.length;
-  }
-
-  private recordPositionKey(positionKey: string): void {
-    const currentCount = (this.chessBoardStateService.repetitionCounts[positionKey] || 0);
-    this.chessBoardStateService.repetitionCounts[positionKey] = currentCount + 1;
-  }
-
-  
-
   getDebugPositionKey(): string {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
       return '';
     }
-    return this.getPositionKey(
+    return ChessBoardLogicUtils.getPositionKey(
       this.chessBoardStateService.field,
-      this.chessBoardStateService.boardHelper.colorTurn
+      this.chessBoardStateService.boardHelper.colorTurn,
+      this.chessBoardStateService.boardHelper.history
     );
   }
 
@@ -2300,15 +2270,4 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     );
   }
 
-  private getPositionKey(board: ChessPieceDto[][][], turn: ChessColorsEnum): string {
-    return ChessBoardLogicUtils.getPositionKey(
-      board,
-      turn,
-      this.chessBoardStateService.boardHelper ? this.chessBoardStateService.boardHelper.history : {}
-    );
-  }
-
-  
 }
-
-

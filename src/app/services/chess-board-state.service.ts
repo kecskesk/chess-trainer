@@ -14,6 +14,7 @@ import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 export class ChessBoardStateService {
   public static BOARD_HELPER: ChessBoardHelperDto = null;
   public static CHESS_FIELD: ChessPieceDto[][][] = [];
+  trackedHistoryLength = -1;
   boardHelper = new ChessBoardHelperDto(
               '',
               {},
@@ -354,5 +355,31 @@ export class ChessBoardStateService {
 
   private static toFileChar(col: number): string {
     return String.fromCharCode('a'.charCodeAt(0) + col);
+  }
+
+  ensureRepetitionTrackingState(): void {
+    const historyLength = this.history.length;
+    if (this.trackedHistoryLength === historyLength && Object.keys(this.repetitionCounts || {}).length > 0) {
+      return;
+    }
+
+    this.repetitionCounts = {};
+    this.recordPositionKey(ChessBoardLogicUtils.getPositionKey(this.field, this.boardHelper.colorTurn, this.boardHelper.history));
+    this.trackedHistoryLength = historyLength;
+  }
+
+  recordCurrentPosition(): void {
+    const positionKey = ChessBoardLogicUtils.getPositionKey(
+      this.field,
+      this.boardHelper.colorTurn,
+      this.boardHelper.history
+    );
+    this.recordPositionKey(positionKey);
+    this.trackedHistoryLength = this.history.length;
+  }
+
+  private recordPositionKey(positionKey: string): void {
+    const currentCount = (this.repetitionCounts[positionKey] || 0);
+    this.repetitionCounts[positionKey] = currentCount + 1;
   }
 }

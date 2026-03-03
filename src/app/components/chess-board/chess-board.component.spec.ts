@@ -729,7 +729,7 @@ describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     chessBoardStateService.repetitionCounts = { [targetPositionKey]: 4 };
-    (component as any).trackedHistoryLength = chessBoardStateService.history.length;
+    chessBoardStateService.trackedHistoryLength = chessBoardStateService.history.length;
 
         movePiece(7, 6, 5, 5);
 
@@ -3781,5 +3781,3 @@ describe('ChessBoardComponent additional suggestion coverage (preview helpers)',
     expect(local.isMateInOneBlunderTarget(0, 0)).toBeFalse();
   });
 });
-
-
