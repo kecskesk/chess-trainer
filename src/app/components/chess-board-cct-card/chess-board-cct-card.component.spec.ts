@@ -29,4 +29,9 @@ describe('ChessBoardCctCardComponent', () => {
     expect(component.getMoveClass('Nf3')).toBe('history-quality--great');
     expect(component.getMoveScore('Nf3')).toBe('+0.35');
   });
+
+  it('returns empty defaults for empty move input', () => {
+    expect(component.getMoveClass('')).toBe('');
+    expect(component.getMoveScore('')).toBe('');
+  });
 });

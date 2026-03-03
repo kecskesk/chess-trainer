@@ -16,4 +16,10 @@ describe('ChessBoardPositionKeyComponent', () => {
 
     expect(emitSpy).toHaveBeenCalledWith(true);
   });
+
+  it('emits false when toggle target is missing', () => {
+    const emitSpy = spyOn(component.debugPanelToggle, 'emit');
+    component.onToggle(new Event('toggle'));
+    expect(emitSpy).toHaveBeenCalledWith(false);
+  });
 });

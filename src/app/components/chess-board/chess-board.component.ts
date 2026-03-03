@@ -1366,6 +1366,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       turnColor,
       parsedMove
     );
+    const kingContextArrows = this.buildKingContextPreviewArrows(parsedMove, turnColor);
+    kingContextArrows.forEach(arrow => arrows.push(arrow));
     arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
   }
 
@@ -1654,6 +1656,149 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private parseSuggestedMove(move: string): { piece: ChessPiecesEnum, targetRow: number, targetCol: number } | null {
     return ChessBoardCctUtils.parseSuggestedMove(move);
+  }
+
+  private buildKingContextPreviewArrows(
+    parsedMove: { piece: ChessPiecesEnum, targetRow: number, targetCol: number },
+    turnColor: ChessColorsEnum
+  ): IVisualizationArrow[] {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.field) {
+      return [];
+    }
+    const board = this.chessBoardStateService.field;
+    const enemyColor = this.getOpponentColor(turnColor);
+    const arrows: IVisualizationArrow[] = [];
+    const seen = new Set<string>();
+
+    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
+      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
+        const sourceCell = board[srcRow][srcCol];
+        if (!(sourceCell && sourceCell[0])) {
+          continue;
+        }
+        const sourcePiece = sourceCell[0];
+        if (sourcePiece.color !== turnColor || sourcePiece.piece !== parsedMove.piece) {
+          continue;
+        }
+        const canMove = this.canPlayLegalMove(
+          board,
+          srcRow,
+          srcCol,
+          parsedMove.targetRow,
+          parsedMove.targetCol,
+          turnColor,
+          sourcePiece
+        );
+        if (!canMove) {
+          continue;
+        }
+
+        const afterMove = this.simulateMove(board, srcRow, srcCol, parsedMove.targetRow, parsedMove.targetCol);
+        this.collectKingAttackPreviewArrows(afterMove, turnColor, enemyColor, arrows, seen);
+        this.collectKingDefensePreviewArrows(afterMove, turnColor, enemyColor, arrows, seen);
+      }
+    }
+
+    return arrows;
+  }
+
+  private collectKingAttackPreviewArrows(
+    board: ChessPieceDto[][][],
+    attackerColor: ChessColorsEnum,
+    enemyColor: ChessColorsEnum,
+    arrows: IVisualizationArrow[],
+    seen: Set<string>
+  ): void {
+    const enemyKing = this.findKing(board, enemyColor);
+    if (!enemyKing) {
+      return;
+    }
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
+        const sourceCell = board[row][col];
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === attackerColor)) {
+          continue;
+        }
+        const canAttackKing = this.canPlayLegalMove(
+          board,
+          row,
+          col,
+          enemyKing.row,
+          enemyKing.col,
+          attackerColor,
+          sourceCell[0]
+        );
+        if (!canAttackKing) {
+          continue;
+        }
+        this.pushUniquePreviewArrow(
+          arrows,
+          seen,
+          this.createVisualizationArrow(
+            new ChessPositionDto(8 - row, col + 1),
+            new ChessPositionDto(8 - enemyKing.row, enemyKing.col + 1),
+            'red',
+            0.5
+          )
+        );
+      }
+    }
+  }
+
+  private collectKingDefensePreviewArrows(
+    board: ChessPieceDto[][][],
+    defenderColor: ChessColorsEnum,
+    enemyColor: ChessColorsEnum,
+    arrows: IVisualizationArrow[],
+    seen: Set<string>
+  ): void {
+    const ownKing = this.findKing(board, defenderColor);
+    if (!ownKing) {
+      return;
+    }
+    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
+      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
+        if (row === ownKing.row && col === ownKing.col) {
+          continue;
+        }
+        const sourceCell = board[row][col];
+        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === defenderColor)) {
+          continue;
+        }
+        const canDefendKing = this.withBoardContext(board, defenderColor, () =>
+          ChessRulesService.canStepThere(
+            ownKing.row,
+            ownKing.col,
+            [new ChessPieceDto(enemyColor, ChessPiecesEnum.King)],
+            row,
+            col,
+            new ChessPieceDto(sourceCell[0].color, sourceCell[0].piece)
+          )
+        );
+        if (!canDefendKing) {
+          continue;
+        }
+        this.pushUniquePreviewArrow(
+          arrows,
+          seen,
+          this.createVisualizationArrow(
+            new ChessPositionDto(8 - row, col + 1),
+            new ChessPositionDto(8 - ownKing.row, ownKing.col + 1),
+            'gold',
+            0.3
+          )
+        );
+      }
+    }
+  }
+
+  private pushUniquePreviewArrow(arrows: IVisualizationArrow[], seen: Set<string>, arrow: IVisualizationArrow): void {
+    const key = `${arrow.fromRow}:${arrow.fromCol}:${arrow.toRow}:${arrow.toCol}:${arrow.color}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    arrows.push(arrow);
   }
 
   private getThreatenedEnemyPiecesByMovedPiece(

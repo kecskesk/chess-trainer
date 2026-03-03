@@ -35,4 +35,8 @@ describe('ChessBoardToolsCardComponent', () => {
   it('returns empty score when default score provider is used', () => {
     expect(component.getSuggestedMoveScore('Nf3')).toBe('');
   });
+
+  it('returns empty score for empty move input', () => {
+    expect(component.getSuggestedMoveScore('')).toBe('');
+  });
 });

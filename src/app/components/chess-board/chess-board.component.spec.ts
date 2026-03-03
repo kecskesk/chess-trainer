@@ -16,6 +16,7 @@ import { ChessBoardComponentUtils } from '../../utils/chess-board-component.util
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 import { ChessConstants } from '../../constants/chess.constants';
+import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -1732,6 +1733,19 @@ describe('ChessBoardComponent gameplay moves and rules (position and analysis)',
 
     component.clearSuggestedMoveArrows();
     expect((component as any).suggestedMoveArrowSnapshot).toBeNull();
+  });
+
+  it('adds king attack/defense arrows during CCT preview when applicable', () => {
+    clearBoard();
+    chessBoardStateService.field[7][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.King } as any]; // e1
+    chessBoardStateService.field[7][3] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Queen } as any]; // d1
+    chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any]; // e8
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+
+    component.previewSuggestedMoveArrows('Qe2+');
+    const arrows = Object.values(chessBoardStateService.boardHelper.arrows) as Array<{ color?: string }>;
+    expect(arrows.some(arrow => arrow.color === 'red')).toBeTrue();
+    expect(arrows.some(arrow => arrow.color === 'gold')).toBeTrue();
   });
 
   it('returns threats on a square and visualizes protected/hanging pieces', () => {
@@ -3542,6 +3556,110 @@ describe('ChessBoardComponent suggestion scoring edge mapping branches', () => {
     });
     await (local as any).refreshSuggestionQualities(12, 'black-scored', ['g1f3'], ['Nf3']);
     expect((local as any).suggestionQualityByMove.e4).toBe('history-quality--small-error');
+  });
+});
+
+describe('ChessBoardComponent additional suggestion coverage', () => {
+  it('covers visible history evaluations getter and suggestion label lookups', () => {
+    spyOn(component, 'getVisibleHistory').and.returnValue(['e4']);
+    spyOn<any>(component, 'getEvaluationForMove').and.returnValue('+0.20');
+    expect(component.visibleHistoryEvaluations).toEqual(['+0.20']);
+
+    (component as any).suggestionQualityByMove = { Nf3: 'history-quality--great' };
+    (component as any).suggestionEvalTextByMove = { Nf3: '+0.30' };
+    expect(component.getSuggestionQualityClass('Nf3')).toBe('history-quality--great');
+    expect(component.getSuggestionEvalText('Nf3')).toBe('+0.30');
+    expect(component.getSuggestionQualityClass('e4')).toBe('');
+    expect(component.getSuggestionEvalText('e4')).toBe('');
+  });
+
+  it('covers refreshSuggestedMoves callback branch with explicit move arrays', async () => {
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.10'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
+      terminate: jasmine.createSpy('terminate')
+    } as any);
+    (local as any).evaluationRunToken = 4;
+
+    const refreshSpy = spyOn<any>(local, 'refreshSuggestionQualities').and.resolveTo();
+    const facadeSpy = spyOn(ChessBoardEvaluationFacade, 'refreshSuggestedMoves').and.callFake(async (params: any) => {
+      await params.refreshSuggestionQualities(4, 'fen', ['g1f3'], ['Nf3']);
+      return {
+        suggestedMoves: ['Nf3'],
+        suggestionQualityByMove: {},
+        suggestionEvalTextByMove: {}
+      };
+    });
+
+    spyOn<any>(local, 'getCurrentFen').and.returnValue('fen');
+    await (local as any).refreshSuggestedMoves(4);
+
+    expect(facadeSpy).toHaveBeenCalled();
+    expect(refreshSpy).toHaveBeenCalledWith(4, 'fen', ['g1f3'], ['Nf3']);
+  });
+
+  it('covers refreshSuggestedMoves callback branch null array fallback', async () => {
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, undefined, undefined, undefined, {
+      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.10'),
+      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
+      terminate: jasmine.createSpy('terminate')
+    } as any);
+    (local as any).evaluationRunToken = 6;
+
+    const refreshSpy = spyOn<any>(local, 'refreshSuggestionQualities').and.resolveTo();
+    spyOn(ChessBoardEvaluationFacade, 'refreshSuggestedMoves').and.callFake(async (params: any) => {
+      await params.refreshSuggestionQualities(6, 'fen', null, null);
+      return {
+        suggestedMoves: ['Nf3'],
+        suggestionQualityByMove: {},
+        suggestionEvalTextByMove: {}
+      };
+    });
+
+    spyOn<any>(local, 'getCurrentFen').and.returnValue('fen');
+    await (local as any).refreshSuggestedMoves(6);
+    expect(refreshSpy).toHaveBeenCalledWith(6, 'fen', [], []);
+  });
+
+  it('covers king-context preview helper early-return and dedupe branches', () => {
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
+    (local as any).chessBoardStateService.field = null;
+    const early = (local as any).buildKingContextPreviewArrows(
+      { piece: ChessPiecesEnum.King, targetRow: 7, targetCol: 4 },
+      ChessColorsEnum.White
+    );
+    expect(early).toEqual([]);
+
+    (local as any).chessBoardStateService.field = Array.from({ length: 8 }, () =>
+      Array.from({ length: 8 }, () => [] as any[])
+    );
+    clearBoard();
+    const noEnemyKingArrows: any[] = [];
+    (local as any).collectKingAttackPreviewArrows(
+      chessBoardStateService.field,
+      ChessColorsEnum.White,
+      ChessColorsEnum.Black,
+      noEnemyKingArrows,
+      new Set<string>()
+    );
+    expect(noEnemyKingArrows.length).toBe(0);
+
+    const noOwnKingArrows: any[] = [];
+    (local as any).collectKingDefensePreviewArrows(
+      chessBoardStateService.field,
+      ChessColorsEnum.White,
+      ChessColorsEnum.Black,
+      noOwnKingArrows,
+      new Set<string>()
+    );
+    expect(noOwnKingArrows.length).toBe(0);
+
+    const arrows: any[] = [];
+    const seen = new Set<string>();
+    const arrow = { fromRow: 1, fromCol: 1, toRow: 2, toCol: 2, color: 'gold', intensity: 0.3 };
+    (local as any).pushUniquePreviewArrow(arrows, seen, arrow);
+    (local as any).pushUniquePreviewArrow(arrows, seen, arrow);
+    expect(arrows.length).toBe(1);
   });
 });
 

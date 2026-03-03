@@ -121,8 +121,7 @@ export class StockfishService implements OnDestroy {
     } catch {
       // Ignore postMessage failures while shutting down.
     }
-    this.worker.terminate();
-    this.worker = null;
+    this.destroyWorker();
   }
 
   private ensureReady(): Promise<void> {
@@ -137,12 +136,17 @@ export class StockfishService implements OnDestroy {
       try {
         this.worker = this.createWorker();
         this.worker.onmessage = (event: MessageEvent<string>) => this.onWorkerMessage(event);
-        this.worker.onerror = () => {
-          const error = new Error('Stockfish worker error');
-          this.rejectPendingEvaluation(error.message);
-          this.rejectPendingTopMoves(error.message);
-          this.rejectAllWaiters(error.message);
-          reject(error);
+        this.worker.onerror = (event: Event | ErrorEvent) => {
+          if (typeof (event as ErrorEvent).preventDefault === 'function') {
+            (event as ErrorEvent).preventDefault();
+          }
+          reject(this.handleWorkerFailure(this.extractWorkerErrorMessage(event)));
+        };
+        this.worker.onmessageerror = (event: MessageEvent<unknown>) => {
+          if (typeof event.preventDefault === 'function') {
+            event.preventDefault();
+          }
+          reject(this.handleWorkerFailure('Stockfish worker message error'));
         };
 
         this.post('uci');
@@ -417,10 +421,47 @@ export class StockfishService implements OnDestroy {
     if (!this.worker) {
       throw new Error('Stockfish worker is not initialized');
     }
-    this.worker.postMessage(command);
+    try {
+      this.worker.postMessage(command);
+    } catch (error) {
+      throw this.handleWorkerFailure(this.extractPostErrorMessage(error));
+    }
   }
 
   private createWorker(): Worker {
     return new Worker('assets/stockfish/stockfish.js');
+  }
+
+  private handleWorkerFailure(message: string): Error {
+    const errorMessage = (message || '').trim() || 'Stockfish worker error';
+    this.rejectPendingEvaluation(errorMessage);
+    this.rejectPendingTopMoves(errorMessage);
+    this.rejectAllWaiters(errorMessage);
+    this.ready = false;
+    this.initPromise = null;
+    this.destroyWorker();
+    return new Error(errorMessage);
+  }
+
+  private destroyWorker(): void {
+    if (!this.worker) {
+      return;
+    }
+    this.worker.terminate();
+    this.worker = null;
+  }
+
+  private extractWorkerErrorMessage(event: Event | ErrorEvent): string {
+    const message = typeof (event as ErrorEvent).message === 'string'
+      ? (event as ErrorEvent).message.trim()
+      : '';
+    return message ? `Stockfish worker error: ${message}` : 'Stockfish worker error';
+  }
+
+  private extractPostErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.trim()) {
+      return `Stockfish worker postMessage failed: ${error.message}`;
+    }
+    return 'Stockfish worker postMessage failed';
   }
 }

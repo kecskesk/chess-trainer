@@ -3,6 +3,7 @@ import { StockfishService } from './stockfish.service';
 class WorkerMock {
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
+  onmessageerror: ((event: MessageEvent<unknown>) => void) | null = null;
   readonly postedCommands: string[] = [];
   terminated = false;
   private currentFen = '';
@@ -250,6 +251,38 @@ describe('StockfishService edge paths (errors/readiness)', () => {
     await expectAsync(pending).toBeRejectedWithError('Stockfish worker error');
   });
 
+  it('rejects with worker error detail and resets worker state', async () => {
+    const pending = service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
+    setTimeout(() => worker.onerror?.({ message: 'Uncaught RuntimeError: unreachable', preventDefault: () => undefined } as any), 0);
+    await expectAsync(pending).toBeRejectedWithError(
+      'Stockfish worker error: Uncaught RuntimeError: unreachable'
+    );
+    expect(worker.terminated).toBeTrue();
+    expect((service as any).worker).toBeNull();
+    expect((service as any).ready).toBeFalse();
+  });
+
+  it('rejects when worker emits message error', async () => {
+    const pending = service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
+    setTimeout(() => worker.onmessageerror?.({ preventDefault: () => undefined } as any), 0);
+    await expectAsync(pending).toBeRejectedWithError('Stockfish worker message error');
+  });
+
+  it('re-initializes with a fresh worker after a worker runtime failure', async () => {
+    const firstWorker = new WorkerMock();
+    const secondWorker = new WorkerMock();
+    const createWorkerSpy = (service as any).createWorker as jasmine.Spy;
+    createWorkerSpy.and.returnValues(firstWorker as unknown as Worker, secondWorker as unknown as Worker);
+
+    const firstPending = service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
+    setTimeout(() => firstWorker.onerror?.({ message: 'Uncaught RuntimeError: unreachable', preventDefault: () => undefined } as any), 0);
+    await expectAsync(firstPending).toBeRejected();
+
+    const secondResult = await service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
+    expect(secondResult).toBe('+0.47');
+    expect(createWorkerSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects pending getTopMoves when worker emits error', async () => {
     const pending = service.getTopMoves('8/8/8/8/8/8/8/8 w - - 0 1', { multiPv: 2 });
     setTimeout(() => worker.onerror?.(new Event('error')), 0);
@@ -276,6 +309,18 @@ describe('StockfishService edge paths (errors/readiness)', () => {
 
   it('throws when posting without initialized worker', () => {
     expect(() => (service as any).post('uci')).toThrowError('Stockfish worker is not initialized');
+  });
+
+  it('throws postMessage failure and tears down broken worker', async () => {
+    await (service as any).ensureReady();
+    spyOn(worker, 'postMessage').and.callFake(() => {
+      throw new Error('DataCloneError');
+    });
+
+    expect(() => (service as any).post('uci'))
+      .toThrowError('Stockfish worker postMessage failed: DataCloneError');
+    expect(worker.terminated).toBeTrue();
+    expect((service as any).worker).toBeNull();
   });
 
   it('returns early from ensureReady when already ready with a worker', async () => {
@@ -360,6 +405,15 @@ describe('StockfishService edge paths (helpers)', () => {
     expect(() => (service as any).rejectPendingTopMoves('x')).not.toThrow();
     (service as any).worker = null;
     expect(() => service.terminate()).not.toThrow();
+  });
+
+  it('covers worker-failure fallback message and post error fallback helper', () => {
+    (service as any).worker = null;
+    const failure = (service as any).handleWorkerFailure('   ');
+    const undefinedFailure = (service as any).handleWorkerFailure(undefined);
+    expect(failure.message).toBe('Stockfish worker error');
+    expect(undefinedFailure.message).toBe('Stockfish worker error');
+    expect((service as any).extractPostErrorMessage({})).toBe('Stockfish worker postMessage failed');
   });
 
   it('creates worker with stockfish asset path', () => {
