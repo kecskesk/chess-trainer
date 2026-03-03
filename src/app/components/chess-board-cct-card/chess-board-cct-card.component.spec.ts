@@ -19,7 +19,14 @@ describe('ChessBoardCctCardComponent', () => {
   });
 
   it('exposes default move class and score providers', () => {
-    expect(component.getMoveClass('Nf3')).toBe('');
+    expect(component.getMoveClass('Nf3')).toBe('suggested-move--threat');
     expect(component.getMoveScore('Nf3')).toBe('');
+  });
+
+  it('uses provided move quality and score maps when present', () => {
+    component.moveQualityByMove = { Nf3: 'history-quality--great' };
+    component.moveEvalByMove = { Nf3: '+0.35' };
+    expect(component.getMoveClass('Nf3')).toBe('history-quality--great');
+    expect(component.getMoveScore('Nf3')).toBe('+0.35');
   });
 });

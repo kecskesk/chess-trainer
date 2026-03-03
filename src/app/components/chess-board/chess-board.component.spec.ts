@@ -1155,10 +1155,10 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview and clock s
   });
 
   it('toggles debug panel state', () => {
-    component.onDebugPanelToggle({ target: { open: true } } as any);
+    component.onDebugPanelToggle(true);
     expect(component.isDebugPanelOpen).toBeTrue();
 
-    component.onDebugPanelToggle({ target: { open: false } } as any);
+    component.onDebugPanelToggle(false);
     expect(component.isDebugPanelOpen).toBeFalse();
 
   });
@@ -1826,7 +1826,7 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
   });
 
   it('covers debug-toggle null-target and isClockActive guard branches', () => {
-    component.onDebugPanelToggle({} as any);
+    component.onDebugPanelToggle(false);
     expect(component.isDebugPanelOpen).toBeFalse();
 
     chessBoardStateService.boardHelper.gameOver = false;

@@ -2,7 +2,7 @@
   <h3 class="section-title">{{statusTitle}}</h3>
   <div class="icon-actions-row icon-actions-row--compact icon-actions-row--status">
     <button class="icon-action-btn"
-      (click)="showPossibleMoves.emit(currentTurnColor)"
+      (click)="showPossibleMoves.emit(boardState ? boardState.colorTurn : null)"
       [attr.title]="uiText.status.showPossibleMovesTitle"
       [attr.aria-label]="uiText.status.showPossibleMovesAriaLabel">
       <span class="icon-action-btn__icon"><i class="fas fa-eye" aria-hidden="true"></i></span>

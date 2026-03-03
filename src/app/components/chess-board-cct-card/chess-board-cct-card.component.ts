@@ -15,9 +15,34 @@ export class ChessBoardCctCardComponent {
   @Input() captures: ICctRecommendation[] = [];
   @Input() checks: ICctRecommendation[] = [];
   @Input() threats: ICctRecommendation[] = [];
-  @Input() getMoveClass: (move: string) => string = () => '';
-  @Input() getMoveScore: (move: string) => string = () => '';
+  @Input() moveQualityByMove: Record<string, string> = {};
+  @Input() moveEvalByMove: Record<string, string> = {};
 
   @Output() previewMove = new EventEmitter<string>();
   @Output() clearPreview = new EventEmitter<void>();
+
+  getMoveClass(move: string): string {
+    if (!move) {
+      return '';
+    }
+    const qualityClass = this.moveQualityByMove[move];
+    if (qualityClass) {
+      return qualityClass;
+    }
+    const normalized = move.replace(/^\.\.\./, '');
+    if (normalized.includes('+')) {
+      return 'suggested-move--check';
+    }
+    if (normalized.includes('x')) {
+      return 'suggested-move--capture';
+    }
+    return 'suggested-move--threat';
+  }
+
+  getMoveScore(move: string): string {
+    if (!move) {
+      return '';
+    }
+    return this.moveEvalByMove[move] || '';
+  }
 }

@@ -21,7 +21,6 @@ export class ChessBoardStatusCardComponent {
   @Input() uiText: typeof UiText = UiText;
   @Input() selectedLocale = '';
   @Input() boardState: IStatusBoardState | null = null;
-  @Input() currentTurnColor: ChessColorsEnum | null = null;
   @Input() pendingDrawOfferBy: ChessColorsEnum | null = null;
   @Input() clockRunning = false;
   @Input() resignConfirmColor: ChessColorsEnum | null = null;

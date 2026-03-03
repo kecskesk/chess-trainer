@@ -14,9 +14,10 @@ export class ChessBoardPositionKeyComponent {
   @Input() boardHelper: { debugText?: string } | null = null;
   @Input() isDebugPanelOpen = false;
   @Input() debugPositionKey = '';
-  @Output() debugPanelToggle = new EventEmitter<Event>();
+  @Output() debugPanelToggle = new EventEmitter<boolean>();
 
   onToggle(event: Event): void {
-    this.debugPanelToggle.emit(event);
+    const detailsElement = event && event.target ? event.target as HTMLDetailsElement : null;
+    this.debugPanelToggle.emit(!!(detailsElement && detailsElement.open));
   }
 }

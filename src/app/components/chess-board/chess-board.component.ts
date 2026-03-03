@@ -44,16 +44,17 @@ import { ChessBoardStorageService } from '../../services/chess-board-storage.ser
 import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 import { ChessBoardCctService } from '../../services/chess-board-cct.service';
-
-interface IStockfishServiceWithMoveEval {
-  evaluateFen: (fen: string, options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
-  evaluateFenAfterMoves?: (fen: string, uciMoves: string[], options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
-}
-
-interface ISuggestionEvaluationResult {
-  pawnsByUci: Map<string, number>;
-  textByUci: Map<string, string>;
-}
+import {
+  ChessBoardSuggestionFacade,
+  IChessBoardSuggestionEngineService,
+  ISuggestionEvaluationResult
+} from '../../utils/chess-board-suggestion.facade';
+import { ChessBoardOpeningFacade, IChessBoardOpeningState } from '../../utils/chess-board-opening.facade';
+import { ChessBoardMoveFacade, IDropMoveContext } from '../../utils/chess-board-move.facade';
+import { ChessBoardVisualizationFacade } from '../../utils/chess-board-visualization.facade';
+import { ChessBoardTimelineFacade } from '../../utils/chess-board-timeline.facade';
+import { ChessBoardClockGameStateFacade } from '../../utils/chess-board-clock-game-state.facade';
+import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
 
 @Component({
   selector: 'app-chess-board',
@@ -166,6 +167,147 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   ambientStyle: {[key: string]: string} = {};
   canDropPredicate = (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean =>
     this.canDrop(drag, drop);
+
+  get suggestionQualityByMoveMap(): Record<string, string> {
+    return this.suggestionQualityByMove;
+  }
+
+  get suggestionEvalTextByMoveMap(): Record<string, string> {
+    return this.suggestionEvalTextByMove;
+  }
+
+  get visibleHistoryEvaluations(): string[] {
+    const visibleHistory = this.getVisibleHistory();
+    return visibleHistory.map((_, idx) => this.getEvaluationForMove(idx));
+  }
+
+  get pendingEvaluationPlaceholderText(): string {
+    return this.pendingEvaluationPlaceholder;
+  }
+
+  get evaluationErrorPlaceholderText(): string {
+    return this.evaluationErrorPlaceholder;
+  }
+
+  get naPlaceholderText(): string {
+    return ChessBoardComponent.NA_PLACEHOLDER;
+  }
+
+  get analysisClampPawnsLimit(): number {
+    return this.analysisClampPawns;
+  }
+
+  get clockVm(): {
+    selectedClockPresetLabel: string;
+    clockStarted: boolean;
+    clockRunning: boolean;
+    blackClockMs: number;
+    whiteClockMs: number;
+    analysisMeterOffsetPercent: number;
+    currentAnalysisEvalText: string;
+    isBlackClockActive: boolean;
+    isWhiteClockActive: boolean;
+    isBlackClockLow: boolean;
+    isWhiteClockLow: boolean;
+  } {
+    return {
+      selectedClockPresetLabel: this.selectedClockPresetLabel,
+      clockStarted: this.clockStarted,
+      clockRunning: this.clockRunning,
+      blackClockMs: this.blackClockMs,
+      whiteClockMs: this.whiteClockMs,
+      analysisMeterOffsetPercent: this.getAnalysisMeterOffsetPercent(),
+      currentAnalysisEvalText: this.getCurrentAnalysisEvalText(),
+      isBlackClockActive: this.isClockActive(this.chessColors.Black),
+      isWhiteClockActive: this.isClockActive(this.chessColors.White),
+      isBlackClockLow: this.isClockLow(this.chessColors.Black),
+      isWhiteClockLow: this.isClockLow(this.chessColors.White)
+    };
+  }
+
+  get statusVm(): {
+    boardState: ChessBoardStateService['boardHelper'];
+    pendingDrawOfferBy: ChessColorsEnum | null;
+    clockRunning: boolean;
+    resignConfirmColor: ChessColorsEnum | null;
+    canOfferDraw: boolean;
+    canRespondToDrawOffer: boolean;
+    canClaimDraw: boolean;
+    canResignWhite: boolean;
+    canResignBlack: boolean;
+  } {
+    return {
+      boardState: this.chessBoardStateService.boardHelper,
+      pendingDrawOfferBy: this.pendingDrawOfferBy,
+      clockRunning: this.clockRunning,
+      resignConfirmColor: this.resignConfirmColor,
+      canOfferDraw: this.canOfferDraw(),
+      canRespondToDrawOffer: this.canRespondToDrawOffer(),
+      canClaimDraw: this.canClaimDraw(),
+      canResignWhite: this.canResign(this.chessColors.White),
+      canResignBlack: this.canResign(this.chessColors.Black)
+    };
+  }
+
+  get toolsVm(): {
+    activeTool: string | null;
+    isBoardFlipped: boolean;
+    canPromote: boolean;
+    suggestedMoves: string[];
+    suggestedMoveQualityByMove: Record<string, string>;
+    suggestedMoveEvalByMove: Record<string, string>;
+    openingRecognition: string;
+    endgameRecognition: string;
+  } {
+    return {
+      activeTool: this.activeTool,
+      isBoardFlipped: this.isBoardFlipped,
+      canPromote: this.chessBoardStateService.boardHelper.canPromote !== null,
+      suggestedMoves: this.suggestedMoves,
+      suggestedMoveQualityByMove: this.suggestionQualityByMoveMap,
+      suggestedMoveEvalByMove: this.suggestionEvalTextByMoveMap,
+      openingRecognition: this.getMockOpeningRecognition(),
+      endgameRecognition: this.getMockEndgameRecognition()
+    };
+  }
+
+  get historyVm(): {
+    canUndo: boolean;
+    canRedo: boolean;
+    visibleHistory: string[];
+    evaluations: string[];
+    pendingEvaluationPlaceholder: string;
+    evaluationErrorPlaceholder: string;
+    naPlaceholder: string;
+    analysisClampPawns: number;
+  } {
+    return {
+      canUndo: this.canUndoMove(),
+      canRedo: this.canRedoMove(),
+      visibleHistory: this.getVisibleHistory(),
+      evaluations: this.visibleHistoryEvaluations,
+      pendingEvaluationPlaceholder: this.pendingEvaluationPlaceholderText,
+      evaluationErrorPlaceholder: this.evaluationErrorPlaceholderText,
+      naPlaceholder: this.naPlaceholderText,
+      analysisClampPawns: this.analysisClampPawnsLimit
+    };
+  }
+
+  get cctVm(): {
+    captures: ICctRecommendation[];
+    checks: ICctRecommendation[];
+    threats: ICctRecommendation[];
+    moveQualityByMove: Record<string, string>;
+    moveEvalByMove: Record<string, string>;
+  } {
+    return {
+      captures: this.getCctRecommendations(this.cctCategory.Captures),
+      checks: this.getCctRecommendations(this.cctCategory.Checks),
+      threats: this.getCctRecommendations(this.cctCategory.Threats),
+      moveQualityByMove: this.suggestionQualityByMoveMap,
+      moveEvalByMove: this.suggestionEvalTextByMoveMap
+    };
+  }
 
   private get previewRenderSize(): number {
     return Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
@@ -411,210 +553,80 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private canProcessDropEvent(event: CdkDragDrop<ChessPieceDto[]>): boolean {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
-      return false;
-    }
-    if (this.chessBoardStateService.boardHelper.gameOver) {
-      this.setSubtleDebugReason(ChessBoardMessageConstants.GAME_OVER_NO_MOVES);
-      return false;
-    }
-    if (!event || !event.previousContainer || !event.container || !event.previousContainer.data || !event.container.data) {
-      return false;
-    }
-    return !!event.previousContainer.data[0];
+    return ChessBoardMoveFacade.canProcessDropEvent({
+      event,
+      hasBoardState: !!(this.chessBoardStateService && this.chessBoardStateService.boardHelper),
+      gameOver: !!(this.chessBoardStateService && this.chessBoardStateService.boardHelper && this.chessBoardStateService.boardHelper.gameOver),
+      onGameOver: () => this.setSubtleDebugReason(ChessBoardMoveFacade.gameOverNoMovesMessage())
+    });
   }
 
-  private buildDropMoveContext(event: CdkDragDrop<ChessPieceDto[]>): {
-    targetRow: number;
-    targetCell: number;
-    srcRow: number;
-    srcCell: number;
-    srcPiece: ChessPiecesEnum;
-    srcColor: ChessColorsEnum;
-  } | null {
-    const targetPosition = ChessBoardComponentUtils.parseFieldId(event.container.id);
-    const sourcePosition = ChessBoardComponentUtils.parseFieldId(event.previousContainer.id);
-    const sourceData = event.previousContainer.data[0];
-    if (!targetPosition || !sourcePosition || !sourceData) {
-      return null;
-    }
-
-    return {
-      targetRow: targetPosition.row,
-      targetCell: targetPosition.col,
-      srcRow: sourcePosition.row,
-      srcCell: sourcePosition.col,
-      srcPiece: sourceData.piece,
-      srcColor: sourceData.color
-    };
+  private buildDropMoveContext(event: CdkDragDrop<ChessPieceDto[]>): IDropMoveContext | null {
+    return ChessBoardMoveFacade.buildDropMoveContext(event);
   }
 
-  private validateDropMove(
-    moveContext: { targetRow: number; targetCell: number; srcRow: number; srcCell: number; srcPiece: ChessPiecesEnum; srcColor: ChessColorsEnum; },
-    event: CdkDragDrop<ChessPieceDto[]>
-  ): boolean {
-    const isValidMove = ChessRulesService.validateMove(
-      moveContext.targetRow,
-      moveContext.targetCell,
-      this.chessBoardStateService.field[moveContext.targetRow][moveContext.targetCell],
-      moveContext.srcRow,
-      moveContext.srcCell
-    ).isValid;
-
-    if (isValidMove) {
-      return true;
-    }
-
-    const sourcePiece = event.previousContainer.data[0];
-    const dragFailureReason = this.getDragFailureReason(moveContext.srcRow, moveContext.srcCell, sourcePiece);
-    if (dragFailureReason) {
-      this.setSubtleDebugReason(dragFailureReason);
-    }
-    return false;
+  private validateDropMove(moveContext: IDropMoveContext, event: CdkDragDrop<ChessPieceDto[]>): boolean {
+    return ChessBoardMoveFacade.validateDropMove({
+      moveContext,
+      event,
+      board: this.chessBoardStateService.field,
+      getDragFailureReason: (srcRow, srcCell, sourcePiece) => this.getDragFailureReason(srcRow, srcCell, sourcePiece),
+      setSubtleDebugReason: (reason) => this.setSubtleDebugReason(reason)
+    });
   }
 
   private prepareUiForDrop(moveContext: { srcColor: ChessColorsEnum }): void {
-    if (!this.clockStarted) {
+    const wasClockStarted = this.clockStarted;
+    this.pendingDrawOfferBy = ChessBoardMoveFacade.prepareUiForDrop({
+      clockStarted: this.clockStarted,
+      pendingDrawOfferBy: this.pendingDrawOfferBy,
+      srcColor: moveContext.srcColor,
+      startClock: () => this.startClock(),
+      randomizeAmbientStyle: () => this.randomizeAmbientStyle(),
+      boardHelper: this.chessBoardStateService.boardHelper
+    });
+    if (!wasClockStarted) {
       this.clockStarted = true;
-      this.startClock();
     }
-
-    this.randomizeAmbientStyle();
-    if (this.pendingDrawOfferBy !== null && this.pendingDrawOfferBy !== moveContext.srcColor) {
-      this.pendingDrawOfferBy = null;
-    }
-
-    this.chessBoardStateService.boardHelper.debugText = '';
-    this.chessBoardStateService.boardHelper.possibles = {};
-    this.chessBoardStateService.boardHelper.hits = {};
-    this.chessBoardStateService.boardHelper.checks = {};
-    this.chessBoardStateService.boardHelper.arrows = {};
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
   }
 
-  private applyPromotionAvailability(moveContext: {
-    srcPiece: ChessPiecesEnum;
-    srcColor: ChessColorsEnum;
-    targetRow: number;
-    targetCell: number;
-  }): void {
-    const promotionTargetRow = moveContext.srcColor === ChessColorsEnum.White ? 0 : 7;
-    if (moveContext.srcPiece === ChessPiecesEnum.Pawn && moveContext.targetRow === promotionTargetRow) {
-      this.chessBoardStateService.boardHelper.canPromote = moveContext.targetCell;
-    }
+  private applyPromotionAvailability(moveContext: IDropMoveContext): void {
+    ChessBoardMoveFacade.applyPromotionAvailability(moveContext, this.chessBoardStateService.boardHelper);
   }
 
-  private applyPreTransferBoardState(
-    event: CdkDragDrop<ChessPieceDto[]>,
-    moveContext: {
-      targetRow: number;
-      targetCell: number;
-      srcRow: number;
-      srcCell: number;
-      srcPiece: ChessPiecesEnum;
-      srcColor: ChessColorsEnum;
-    }
-  ): { isHit: boolean; isEP: boolean; castleData: string | null } {
-    let isHit = false;
-    let isEP = false;
-    let castleData: string | null = null;
-
-    if (event.container && event.container.data && event.container.data[0]) {
-      this.chessBoardStateService.field[moveContext.targetRow][moveContext.targetCell].splice(0, 1);
-      isHit = true;
-    }
-
-    const isPawnDiagonalToEmpty = moveContext.srcPiece === ChessPiecesEnum.Pawn
-      && Math.abs(moveContext.targetCell - moveContext.srcCell) === 1
-      && (!event.container.data || event.container.data.length < 1);
-    const targetDirectionStep = moveContext.srcColor === ChessColorsEnum.White ? -1 : 1;
-    const enemyFirstStep = moveContext.srcColor === ChessColorsEnum.Black ? 5 : 2;
-    if (isPawnDiagonalToEmpty && (moveContext.targetRow - moveContext.srcRow) === targetDirectionStep &&
-      moveContext.targetRow === enemyFirstStep) {
-      const epTargetRow = moveContext.srcColor === ChessColorsEnum.White ? 3 : 4;
-      const epSourceRow = moveContext.srcColor === ChessColorsEnum.White ? 1 : 6;
-      const lastHistory = this.chessBoardStateService.history[this.chessBoardStateService.history.length - 1];
-      const possibleEP = ChessBoardStateService.translateNotation(
-        epTargetRow,
-        moveContext.targetCell,
-        epSourceRow,
-        moveContext.targetCell,
-        ChessPiecesEnum.Pawn,
-        false,
-        false,
-        false,
-        false,
-        null
-      );
-      if (lastHistory === possibleEP && this.chessBoardStateService.field[epTargetRow][moveContext.targetCell].length > 0) {
-        this.chessBoardStateService.field[epTargetRow][moveContext.targetCell].splice(0, 1);
-        isHit = true;
-        isEP = true;
-      }
-    }
-
-    this.chessBoardStateService.boardHelper.justDidEnPassant = null;
-    const justDidCastle = this.chessBoardStateService.boardHelper.justDidCastle;
-    if (justDidCastle) {
-      const rookCol = justDidCastle.col === 2 ? 0 : 7;
-      const rookDestCol = justDidCastle.col === 2 ? 3 : 5;
-      const castleRook = this.chessBoardStateService.field[justDidCastle.row][rookCol];
-      if (castleRook && castleRook[0]) {
-        const sourceColor = castleRook[0].color as ChessColorsEnum;
-        this.chessBoardStateService.field[justDidCastle.row][rookCol].splice(0, 1);
-        const newCastleRook = new ChessPieceDto(sourceColor, ChessPiecesEnum.Rook);
-        this.chessBoardStateService.field[justDidCastle.row][rookDestCol].push(newCastleRook);
-        this.chessBoardStateService.boardHelper.justDidCastle = null;
-        castleData = justDidCastle.col === 2 ? 'O-O-O' : 'O-O';
-      }
-    }
-
-    return { isHit, isEP, castleData };
+  private applyPreTransferBoardState(event: CdkDragDrop<ChessPieceDto[]>, moveContext: IDropMoveContext): {
+    isHit: boolean;
+    isEP: boolean;
+    castleData: string | null;
+  } {
+    return ChessBoardMoveFacade.applyPreTransferBoardState({
+      event,
+      moveContext,
+      field: this.chessBoardStateService.field,
+      history: this.chessBoardStateService.history,
+      boardHelper: this.chessBoardStateService.boardHelper
+    });
   }
 
   private finalizeDropState(
-    moveContext: {
-      targetRow: number;
-      targetCell: number;
-      srcRow: number;
-      srcCell: number;
-      srcPiece: ChessPiecesEnum;
-      srcColor: ChessColorsEnum;
-    },
+    moveContext: IDropMoveContext,
     moveFlags: { isHit: boolean; isEP: boolean; castleData: string | null }
   ): void {
     this.isFinalizingDropState = true;
-    const enemyColor = moveContext.srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const isCheck = this.isKingInCheck(this.chessBoardStateService.field, enemyColor);
-    const hasLegalMoves = this.hasAnyLegalMove(this.chessBoardStateService.field, enemyColor);
-    const isMatch = isCheck && !hasLegalMoves;
-    if (isMatch) {
-      this.chessBoardStateService.boardHelper.gameOver = true;
-      this.chessBoardStateService.boardHelper.checkmateColor = enemyColor;
-      this.chessBoardStateService.boardHelper.debugText =
-        `${this.uiText.message.checkmateCallout} ${moveContext.srcColor === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black} ${this.uiText.message.checkmateWinner}`;
-    }
-
-    const lastNotation = ChessBoardStateService.translateNotation(
-      moveContext.targetRow,
-      moveContext.targetCell,
-      moveContext.srcRow,
-      moveContext.srcCell,
-      moveContext.srcPiece,
-      moveFlags.isHit,
-      isCheck,
-      isMatch,
-      moveFlags.isEP,
-      moveFlags.castleData
-    );
-    ChessBoardStateService.addHistory(lastNotation);
-    this.addIncrementToColor(moveContext.srcColor);
-    this.chessBoardStateService.boardHelper.colorTurn =
-      this.chessBoardStateService.boardHelper.colorTurn === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    if (!isMatch) {
-      this.applyDrawRules(hasLegalMoves, isCheck);
-    }
+    ChessBoardMoveFacade.finalizeDropState({
+      moveContext,
+      moveFlags,
+      field: this.chessBoardStateService.field,
+      boardHelper: this.chessBoardStateService.boardHelper,
+      isKingInCheck: (board, color) => this.isKingInCheck(board, color),
+      hasAnyLegalMove: (board, color) => this.hasAnyLegalMove(board, color),
+      checkmateDebugText:
+        `${this.uiText.message.checkmateCallout} ${moveContext.srcColor === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black} ${this.uiText.message.checkmateWinner}`,
+      addIncrementToColor: (color) => this.addIncrementToColor(color),
+      applyDrawRules: (hasLegalMoves, isCheck) => this.applyDrawRules(hasLegalMoves, isCheck)
+    });
     this.isFinalizingDropState = false;
     this.pushSnapshotForCurrentState();
   }
@@ -782,9 +794,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return `translate(-50%, -50%) rotate(${rotate})`;
   }
 
-  onDebugPanelToggle(event: Event): void {
-    const detailsElement = event && event.target ? event.target as HTMLDetailsElement : null;
-    this.isDebugPanelOpen = !!(detailsElement && detailsElement.open);
+  onDebugPanelToggle(isOpen: boolean): void {
+    this.isDebugPanelOpen = !!isOpen;
     ChessBoardStorageService.persistDebugPanelOpenState(this.debugPanelStorageKey, this.isDebugPanelOpen);
   }
 
@@ -937,9 +948,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return;
     }
-    if (this.chessBoardStateService.boardHelper.gameOver) {
-      return;
-    }
     if (!this.canOfferDraw()) {
       return;
     }
@@ -951,17 +959,21 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    return !this.chessBoardStateService.boardHelper.gameOver && this.pendingDrawOfferBy === null;
+    return ChessBoardClockGameStateFacade.canOfferDraw(
+      this.chessBoardStateService.boardHelper.gameOver,
+      this.pendingDrawOfferBy
+    );
   }
 
   canRespondToDrawOffer(): boolean {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    if (this.chessBoardStateService.boardHelper.gameOver || this.pendingDrawOfferBy === null) {
-      return false;
-    }
-    return this.pendingDrawOfferBy !== this.chessBoardStateService.boardHelper.colorTurn;
+    return ChessBoardClockGameStateFacade.canRespondToDrawOffer(
+      this.chessBoardStateService.boardHelper.gameOver,
+      this.pendingDrawOfferBy,
+      this.chessBoardStateService.boardHelper.colorTurn
+    );
   }
 
   acceptDrawOffer(): void {
@@ -982,18 +994,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   applyTimeControl(baseMinutes: number, incrementSeconds: number, label: string): void {
     this.stopClock();
-    this.selectedClockPresetLabel = label;
-    const baseMs = Math.max(0, baseMinutes) * 60 * 1000;
-    this.incrementMs = Math.max(0, incrementSeconds) * 1000;
-    this.whiteClockMs = baseMs;
-    this.blackClockMs = baseMs;
-    this.clockStarted = false;
-    this.clockRunning = false;
-    this.lastClockTickAt = 0;
+    const nextTimeControl = ChessBoardClockGameStateFacade.getAppliedTimeControl(baseMinutes, incrementSeconds, label);
+    this.selectedClockPresetLabel = nextTimeControl.selectedClockPresetLabel;
+    this.incrementMs = nextTimeControl.incrementMs;
+    this.whiteClockMs = nextTimeControl.whiteClockMs;
+    this.blackClockMs = nextTimeControl.blackClockMs;
+    this.clockStarted = nextTimeControl.clockStarted;
+    this.clockRunning = nextTimeControl.clockRunning;
+    this.lastClockTickAt = nextTimeControl.lastClockTickAt;
   }
 
   startOrPauseClock(): void {
-    if (this.chessBoardStateService.boardHelper.gameOver) {
+    if (!ChessBoardClockGameStateFacade.canToggleClock(this.chessBoardStateService.boardHelper.gameOver)) {
       return;
     }
     if (this.clockRunning) {
@@ -1047,18 +1059,25 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
     this.ensureRepetitionTrackingState();
-    return this.isThreefoldRepetition() || this.isFiftyMoveRule();
+    return ChessBoardClockGameStateFacade.getClaimDrawReason(
+      this.isThreefoldRepetition(),
+      this.isFiftyMoveRule()
+    ) !== null;
   }
 
   claimDraw(): void {
     if (!this.canClaimDraw()) {
       return;
     }
-    if (this.isThreefoldRepetition()) {
+    const claimReason = ChessBoardClockGameStateFacade.getClaimDrawReason(
+      this.isThreefoldRepetition(),
+      this.isFiftyMoveRule()
+    );
+    if (claimReason === 'threefold') {
       this.setDrawState(ChessBoardMessageConstants.DRAW_BY_THREEFOLD_TEXT, ChessBoardMessageConstants.DRAW_BY_THREEFOLD_TITLE);
       return;
     }
-    if (this.isFiftyMoveRule()) {
+    if (claimReason === 'fifty-move') {
       this.setDrawState(ChessBoardMessageConstants.DRAW_BY_FIFTY_MOVE_TEXT, ChessBoardMessageConstants.DRAW_BY_FIFTY_MOVE_TITLE);
     }
   }
@@ -1067,10 +1086,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return false;
     }
-    if (this.chessBoardStateService.boardHelper.gameOver) {
-      return false;
-    }
-    return color === ChessColorsEnum.White || color === ChessColorsEnum.Black;
+    return ChessBoardClockGameStateFacade.canResign(this.chessBoardStateService.boardHelper.gameOver, color);
   }
 
   openResignConfirm(color: ChessColorsEnum): void {
@@ -1094,31 +1110,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getVisibleHistory(): string[] {
-    const history = this.chessBoardStateService.history || [];
-    if (this.mockHistoryCursor === null) {
-      return history;
-    }
-    if (history.length < 1) {
-      return [];
-    }
-    const maxIndex = history.length - 1;
-    const clampedIndex = Math.max(-1, Math.min(this.mockHistoryCursor, maxIndex));
-    if (clampedIndex < 0) {
-      return [];
-    }
-    return history.slice(0, clampedIndex + 1);
+    return ChessBoardTimelineFacade.getVisibleHistory(this.chessBoardStateService.history || [], this.mockHistoryCursor);
   }
 
   canUndoMove(): boolean {
-    return ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.mockHistoryCursor) >= 0;
+    return ChessBoardTimelineFacade.canUndoMove(this.getMaxMoveIndex(), this.mockHistoryCursor);
   }
 
   canRedoMove(): boolean {
-    const maxIndex = this.getMaxMoveIndex();
-    if (maxIndex < 0 || this.mockHistoryCursor === null) {
-      return false;
-    }
-    return this.mockHistoryCursor < maxIndex;
+    return ChessBoardTimelineFacade.canRedoMove(this.getMaxMoveIndex(), this.mockHistoryCursor);
   }
 
   undoMove(): void {
@@ -1126,11 +1126,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (maxIndex < 0) {
       return;
     }
-    const currentIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.mockHistoryCursor);
-    if (currentIndex < 0) {
+    const nextCursor = ChessBoardTimelineFacade.getUndoCursor(maxIndex, this.mockHistoryCursor);
+    if (nextCursor === null) {
       return;
     }
-    this.mockHistoryCursor = currentIndex - 1;
+    this.mockHistoryCursor = nextCursor;
     this.restoreSnapshotForVisibleHistory();
   }
 
@@ -1139,15 +1139,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (maxIndex < 0 || this.mockHistoryCursor === null) {
       return;
     }
-    if (this.mockHistoryCursor >= maxIndex) {
-      this.mockHistoryCursor = null;
-      this.restoreSnapshotForVisibleHistory();
-      return;
-    }
-    this.mockHistoryCursor += 1;
-    if (this.mockHistoryCursor >= maxIndex) {
-      this.mockHistoryCursor = null;
-    }
+    this.mockHistoryCursor = ChessBoardTimelineFacade.getRedoCursor(maxIndex, this.mockHistoryCursor);
     this.restoreSnapshotForVisibleHistory();
     this.scheduleHistoryAutoScroll();
   }
@@ -1234,51 +1226,29 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getMockOpeningRecognition(): string {
-    this.updateRecognizedOpeningForCurrentHistory();
-    const historySteps = this.getVisibleHistory()
-      .map(step => ChessBoardOpeningUtils.normalizeNotationToken(step))
-      .filter(step => step.length > 0);
-    const moveCount = historySteps.length;
-    if (moveCount < 1) {
-      return this.uiText.recognition.waitingForOpening;
-    }
-    if (!this.openingsLoaded) {
-      return this.uiText.recognition.loadingOpenings;
-    }
-    if (this.activeOpening) {
-      return ChessBoardOpeningUtils.getDisplayedOpeningName(this.activeOpening, historySteps);
-    }
-    return this.uiText.recognition.noOpeningMatch;
+    const historySteps = ChessBoardOpeningFacade.normalizeHistorySteps(this.getVisibleHistory());
+    this.updateRecognizedOpeningForCurrentHistory(historySteps);
+    return ChessBoardOpeningFacade.getRecognitionLabel(
+      this.getOpeningState(),
+      historySteps,
+      this.uiText
+    );
   }
 
   private loadOpeningsFromAssets(locale: string): void {
     const loadId = ++this.openingsLoadId;
-    const effectiveLocale = locale || UiTextLoaderService.DEFAULT_LOCALE;
-
-    this.openingsLoaded = false;
-    this.openings = [];
-    this.activeOpening = null;
-    this.activeOpeningHistoryKey = '';
-
-    ChessBoardOpeningUtils.loadOpeningsFromAssets(
-      this.http,
-      effectiveLocale,
-      UiTextLoaderService.DEFAULT_LOCALE,
-      (parsedItems) => {
-        if (loadId !== this.openingsLoadId || parsedItems.length < 1) {
-          return;
-        }
-        this.openings = [...this.openings, ...parsedItems];
-      },
-      () => {
-        if (loadId !== this.openingsLoadId) {
-          return;
-        }
-        this.openingsLoaded = true;
+    ChessBoardOpeningFacade.loadOpeningsFromAssets({
+      http: this.http,
+      locale,
+      defaultLocale: UiTextLoaderService.DEFAULT_LOCALE,
+      loadId,
+      getCurrentLoadId: () => this.openingsLoadId,
+      state: this.getOpeningState(),
+      onReady: () => {
         this.updateRecognizedOpeningForCurrentHistory();
         this.requestClockRender();
       }
-    );
+    });
   }
 
   private getOpeningAsset$(fileName: string, locale: string): Observable<IOpeningAssetItem[]> {
@@ -1290,37 +1260,31 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     );
   }
 
-  private updateRecognizedOpeningForCurrentHistory(): void {
-    if (this.openings.length < 1) {
-      this.activeOpening = null;
-      return;
-    }
-
-    const historySteps = this.getVisibleHistory()
-      .map(step => ChessBoardOpeningUtils.normalizeNotationToken(step))
-      .filter(step => step.length > 0);
-
-    const bestMatchResult = ChessBoardOpeningUtils.findBestOpeningMatch(this.openings, historySteps);
-    this.activeOpening = bestMatchResult.opening;
-    const historyKey = historySteps.join('|');
-    const debugKey = `${historyKey}::${this.activeOpening ? this.activeOpening.name : 'none'}`;
-    if (this.activeOpening && debugKey !== this.activeOpeningHistoryKey) {
-      this.activeOpeningHistoryKey = debugKey;
-      this.chessBoardStateService.boardHelper.debugText = this.formatOpeningDebugText(
-        this.activeOpening,
-        bestMatchResult.baseMatchedDepth,
-        historySteps.length,
-        historySteps
-      );
-    }
+  private updateRecognizedOpeningForCurrentHistory(
+    historySteps: string[] = ChessBoardOpeningFacade.normalizeHistorySteps(this.getVisibleHistory())
+  ): void {
+    ChessBoardOpeningFacade.updateRecognizedOpeningForHistory(
+      this.getOpeningState(),
+      historySteps,
+      this.uiText,
+      ChessBoardComponent.NA_PLACEHOLDER,
+      (debugText) => {
+        this.chessBoardStateService.boardHelper.debugText = debugText;
+      }
+    );
   }
 
   private formatOpeningDebugText(
-    opening: IParsedOpening,
+    opening: IParsedOpening | null,
     matchedDepth: number,
-    historyDepth: number,
-    historySteps: string[]
+    historyDepthOrSteps: number | string[],
+    historyStepsArg: string[] = []
   ): string {
+    if (!opening) {
+      return '';
+    }
+    const historySteps = Array.isArray(historyDepthOrSteps) ? historyDepthOrSteps : historyStepsArg;
+    const historyDepth = Array.isArray(historyDepthOrSteps) ? historySteps.length : historyDepthOrSteps;
     return ChessBoardOpeningUtils.formatOpeningDebugText(
       opening,
       matchedDepth,
@@ -1329,6 +1293,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.uiText,
       ChessBoardComponent.NA_PLACEHOLDER
     );
+  }
+
+  private getOpeningState(): IChessBoardOpeningState {
+    return this as unknown as IChessBoardOpeningState;
   }
 
   getMockEndgameRecognition(): string {
@@ -1393,38 +1361,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     const turnColor = this.chessBoardStateService.boardHelper.colorTurn;
-    const targetCell = this.chessBoardStateService.field[parsedMove.targetRow][parsedMove.targetCol];
-    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
-      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const sourceCell = this.chessBoardStateService.field[srcRow][srcCol];
-        if (!(sourceCell && sourceCell[0])) {
-          continue;
-        }
-        const sourcePiece = sourceCell[0];
-        if (sourcePiece.color !== turnColor || sourcePiece.piece !== parsedMove.piece) {
-          continue;
-        }
-
-        const isValidMove = ChessRulesService.validateMove(
-          parsedMove.targetRow,
-          parsedMove.targetCol,
-          targetCell,
-          srcRow,
-          srcCol
-        ).isValid;
-        if (!isValidMove) {
-          continue;
-        }
-
-        const suggestionArrow = this.createVisualizationArrow(
-          { row: 8 - srcRow, col: srcCol + 1 },
-          { row: 8 - parsedMove.targetRow, col: parsedMove.targetCol + 1 },
-          'yellow',
-          0.45
-        );
-        ChessBoardStateService.createArrowFromVisualization(suggestionArrow);
-      }
-    }
+    const arrows = ChessBoardSuggestionFacade.buildSuggestedMovePreviewArrows(
+      this.chessBoardStateService.field,
+      turnColor,
+      parsedMove
+    );
+    arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
   }
 
   clearSuggestedMoveArrows(): void {
@@ -1901,119 +1843,52 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.clearOverlay();
 
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
-    if (ofColor) {
-      this.chessBoardStateService.field.forEach((row, rowIdx) => {
-        row.forEach((cell, cellIdx) => {
-          // All pieces of the color
-          if (cell && cell[0] && cell[0].color === ofColor) {
-            const threats = this.getThreatsBy(cell, rowIdx, cellIdx, ofColor, enemyColor);
-            threats.forEach(threat => {
-              let scaryThreat = 0.25;
-              const attacker = ChessRulesService.valueOfPiece(threat.piece);
-              const defender = ChessRulesService.valueOfPiece(cell[0].piece);
-              if (attacker / defender > 1) {
-                scaryThreat += 0.15;
-              }
-              if (attacker / defender < 1) {
-                scaryThreat -= 0.15;
-              }
-              const posFrom = new ChessPositionDto(8 - rowIdx, cellIdx + 1);
-              const posTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-              const threatenedCell = this.chessBoardStateService.field[threat.pos.row][threat.pos.col];
-              if (threatenedCell && threatenedCell[0]) {
-                const protectors = this.getProtectors(
-                  threatenedCell,
-                  threat.pos.row,
-                  threat.pos.col,
-                  enemyColor,
-                  ofColor
-                );
-                let threatColor: IVisualizationArrow['color'] = protectors.length > 0 ? 'blue' : 'cyan';
-                if (threatenedCell[0].piece === ChessPiecesEnum.King) {
-                  threatColor = 'red';
-                }
-                ChessBoardStateService.createArrowFromVisualization(
-                  this.createVisualizationArrow(posFrom, posTo, threatColor, scaryThreat)
-                );
-                protectors.forEach(protector => {
-                  const protectionFrom = new ChessPositionDto(8 - protector.row, protector.col + 1);
-                  const protectionTo = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-                  ChessBoardStateService.createArrowFromVisualization(
-                    this.createVisualizationArrow(protectionFrom, protectionTo, 'gold', 0.25)
-                  );
-                });
-              } else {
-                ChessBoardStateService.createArrowFromVisualization(
-                  this.createVisualizationArrow(posFrom, posTo, 'cyan', scaryThreat)
-                );
-              }
-            });
-          }
-        });
-      });
-    }
+    const arrows = ChessBoardVisualizationFacade.buildThreatArrows(
+      this.chessBoardStateService.field,
+      ofColor,
+      enemyColor,
+      (cell, rowIdx, cellIdx, srcColor, dstColor) => this.getThreatsBy(cell, rowIdx, cellIdx, srcColor, dstColor),
+      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy)
+    );
+    arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
     this.activeTool = key;
   }
 
   getThreatsBy(
-    cell: ChessPieceDto[],
+    _cell: ChessPieceDto[],
     rowIdx: number,
     cellIdx: number,
     ofColor: ChessColorsEnum,
     enemyColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
-    const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
     const board = this.chessBoardStateService.field;
-    for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-      for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-        if (cellIdx !== targetCol || rowIdx !== targetRow) {
-          const targetCell = board[targetRow][targetCol];
-          const isEnemyTarget = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
-          if (!isEnemyTarget) {
-            continue;
-          }
-          const legalMove = this.canPlayLegalMove(board, rowIdx, cellIdx, targetRow, targetCol, ofColor, cell[0]);
-          if (legalMove) {
-            threats.push({pos: new ChessPositionDto(targetRow, targetCol), piece: targetCell[0].piece});
-          }
-        }
-      }
-    }
-    return threats;
+    return ChessBoardVisualizationFacade.getThreatsBy(
+      board,
+      rowIdx,
+      cellIdx,
+      ofColor,
+      enemyColor,
+      (boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece) =>
+        this.canPlayLegalMove(boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece)
+    );
   }
 
   getThreatsOn(
-    cell: ChessPieceDto[],
+    _cell: ChessPieceDto[],
     rowIdx: number,
     cellIdx: number,
     _defendedColor: ChessColorsEnum,
     attackerColor: ChessColorsEnum
   ): {pos: ChessPositionDto, piece: ChessPiecesEnum}[] {
-    const threats: {pos: ChessPositionDto, piece: ChessPiecesEnum}[] = [];
     const board = this.chessBoardStateService.field;
-    for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-      for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-        if (cellIdx !== targetCol || rowIdx !== targetRow) {
-          const attackerCell = board[targetRow][targetCol];
-          if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
-            continue;
-          }
-          const legalMove = this.canPlayLegalMove(
-            board,
-            targetRow,
-            targetCol,
-            rowIdx,
-            cellIdx,
-            attackerColor,
-            attackerCell[0]
-          );
-          if (legalMove) {
-            threats.push({pos: new ChessPositionDto(targetRow, targetCol), piece: cell[0].piece});
-          }
-        }
-      }
-    }
-    return threats;
+    return ChessBoardVisualizationFacade.getThreatsOn(
+      board,
+      rowIdx,
+      cellIdx,
+      attackerColor,
+      (boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece) =>
+        this.canPlayLegalMove(boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece)
+    );
   }
 
   showProtected(ofEnemy = false): void {
@@ -2024,25 +1899,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     this.clearOverlay();
-    this.chessBoardStateService.boardHelper.arrows = {};
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
-    if (ofColor) {
-      this.chessBoardStateService.field.forEach((row, rowAIdx) => {
-        row.forEach((cellA, cellAIdx) => {
-          // All pieces of the color
-          if (cellA && cellA[0] && cellA[0].color === ofColor) {
-            const protectors = this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
-            protectors.forEach(cellB => {
-              const posFrom = new ChessPositionDto(8 - cellB.row, cellB.col + 1);
-              const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
-              ChessBoardStateService.createArrowFromVisualization(
-                this.createVisualizationArrow(posFrom, posTo, 'gold', 0.25)
-              );
-            });
-          }
-        });
-      });
-    }
+    const arrows = ChessBoardVisualizationFacade.buildProtectedArrows(
+      this.chessBoardStateService.field,
+      ofColor,
+      enemyColor,
+      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy)
+    );
+    arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
     this.activeTool = key;
   }
 
@@ -2053,26 +1917,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     ofColor: ChessColorsEnum,
     enemyColor: ChessColorsEnum
   ): ChessPositionDto[] {
-    const protectors = [] as ChessPositionDto[];
-    this.chessBoardStateService.field.forEach((rowB, rowBIdx) => {
-      rowB.forEach((cellB, cellBIdx) => {
-        // All pieces of the color
-        if (cellB && cellB[0] && cellB[0].color === ofColor) {
-          if (cellAIdx !== cellBIdx || rowAIdx !== rowBIdx) {
-            if (ChessRulesService.canStepThere(
-              rowAIdx,
-              cellAIdx,
-              [{ color: enemyColor, piece: cellA[0].piece }],
-              rowBIdx,
-              cellBIdx,
-              { color: ofColor, piece: cellB[0].piece })) {
-              protectors.push(new ChessPositionDto(rowBIdx, cellBIdx));
-            }
-          }
-        }
-      });
-    });
-    return protectors;
+    return ChessBoardVisualizationFacade.getProtectors(
+      this.chessBoardStateService.field,
+      cellA,
+      rowAIdx,
+      cellAIdx,
+      ofColor,
+      enemyColor
+    );
   }
 
   showHangingPieces(ofEnemy = false): void {
@@ -2084,51 +1936,22 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     this.clearOverlay();
     const { ofColor, enemyColor } = this.initColors(ofEnemy);
-    this.chessBoardStateService.boardHelper.arrows = {};
-    if (ofColor) {
-      this.chessBoardStateService.field.forEach((row, rowAIdx) => {
-        row.forEach((cellA, cellAIdx) => {
-          // All pieces of the color
-          if (cellA && cellA[0] && cellA[0].color === ofColor) {
-            const protectedBy = this.getProtectors(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
-            const isProtected = protectedBy.length > 0;
-            if (!isProtected) {
-              const threatsOnCell = this.getThreatsOn(cellA, rowAIdx, cellAIdx, ofColor, enemyColor);
-              threatsOnCell.forEach(threat => {
-                let scaryThreat = 0.25;
-                const attacker = ChessRulesService.valueOfPiece(cellA[0].piece);
-                const defender = ChessRulesService.valueOfPiece(threat.piece);
-                if (attacker / defender > 1) {
-                  scaryThreat += 0.15;
-                }
-                if (attacker / defender < 1) {
-                  scaryThreat -= 0.15;
-                }
-                const posFrom = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-                const posTo = new ChessPositionDto(8 - rowAIdx, cellAIdx + 1);
-                ChessBoardStateService.createArrowFromVisualization(
-                  this.createVisualizationArrow(posFrom, posTo, 'blue', scaryThreat)
-                );
-              });
-            }
-          }
-        });
-      });
-    }
+    const arrows = ChessBoardVisualizationFacade.buildHangingArrows(
+      this.chessBoardStateService.field,
+      ofColor,
+      enemyColor,
+      (cellA, rowAIdx, cellAIdx, color, enemy) => this.getProtectors(cellA, rowAIdx, cellAIdx, color, enemy),
+      (cell, rowIdx, cellIdx, defendedColor, attackerColor) => this.getThreatsOn(cell, rowIdx, cellIdx, defendedColor, attackerColor)
+    );
+    arrows.forEach(arrow => ChessBoardStateService.createArrowFromVisualization(arrow));
     this.activeTool = key;
   }
 
   private initColors(ofEnemy: boolean): { ofColor: ChessColorsEnum, enemyColor: ChessColorsEnum} {
-    let ofColor: ChessColorsEnum;
-    let enemyColor: ChessColorsEnum;
-    if (!ofEnemy) {
-      ofColor = this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
-      enemyColor = ofColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    } else {
-      enemyColor = this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
-      ofColor = enemyColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    }
-    return {ofColor, enemyColor};
+    return ChessBoardVisualizationFacade.initColors(
+      this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum,
+      ofEnemy
+    );
   }
 
   private hasBoardHighlight(targetRow: number, targetCol: number, type: IBoardHighlight['type']): boolean {
@@ -2142,112 +1965,24 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     color: IVisualizationArrow['color'],
     intensity: number
   ): IVisualizationArrow {
-    return {
-      fromRow: from.row,
-      fromCol: from.col,
-      toRow: to.row,
-      toCol: to.col,
-      color,
-      intensity: Math.max(0, Math.min(1, intensity))
-    };
+    return ChessBoardVisualizationFacade.createVisualizationArrow(from, to, color, intensity);
   }
 
   private collectForkVisualizationArrows(): IVisualizationArrow[] {
-    const forkArrows: IVisualizationArrow[] = [];
-    const board = this.chessBoardStateService.field;
-    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
-      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
-        const cell = board[row][col];
-        if (!(cell && cell[0])) {
-          continue;
-        }
-        const sourcePiece = cell[0];
-        const enemyColor = sourcePiece.color === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-        const threats = this.getThreatsBy(cell, row, col, sourcePiece.color, enemyColor);
-        if (threats.length < 2) {
-          continue;
-        }
-
-        const sourcePosition = new ChessPositionDto(8 - row, col + 1);
-        threats.forEach(threat => {
-          const targetPosition = new ChessPositionDto(8 - threat.pos.row, threat.pos.col + 1);
-          forkArrows.push(this.createVisualizationArrow(sourcePosition, targetPosition, 'yellow', 0.25));
-        });
-      }
-    }
-    return forkArrows;
+    return ChessBoardVisualizationFacade.buildForkArrows(
+      this.chessBoardStateService.field,
+      (cell, rowIdx, cellIdx, srcColor, dstColor) => this.getThreatsBy(cell, rowIdx, cellIdx, srcColor, dstColor)
+    );
   }
 
   private collectPinVisualizationArrows(): IVisualizationArrow[] {
-    const pinArrows: IVisualizationArrow[] = [];
-    const board = this.chessBoardStateService.field;
-    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
-      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
-        const attackerCell = board[row][col];
-        if (!(attackerCell && attackerCell[0])) {
-          continue;
-        }
-
-        const attackerPiece = attackerCell[0];
-        const directions = this.getPinDirections(attackerPiece.piece);
-        if (directions.length < 1) {
-          continue;
-        }
-
-        directions.forEach(direction => {
-          let scanRow = row + direction.dr;
-          let scanCol = col + direction.dc;
-          let maybePinned: ChessPieceDto | null = null;
-          let maybePinnedPos: ChessPositionDto | null = null;
-
-          while (this.isWithinBoard(scanRow, scanCol)) {
-            const targetCell = board[scanRow][scanCol];
-            if (!(targetCell && targetCell[0])) {
-              scanRow += direction.dr;
-              scanCol += direction.dc;
-              continue;
-            }
-
-            const targetPiece = targetCell[0];
-            if (!maybePinned) {
-              if (targetPiece.color === attackerPiece.color) {
-                break;
-              }
-              maybePinned = targetPiece;
-              maybePinnedPos = new ChessPositionDto(scanRow, scanCol);
-              scanRow += direction.dr;
-              scanCol += direction.dc;
-              continue;
-            }
-
-            if (targetPiece.color !== maybePinned.color) {
-              break;
-            }
-
-            if (this.isPinnedToValuablePiece(maybePinned.piece, targetPiece.piece)) {
-              const attackerFrom = new ChessPositionDto(8 - row, col + 1);
-              const pinnedPos = maybePinnedPos as ChessPositionDto;
-              const pinnedTo = new ChessPositionDto(8 - pinnedPos.row, pinnedPos.col + 1);
-              const protectedFrom = new ChessPositionDto(8 - scanRow, scanCol + 1);
-              pinArrows.push(this.createVisualizationArrow(attackerFrom, pinnedTo, 'green', 0.25));
-              pinArrows.push(this.createVisualizationArrow(protectedFrom, pinnedTo, 'green', 0.25));
-            }
-
-            if (this.isSkewerPair(maybePinned.piece, targetPiece.piece)) {
-              const attackerFrom = new ChessPositionDto(8 - row, col + 1);
-              const pinnedPos = maybePinnedPos as ChessPositionDto;
-              const frontTo = new ChessPositionDto(8 - pinnedPos.row, pinnedPos.col + 1);
-              const rearTo = new ChessPositionDto(8 - scanRow, scanCol + 1);
-              pinArrows.push(this.createVisualizationArrow(attackerFrom, frontTo, 'orange', 0.25));
-              pinArrows.push(this.createVisualizationArrow(frontTo, rearTo, 'orange', 0.25));
-            }
-            break;
-          }
-        });
-      }
-    }
-
-    return pinArrows;
+    return ChessBoardVisualizationFacade.buildPinArrows(
+      this.chessBoardStateService.field,
+      (piece) => this.getPinDirections(piece),
+      (row, col) => this.isWithinBoard(row, col),
+      (pinned, protectedPiece) => this.isPinnedToValuablePiece(pinned, protectedPiece),
+      (frontPiece, rearPiece) => this.isSkewerPair(frontPiece, rearPiece)
+    );
   }
 
   private getPinDirections(piece: ChessPiecesEnum): Array<{dr: number, dc: number}> {
@@ -2416,34 +2151,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private applyDrawRules(hasLegalMovesForCurrentTurn: boolean, isCurrentTurnInCheck: boolean): void {
-    if (this.chessBoardStateService.boardHelper.gameOver) {
-      return;
-    }
-
-    // Draw precedence mirrors practical game flow:
-    // 1) immediate board-state draw (stalemate / insufficient material)
-    // 2) history-dependent automatic draws (fivefold / seventy-five-move)
-    const isStalemate = !isCurrentTurnInCheck && !hasLegalMovesForCurrentTurn;
-    if (isStalemate) {
-      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_STALEMATE_TEXT, ChessBoardMessageConstants.DRAW_BY_STALEMATE_TITLE);
-      return;
-    }
-
-    if (ChessBoardLogicUtils.isInsufficientMaterial(this.chessBoardStateService.field)) {
-      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_INSUFFICIENT_TEXT, ChessBoardMessageConstants.DRAW_BY_INSUFFICIENT_TITLE);
-      return;
-    }
-
-    this.recordCurrentPosition();
-    if (this.isFivefoldRepetition()) {
-      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_FIVEFOLD_TEXT, ChessBoardMessageConstants.DRAW_BY_FIVEFOLD_TITLE);
-      return;
-    }
-
-    if (this.isSeventyFiveMoveRule()) {
-      this.setDrawState(ChessBoardMessageConstants.DRAW_BY_SEVENTYFIVE_TEXT, ChessBoardMessageConstants.DRAW_BY_SEVENTYFIVE_TITLE);
-      return;
-    }
+    ChessBoardMoveFacade.applyDrawRules({
+      gameOver: this.chessBoardStateService.boardHelper.gameOver,
+      hasLegalMovesForCurrentTurn,
+      isCurrentTurnInCheck,
+      field: this.chessBoardStateService.field,
+      recordCurrentPosition: () => this.recordCurrentPosition(),
+      isFivefoldRepetition: () => this.isFivefoldRepetition(),
+      isSeventyFiveMoveRule: () => this.isSeventyFiveMoveRule(),
+      setDrawState: (message, reason) => this.setDrawState(message, reason)
+    });
   }
 
   private setDrawState(message: string, historyReason: string): void {
@@ -2531,7 +2248,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private startClock(): void {
-    const startResult = ChessBoardClockUtils.startClock(
+    const startResult = ChessBoardClockGameStateFacade.startClock(
       this.clockIntervalId,
       this.lastClockTickAt,
       this.clockTickIntervalMs,
@@ -2548,14 +2265,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private stopClock(): void {
-    const stopResult = ChessBoardClockUtils.stopClock(this.clockIntervalId);
+    const stopResult = ChessBoardClockGameStateFacade.stopClock(this.clockIntervalId);
     this.clockIntervalId = stopResult.clockIntervalId;
     this.clockRunning = stopResult.clockRunning;
     this.requestClockRender();
   }
 
   private tickClock(): void {
-    const tickResult = ChessBoardClockUtils.tickClock(
+    const tickResult = ChessBoardClockGameStateFacade.tickClock(
       this.clockRunning,
       this.clockStarted,
       this.chessBoardStateService.boardHelper.gameOver,
@@ -2587,7 +2304,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private addIncrementToColor(color: ChessColorsEnum): void {
-    const nextClocks = ChessBoardClockUtils.addIncrementToColor(
+    const nextClocks = ChessBoardClockGameStateFacade.addIncrementToColor(
       color,
       this.clockStarted,
       this.incrementMs,
@@ -2600,7 +2317,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleTimeForfeit(loserColor: ChessColorsEnum): void {
-    const forfeitResult = ChessBoardClockUtils.handleTimeForfeit(
+    const forfeitResult = ChessBoardClockGameStateFacade.handleTimeForfeit(
       loserColor,
       this.chessBoardStateService.boardHelper.gameOver,
       this.uiText.status.white,
@@ -2628,8 +2345,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private initializeSnapshotTimeline(): void {
-    this.moveSnapshots = [];
-    this.moveSnapshots.push(this.captureCurrentSnapshot());
+    this.moveSnapshots = ChessBoardTimelineFacade.getInitializedSnapshots(() => this.captureCurrentSnapshot());
     this.mockHistoryCursor = null;
     this.resetEvaluationState();
     this.scheduleEvaluationRefresh();
@@ -2637,18 +2353,18 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private pushSnapshotForCurrentState(): void {
-    const activeSnapshotIndex = this.getActiveSnapshotIndex();
-    if (activeSnapshotIndex >= 0 && activeSnapshotIndex < this.moveSnapshots.length - 1) {
-      this.moveSnapshots = this.moveSnapshots.slice(0, activeSnapshotIndex + 1);
-    }
-    this.moveSnapshots.push(this.captureCurrentSnapshot());
+    this.moveSnapshots = ChessBoardTimelineFacade.appendSnapshotForCurrentState(
+      this.moveSnapshots,
+      this.getActiveSnapshotIndex(),
+      () => this.captureCurrentSnapshot()
+    );
     this.mockHistoryCursor = null;
     this.scheduleEvaluationRefresh();
     this.scheduleHistoryAutoScroll();
   }
 
   private scheduleHistoryAutoScroll(): void {
-    if (this.previewMode || this.mockHistoryCursor !== null) {
+    if (!ChessBoardTimelineFacade.shouldAutoScrollHistory(this.previewMode, this.mockHistoryCursor)) {
       return;
     }
     setTimeout(() => {
@@ -2680,13 +2396,21 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.initializeSnapshotTimeline();
       return;
     }
-    this.moveSnapshots[activeSnapshotIndex] = this.captureCurrentSnapshot();
+    this.moveSnapshots = ChessBoardTimelineFacade.replaceActiveSnapshot(
+      this.moveSnapshots,
+      activeSnapshotIndex,
+      () => this.captureCurrentSnapshot()
+    );
     this.scheduleEvaluationRefresh();
   }
 
   private restoreSnapshotForVisibleHistory(): void {
-    const targetSnapshotIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.mockHistoryCursor) + 1;
-    if (targetSnapshotIndex < 0 || targetSnapshotIndex >= this.moveSnapshots.length) {
+    const targetSnapshotIndex = ChessBoardTimelineFacade.getTargetSnapshotIndex(
+      this.getMaxMoveIndex(),
+      this.mockHistoryCursor,
+      this.moveSnapshots.length
+    );
+    if (targetSnapshotIndex < 0) {
       return;
     }
     this.restoreSnapshot(this.moveSnapshots[targetSnapshotIndex]);
@@ -2694,43 +2418,46 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private resetEvaluationState(): void {
-    this.evalByHistoryIndex.clear();
-    this.pendingEvalByHistoryIndex.clear();
-    this.evalErrorByHistoryIndex.clear();
-    this.evalCacheByFen.clear();
-    this.suggestedMovesCacheByFen.clear();
-    this.suggestionQualityByFen.clear();
-    this.suggestionEvalTextByFen.clear();
-    this.suggestionQualityByMove = {};
-    this.suggestionEvalTextByMove = {};
-    this.suggestedMoves = [...this.suggestedMovesLoadingPlaceholder];
-    if (this.evaluationRefreshTimer !== null) {
-      clearTimeout(this.evaluationRefreshTimer);
-      this.evaluationRefreshTimer = null;
-    }
-    this.evaluationRunToken += 1;
+    const resetResult = ChessBoardEvaluationFacade.resetEvaluationState({
+      evalByHistoryIndex: this.evalByHistoryIndex,
+      pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
+      evalErrorByHistoryIndex: this.evalErrorByHistoryIndex,
+      evalCacheByFen: this.evalCacheByFen,
+      suggestedMovesCacheByFen: this.suggestedMovesCacheByFen,
+      suggestionQualityByFen: this.suggestionQualityByFen,
+      suggestionEvalTextByFen: this.suggestionEvalTextByFen,
+      suggestedMovesLoadingPlaceholder: this.suggestedMovesLoadingPlaceholder,
+      evaluationRefreshTimer: this.evaluationRefreshTimer,
+      evaluationRunToken: this.evaluationRunToken
+    });
+    this.evaluationRefreshTimer = resetResult.evaluationRefreshTimer;
+    this.evaluationRunToken = resetResult.evaluationRunToken;
+    this.suggestedMoves = resetResult.suggestedMoves;
+    this.suggestionQualityByMove = resetResult.suggestionQualityByMove;
+    this.suggestionEvalTextByMove = resetResult.suggestionEvalTextByMove;
   }
 
   private scheduleEvaluationRefresh(): void {
-    if (!this.activeStockfishService || this.previewMode) {
-      return;
-    }
-    if (this.evaluationRefreshTimer !== null) {
-      clearTimeout(this.evaluationRefreshTimer);
-      this.evaluationRefreshTimer = null;
-    }
-    const runToken = ++this.evaluationRunToken;
-    this.evaluationRefreshTimer = setTimeout(() => {
-      this.evaluationRefreshTimer = null;
-      void this.refreshVisibleHistoryEvaluations(runToken);
-    }, this.evaluationDebounceMs);
+    const scheduleResult = ChessBoardEvaluationFacade.scheduleEvaluationRefresh({
+      hasEngine: !!this.activeStockfishService,
+      previewMode: this.previewMode,
+      evaluationRefreshTimer: this.evaluationRefreshTimer,
+      evaluationRunToken: this.evaluationRunToken,
+      evaluationDebounceMs: this.evaluationDebounceMs,
+      runRefresh: (runToken) => {
+        this.evaluationRefreshTimer = null;
+        void this.refreshVisibleHistoryEvaluations(runToken);
+      }
+    });
+    this.evaluationRunToken = scheduleResult.evaluationRunToken;
+    this.evaluationRefreshTimer = scheduleResult.evaluationRefreshTimer;
   }
 
   private async refreshVisibleHistoryEvaluations(runToken: number): Promise<void> {
     if (!this.activeStockfishService) {
       return;
     }
-    await ChessBoardEvaluationUtils.refreshVisibleHistoryEvaluations({
+    await ChessBoardEvaluationFacade.refreshVisibleHistoryEvaluations({
       runToken,
       getCurrentRunToken: () => this.evaluationRunToken,
       visibleHistoryLength: this.getVisibleHistory().length,
@@ -2741,57 +2468,37 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
       evalErrorByHistoryIndex: this.evalErrorByHistoryIndex,
       naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
-      requestRender: () => this.requestClockRender()
+      requestRender: () => this.requestClockRender(),
+      onRefreshSuggestedMoves: () => this.refreshSuggestedMoves(runToken)
     });
-    await this.refreshSuggestedMoves(runToken);
   }
 
   private async refreshSuggestedMoves(runToken: number): Promise<void> {
     if (!this.activeStockfishService || runToken !== this.evaluationRunToken) {
       return;
     }
-    const fen = this.getCurrentFen();
-    const cachedSuggestions = this.suggestedMovesCacheByFen.get(fen);
-    if (cachedSuggestions) {
-      this.suggestedMoves = [...cachedSuggestions];
-      const cachedQuality = this.suggestionQualityByFen.get(fen);
-      this.suggestionQualityByMove = cachedQuality ? { ...cachedQuality } : {};
-      const cachedEvalText = this.suggestionEvalTextByFen.get(fen);
-      this.suggestionEvalTextByMove = cachedEvalText ? { ...cachedEvalText } : {};
-      this.requestClockRender();
-      if (!cachedQuality || !cachedEvalText) {
-        await this.refreshSuggestionQualities(runToken, fen);
-      }
-      return;
-    }
-
-    this.suggestedMoves = [...this.suggestedMovesLoadingPlaceholder];
-    this.requestClockRender();
-    try {
-      const engineTopMoves = await this.activeStockfishService.getTopMoves(fen, {
-        depth: this.suggestedMovesDepth,
-        multiPv: this.suggestedMovesCount
-      });
-      if (runToken !== this.evaluationRunToken) {
-        return;
-      }
-      const formattedSuggestions = this.formatEngineSuggestions(engineTopMoves);
-      const resolvedSuggestions = formattedSuggestions.length > 0
-        ? formattedSuggestions
-        : [ChessBoardComponent.NA_PLACEHOLDER];
-      this.suggestedMovesCacheByFen.set(fen, resolvedSuggestions);
-      this.suggestedMoves = [...resolvedSuggestions];
-      await this.refreshSuggestionQualities(runToken, fen, engineTopMoves, formattedSuggestions);
-      this.requestClockRender();
-    } catch {
-      if (runToken !== this.evaluationRunToken) {
-        return;
-      }
-      this.suggestionQualityByMove = {};
-      this.suggestionEvalTextByMove = {};
-      this.suggestedMoves = [ChessBoardComponent.NA_PLACEHOLDER];
-      this.requestClockRender();
-    }
+    const result = await ChessBoardEvaluationFacade.refreshSuggestedMoves({
+      runToken,
+      getCurrentRunToken: () => this.evaluationRunToken,
+      fen: this.getCurrentFen(),
+      getTopMoves: (fen, options) => this.activeStockfishService!.getTopMoves(fen, options),
+      suggestedMovesDepth: this.suggestedMovesDepth,
+      suggestedMovesCount: this.suggestedMovesCount,
+      suggestedMovesCacheByFen: this.suggestedMovesCacheByFen,
+      suggestionQualityByFen: this.suggestionQualityByFen,
+      suggestionEvalTextByFen: this.suggestionEvalTextByFen,
+      suggestedMovesLoadingPlaceholder: this.suggestedMovesLoadingPlaceholder,
+      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
+      requestRender: () => this.requestClockRender(),
+      formatEngineSuggestions: (uciMoves) => this.formatEngineSuggestions(uciMoves),
+      refreshSuggestionQualities: (token, fen, topMoves, formatted) =>
+        topMoves === undefined && formatted === undefined
+          ? this.refreshSuggestionQualities(token, fen)
+          : this.refreshSuggestionQualities(token, fen, topMoves || [], formatted || [])
+    });
+    this.suggestedMoves = result.suggestedMoves;
+    this.suggestionQualityByMove = result.suggestionQualityByMove;
+    this.suggestionEvalTextByMove = result.suggestionEvalTextByMove;
   }
 
   private async refreshSuggestionQualities(
@@ -2803,307 +2510,89 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.activeStockfishService || runToken !== this.evaluationRunToken) {
       return;
     }
-
-    const cachedQuality = this.suggestionQualityByFen.get(fen);
-    const cachedEvalText = this.suggestionEvalTextByFen.get(fen);
-    if (cachedQuality && cachedEvalText) {
-      this.suggestionQualityByMove = { ...cachedQuality };
-      this.suggestionEvalTextByMove = { ...cachedEvalText };
-      this.requestClockRender();
-      return;
-    }
-
-    let topMovesUci = engineTopMoves;
-    if (topMovesUci.length < 1) {
-      topMovesUci = await this.activeStockfishService.getTopMoves(fen, {
-        depth: this.suggestedMovesDepth,
-        multiPv: this.suggestedMovesCount
-      });
-    }
-    if (runToken !== this.evaluationRunToken) {
-      return;
-    }
-
-    const topMovesDisplay = formattedEngineSuggestions.length > 0
-      ? formattedEngineSuggestions
-      : this.formatEngineSuggestions(topMovesUci);
-
-    const displayToUci = this.buildDisplayToUciMap(topMovesUci, topMovesDisplay);
-
-    const uniqueUciMoves = Array.from(new Set(Array.from(displayToUci.values())));
-    if (uniqueUciMoves.length < 1) {
-      this.suggestionQualityByMove = {};
-      this.suggestionEvalTextByMove = {};
-      this.suggestionQualityByFen.set(fen, {});
-      this.suggestionEvalTextByFen.set(fen, {});
-      this.requestClockRender();
-      return;
-    }
-
-    const evaluationResult = await this.evaluateUciMovesForQuality(runToken, fen, uniqueUciMoves);
-    const evalByUci = evaluationResult.pawnsByUci;
-    const evalTextByUci = evaluationResult.textByUci;
-
-    if (evalByUci.size < 1) {
-      this.suggestionQualityByMove = {};
-      this.suggestionEvalTextByMove = {};
-      this.suggestionQualityByFen.set(fen, {});
-      this.suggestionEvalTextByFen.set(fen, {});
-      this.requestClockRender();
-      return;
-    }
-
-    const evalValues = Array.from(evalByUci.values());
-    const turnColor = this.chessBoardStateService.boardHelper.colorTurn;
-    const bestEval = turnColor === ChessColorsEnum.White
-      ? Math.max(...evalValues)
-      : Math.min(...evalValues);
-
-    const qualityByMove: Record<string, string> = {};
-    const evalTextByMove: Record<string, string> = {};
-    displayToUci.forEach((uciMove, displayMove) => {
-      const moveEval = evalByUci.get(uciMove);
-      if (moveEval === undefined) {
-        return;
-      }
-      const loss = turnColor === ChessColorsEnum.White
-        ? (bestEval - moveEval)
-        : (moveEval - bestEval);
-      qualityByMove[displayMove] = this.classifySuggestionLoss(loss);
-      const evalText = evalTextByUci.get(uciMove);
-      if (evalText) {
-        evalTextByMove[displayMove] = evalText;
-      }
+    const result = await ChessBoardEvaluationFacade.refreshSuggestionQualities({
+      runToken,
+      getCurrentRunToken: () => this.evaluationRunToken,
+      fen,
+      engineTopMoves,
+      formattedEngineSuggestions,
+      getTopMoves: (fenArg, options) => this.activeStockfishService!.getTopMoves(fenArg, options),
+      suggestedMovesDepth: this.suggestedMovesDepth,
+      suggestedMovesCount: this.suggestedMovesCount,
+      suggestionQualityByFen: this.suggestionQualityByFen,
+      suggestionEvalTextByFen: this.suggestionEvalTextByFen,
+      formatEngineSuggestions: (uciMoves) => this.formatEngineSuggestions(uciMoves),
+      buildDisplayToUciMap: (topMovesUci, topMovesDisplay) => this.buildDisplayToUciMap(topMovesUci, topMovesDisplay),
+      evaluateUciMovesForQuality: (token, fenArg, uniqueMoves) => this.evaluateUciMovesForQuality(token, fenArg, uniqueMoves),
+      turnColor: this.chessBoardStateService.boardHelper.colorTurn,
+      classifySuggestionLoss: (loss) => this.classifySuggestionLoss(loss),
+      requestRender: () => this.requestClockRender()
     });
-
-    this.suggestionQualityByFen.set(fen, qualityByMove);
-    this.suggestionEvalTextByFen.set(fen, evalTextByMove);
-    this.suggestionQualityByMove = { ...qualityByMove };
-    this.suggestionEvalTextByMove = { ...evalTextByMove };
-    this.requestClockRender();
+    this.suggestionQualityByMove = result.suggestionQualityByMove;
+    this.suggestionEvalTextByMove = result.suggestionEvalTextByMove;
   }
 
   private buildDisplayToUciMap(topMovesUci: string[], topMovesDisplay: string[]): Map<string, string> {
-    const displayToUci = new Map<string, string>();
-    topMovesDisplay.forEach((move, index) => {
-      const uciMove = (topMovesUci[index] || '').trim().toLowerCase();
-      if (move && /^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uciMove) && !displayToUci.has(move)) {
-        displayToUci.set(move, uciMove);
-      }
-    });
-
     const cctMoves = [
       ...this.getCctRecommendations(CctCategoryEnum.Captures).map(item => item.move),
       ...this.getCctRecommendations(CctCategoryEnum.Checks).map(item => item.move),
       ...this.getCctRecommendations(CctCategoryEnum.Threats).map(item => item.move)
     ];
-    cctMoves.forEach(move => {
-      if (!move || displayToUci.has(move)) {
-        return;
-      }
-      const resolved = this.resolveMoveToUci(move);
-      if (resolved) {
-        displayToUci.set(move, resolved);
-      }
+    return ChessBoardSuggestionFacade.buildDisplayToUciMap({
+      topMovesUci,
+      topMovesDisplay,
+      cctMoves,
+      resolveMoveToUci: (move) => this.resolveMoveToUci(move)
     });
-
-    return displayToUci;
   }
 
   private async evaluateUciMovesForQuality(runToken: number, fen: string, uniqueUciMoves: string[]): Promise<ISuggestionEvaluationResult> {
-    const evalByUci = new Map<string, number>();
-    const evalTextByUci = new Map<string, string>();
-    const engineService = this.activeStockfishService as IStockfishServiceWithMoveEval | undefined;
-    if (!engineService) {
-      return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
-    }
-
-    for (const uciMove of uniqueUciMoves) {
-      if (runToken !== this.evaluationRunToken) {
-        return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
-      }
-      try {
-        const evaluation = typeof engineService.evaluateFenAfterMoves === 'function'
-          ? await engineService.evaluateFenAfterMoves(fen, [uciMove], { depth: this.suggestedMovesDepth })
-          : await engineService.evaluateFen(fen, { depth: this.suggestedMovesDepth });
-        if (evaluation && evaluation !== this.pendingEvaluationPlaceholder && evaluation !== this.evaluationErrorPlaceholder &&
-          evaluation !== ChessBoardComponent.NA_PLACEHOLDER) {
-          evalTextByUci.set(uciMove, evaluation);
-        }
-        const pawns = ChessBoardComponentUtils.parseEvaluationPawns(
-          evaluation,
-          this.pendingEvaluationPlaceholder,
-          this.evaluationErrorPlaceholder,
-          ChessBoardComponent.NA_PLACEHOLDER,
-          this.analysisClampPawns
-        );
-        if (pawns !== null) {
-          evalByUci.set(uciMove, pawns);
-        }
-      } catch {
-        // Ignore individual move failures and continue with available scores.
-      }
-    }
-    return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
+    return ChessBoardSuggestionFacade.evaluateUciMovesForQuality({
+      runToken,
+      getCurrentRunToken: () => this.evaluationRunToken,
+      fen,
+      uniqueUciMoves,
+      engineService: this.activeStockfishService as IChessBoardSuggestionEngineService | undefined,
+      suggestedMovesDepth: this.suggestedMovesDepth,
+      pendingEvaluationPlaceholder: this.pendingEvaluationPlaceholder,
+      evaluationErrorPlaceholder: this.evaluationErrorPlaceholder,
+      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
+      analysisClampPawns: this.analysisClampPawns
+    });
   }
 
   private classifySuggestionLoss(loss: number): string {
-    if (loss <= 0.10) {
-      return 'history-quality--genius';
-    }
-    if (loss <= 0.30) {
-      return 'history-quality--great';
-    }
-    if (loss <= 0.60) {
-      return 'history-quality--good';
-    }
-    if (loss <= 1.20) {
-      return 'history-quality--small-error';
-    }
-    if (loss <= 2.50) {
-      return 'history-quality--mistake';
-    }
-    return 'history-quality--blunder';
+    return ChessBoardSuggestionFacade.classifySuggestionLoss(loss);
   }
 
   private formatEngineSuggestions(uciMoves: string[]): string[] {
-    if (!uciMoves || uciMoves.length < 1) {
-      return [];
-    }
-    return uciMoves
-      .map(move => this.formatUciMoveForDisplay(move))
-      .filter(move => !!move)
-      .slice(0, this.suggestedMovesCount);
+    return ChessBoardSuggestionFacade.formatEngineSuggestions(
+      uciMoves,
+      this.chessBoardStateService.field,
+      this.suggestedMovesCount,
+      (square) => this.parseSquareToCoords(square)
+    );
   }
 
   private formatUciMoveForDisplay(uciMove: string): string {
-    const normalized = (uciMove || '').trim();
-    const moveMatch = normalized.match(/^([a-h][1-8])([a-h][1-8])[qrbn]?$/);
-    if (!moveMatch) {
-      return '';
-    }
-    const fromSquare = this.parseSquareToCoords(moveMatch[1]);
-    const toSquare = this.parseSquareToCoords(moveMatch[2]);
-    if (!fromSquare || !toSquare) {
-      return '';
-    }
-
-    const sourceCell = this.chessBoardStateService.field[fromSquare.row][fromSquare.col];
-    if (!(sourceCell && sourceCell[0])) {
-      return moveMatch[2];
-    }
-    const sourcePiece = sourceCell[0];
-    const targetCell = this.chessBoardStateService.field[toSquare.row][toSquare.col];
-    const isCapture =
-      !!(targetCell && targetCell[0] && targetCell[0].color !== sourcePiece.color) ||
-      (sourcePiece.piece === ChessPiecesEnum.Pawn && fromSquare.col !== toSquare.col);
-    const toAlgebraic = moveMatch[2];
-
-    if (sourcePiece.piece === ChessPiecesEnum.Pawn) {
-      if (isCapture) {
-        const fromFile = moveMatch[1].charAt(0);
-        return `${fromFile}x${toAlgebraic}`;
-      }
-      return toAlgebraic;
-    }
-
-    const pieceNotation = ChessBoardCctUtils.pieceNotation(sourcePiece.piece);
-    return `${pieceNotation}${isCapture ? 'x' : ''}${toAlgebraic}`;
+    return ChessBoardSuggestionFacade.formatUciMoveForDisplay(
+      uciMove,
+      this.chessBoardStateService.field,
+      (square) => this.parseSquareToCoords(square)
+    );
   }
 
   private parseSquareToCoords(square: string): { row: number; col: number } | null {
-    const normalized = (square || '').trim().toLowerCase();
-    const squareMatch = normalized.match(/^([a-h])([1-8])$/);
-    if (!squareMatch) {
-      return null;
-    }
-    const file = squareMatch[1];
-    const rank = Number(squareMatch[2]);
-    const col = file.charCodeAt(0) - 'a'.charCodeAt(0);
-    const row = ChessConstants.BOARD_SIZE - rank;
-    if (col < ChessConstants.MIN_INDEX || col > ChessConstants.MAX_INDEX ||
-      row < ChessConstants.MIN_INDEX || row > ChessConstants.MAX_INDEX) {
-      return null;
-    }
-    return { row, col };
+    return ChessBoardSuggestionFacade.parseSquareToCoords(square);
   }
 
   private resolveMoveToUci(move: string): string | null {
-    const normalized = (move || '').trim().replace(/^\.\.\./, '').replace(/[+#?!]/g, '');
-    const targetMatch = normalized.match(/([a-h][1-8])$/);
-    if (!targetMatch) {
-      return null;
-    }
-    const targetSquare = targetMatch[1];
-    const targetCoords = this.parseSquareToCoords(targetSquare);
-    if (!targetCoords) {
-      return null;
-    }
-    const targetCell = this.chessBoardStateService.field[targetCoords.row][targetCoords.col];
-    const turnColor = this.chessBoardStateService.boardHelper.colorTurn;
-
-    const pieceChar = normalized.charAt(0);
-    let pieceType = ChessPiecesEnum.Pawn;
-    if (pieceChar === 'K') {
-      pieceType = ChessPiecesEnum.King;
-    } else if (pieceChar === 'Q') {
-      pieceType = ChessPiecesEnum.Queen;
-    } else if (pieceChar === 'R') {
-      pieceType = ChessPiecesEnum.Rook;
-    } else if (pieceChar === 'B') {
-      pieceType = ChessPiecesEnum.Bishop;
-    } else if (pieceChar === 'N') {
-      pieceType = ChessPiecesEnum.Knight;
-    }
-
-    const pawnCaptureFileMatch = normalized.match(/^([a-h])x[a-h][1-8]$/);
-    const pawnCaptureFile = pawnCaptureFileMatch ? pawnCaptureFileMatch[1] : '';
-    const candidates: string[] = [];
-    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
-      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const sourceCell = this.chessBoardStateService.field[srcRow][srcCol];
-        if (!(sourceCell && sourceCell[0])) {
-          continue;
-        }
-        const sourcePiece = sourceCell[0];
-        if (sourcePiece.color !== turnColor || sourcePiece.piece !== pieceType) {
-          continue;
-        }
-        if (pieceType === ChessPiecesEnum.Pawn && pawnCaptureFile) {
-          const sourceFile = String.fromCharCode('a'.charCodeAt(0) + srcCol);
-          if (sourceFile !== pawnCaptureFile) {
-            continue;
-          }
-        }
-
-        const isValid = ChessRulesService.validateMove(
-          targetCoords.row,
-          targetCoords.col,
-          targetCell,
-          srcRow,
-          srcCol
-        ).isValid;
-        if (!isValid) {
-          continue;
-        }
-
-        const fromSquare = ChessBoardCctUtils.toAlgebraicSquare(srcRow, srcCol);
-        let promotionSuffix = '';
-        if (
-          pieceType === ChessPiecesEnum.Pawn &&
-          ((sourcePiece.color === ChessColorsEnum.White && targetCoords.row === 0) ||
-           (sourcePiece.color === ChessColorsEnum.Black && targetCoords.row === ChessConstants.MAX_INDEX))
-        ) {
-          promotionSuffix = 'q';
-        }
-        candidates.push(`${fromSquare}${targetSquare}${promotionSuffix}`);
-      }
-    }
-
-    if (candidates.length < 1) {
-      return null;
-    }
-    return candidates[0];
+    return ChessBoardSuggestionFacade.resolveMoveToUci({
+      move,
+      board: this.chessBoardStateService.field,
+      turnColor: this.chessBoardStateService.boardHelper.colorTurn,
+      parseSquareToCoords: (square) => this.parseSquareToCoords(square)
+    });
   }
 
   private getFenForHistoryIndex(halfMoveIndex: number): string {

@@ -15,8 +15,8 @@ export class ChessBoardToolsCardComponent {
   @Input() isBoardFlipped = false;
   @Input() canPromote = false;
   @Input() suggestedMoves: string[] = [];
-  @Input() suggestedMoveClassProvider: (move: string) => string = () => '';
-  @Input() suggestedMoveScoreProvider: (move: string) => string = () => '';
+  @Input() suggestedMoveQualityByMove: Record<string, string> = {};
+  @Input() suggestedMoveEvalByMove: Record<string, string> = {};
   @Input() openingRecognition = '';
   @Input() endgameRecognition = '';
 
@@ -34,7 +34,7 @@ export class ChessBoardToolsCardComponent {
   @Output() clearPreview = new EventEmitter<void>();
 
   getSuggestedMoveClass(move: string): string {
-    const qualityClass = this.suggestedMoveClassProvider(move);
+    const qualityClass = move ? this.suggestedMoveQualityByMove[move] : '';
     if (qualityClass) {
       return qualityClass;
     }
@@ -52,6 +52,9 @@ export class ChessBoardToolsCardComponent {
   }
 
   getSuggestedMoveScore(move: string): string {
-    return this.suggestedMoveScoreProvider(move) || '';
+    if (!move) {
+      return '';
+    }
+    return this.suggestedMoveEvalByMove[move] || '';
   }
 }
