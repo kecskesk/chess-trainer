@@ -56,13 +56,6 @@ describe('ChessBoardLogicUtils snapshot and cloning', () => {
     const clonedPos = ChessBoardLogicUtils.clonePosition({ row: 2, col: 3 } as any);
     expect(clonedPos).toEqual({ row: 2, col: 3 });
   });
-
-  it('delegates cloneBoard to cloneField', () => {
-    const board = emptyBoard();
-    board[1][1] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
-    const cloned = ChessBoardLogicUtils.cloneBoard(board);
-    expect(cloned[1][1][0]).not.toBe(board[1][1][0]);
-  });
 });
 
 describe('ChessBoardLogicUtils position keys and notation helpers', () => {

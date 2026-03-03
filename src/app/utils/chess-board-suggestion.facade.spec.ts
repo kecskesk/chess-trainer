@@ -15,13 +15,6 @@ describe('ChessBoardSuggestionFacade', () => {
     expect(ChessBoardSuggestionFacade.formatUciMoveForDisplay('e1e2', board)).toBe('Ke2');
   });
 
-  it('uses provided square parser in formatUciMoveForDisplay', () => {
-    const board = emptyBoard();
-    board[7][6] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Knight)];
-    const parser = (sq: string) => (sq === 'g1' ? { row: 7, col: 6 } : sq === 'f3' ? { row: 5, col: 5 } : null);
-    expect(ChessBoardSuggestionFacade.formatUciMoveForDisplay('g1f3', board, parser)).toBe('Nf3');
-  });
-
   it('uses built-in square parser in resolveMoveToUci when parser is omitted', () => {
     const board = emptyBoard();
     board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];

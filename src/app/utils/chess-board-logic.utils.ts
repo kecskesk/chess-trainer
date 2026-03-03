@@ -46,13 +46,6 @@ export class ChessBoardLogicUtils {
     }));
   }
 
-  /**
-   * @deprecated Use cloneField instead
-   */
-  static cloneBoard(board: ChessPieceDto[][][]): ChessPieceDto[][][] {
-    return ChessBoardLogicUtils.cloneField(board);
-  }
-
   static clonePosition(position: ChessPositionDto | null): ChessPositionDto | null {
     if (!position) {
       return null;

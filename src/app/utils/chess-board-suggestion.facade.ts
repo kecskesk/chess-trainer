@@ -114,14 +114,13 @@ export class ChessBoardSuggestionFacade {
   static formatEngineSuggestions(
     uciMoves: string[],
     board: ChessPieceDto[][][],
-    suggestedMovesCount: number,
-    parseSquareToCoords?: (square: string) => { row: number; col: number } | null
+    suggestedMovesCount: number
   ): string[] {
     if (!uciMoves || uciMoves.length < 1) {
       return [];
     }
     return uciMoves
-      .map(move => this.formatUciMoveForDisplay(move, board, parseSquareToCoords))
+      .map(move => this.formatUciMoveForDisplay(move, board))
       .filter(move => !!move)
       .slice(0, suggestedMovesCount);
   }
@@ -129,16 +128,14 @@ export class ChessBoardSuggestionFacade {
   static formatUciMoveForDisplay(
     uciMove: string,
     board: ChessPieceDto[][][],
-    parseSquareToCoords?: (square: string) => { row: number; col: number } | null
   ): string {
     const normalized = (uciMove || '').trim();
     const moveMatch = normalized.match(/^([a-h][1-8])([a-h][1-8])[qrbn]?$/);
     if (!moveMatch) {
       return '';
     }
-    const parseCoords = parseSquareToCoords || ((square: string) => this.parseSquareToCoords(square));
-    const fromSquare = parseCoords(moveMatch[1]);
-    const toSquare = parseCoords(moveMatch[2]);
+    const fromSquare = this.parseSquareToCoords(moveMatch[1]);
+    const toSquare = this.parseSquareToCoords(moveMatch[2]);
     if (!fromSquare || !toSquare) {
       return '';
     }
@@ -184,15 +181,14 @@ export class ChessBoardSuggestionFacade {
   }
 
   static resolveMoveToUci(params: IResolveMoveToUciParams): string | null {
-    const { move, board, turnColor, parseSquareToCoords } = params;
+    const { move, board, turnColor } = params;
     const normalized = (move || '').trim().replace(/^\.\.\./, '').replace(/[+#?!]/g, '');
     const targetMatch = normalized.match(/([a-h][1-8])$/);
     if (!targetMatch) {
       return null;
     }
     const targetSquare = targetMatch[1];
-    const parseCoords = parseSquareToCoords || ((square: string) => this.parseSquareToCoords(square));
-    const targetCoords = parseCoords(targetSquare);
+    const targetCoords = this.parseSquareToCoords(targetSquare);
     if (!targetCoords) {
       return null;
     }

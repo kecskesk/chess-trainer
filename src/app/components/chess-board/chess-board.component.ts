@@ -1,5 +1,5 @@
 /* istanbul ignore file */
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, Optional, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragStart, CdkDropList } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
@@ -244,7 +244,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   constructor(
     public chessBoardStateService: ChessBoardStateService,
     private readonly http: HttpClient,
-    @Optional() private readonly chessBoardCctService?: ChessBoardCctService,
+    private readonly chessBoardCctService: ChessBoardCctService,
     private readonly ngZone?: NgZone,
     private readonly cdr?: ChangeDetectorRef,
     private readonly uiTextLoaderService?: UiTextLoaderService,
@@ -682,7 +682,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
             if (isCapture) {
               ChessBoardStateService.addHit({ row: targetRow, col: targetCol });
             }
-            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
             if (this.isKingInCheck(afterMove, enemyColor)) {
               ChessBoardStateService.addCheck({ row: targetRow, col: targetCol });
               ChessBoardStateService.createArrowFromVisualization(
@@ -1077,12 +1077,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getCctRecommendations(category: CctCategoryEnum): ICctRecommendation[] {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
-      return [];
-    }
-    if (!this.chessBoardCctService) {
-      return [];
-    }
     const forColor = this.chessBoardStateService.boardHelper.colorTurn;
     const historyLength = this.chessBoardStateService.history.length;
     const cache = this.chessBoardCctService.ensureCctRecommendations(
@@ -1234,7 +1228,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
           continue;
         }
 
-        const afterMove = this.simulateMove(board, srcRow, srcCol, parsedMove.targetRow, parsedMove.targetCol);
+        const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, parsedMove.targetRow, parsedMove.targetCol);
         this.collectKingAttackPreviewArrows(afterMove, turnColor, enemyColor, arrows, seen);
         this.collectKingDefensePreviewArrows(afterMove, turnColor, enemyColor, arrows, seen);
       }
@@ -1396,7 +1390,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
               continue;
             }
 
-            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
             if (this.isKingInCheck(afterMove, attackerColor)) {
               continue;
             }
@@ -1437,13 +1431,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
 
-    const board = this.cloneBoard(this.chessBoardStateService.field);
+    const board = ChessBoardLogicUtils.cloneField(this.chessBoardStateService.field);
     const sourceCell = board[srcRow][srcCol];
     const forColor = sourceCell && sourceCell[0]
       ? sourceCell[0].color
       : this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
     const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+    const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
 
     if (this.isKingInCheck(afterMove, forColor)) {
       return;
@@ -1700,10 +1694,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private cloneBoard(board: ChessPieceDto[][][]): ChessPieceDto[][][] {
-    return ChessBoardLogicUtils.cloneField(board);
-  }
-
   private canPlayLegalMove(
     board: ChessPieceDto[][][],
     srcRow: number,
@@ -1728,18 +1718,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+    const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
     return !this.isKingInCheck(afterMove, forColor);
-  }
-
-  private simulateMove(
-    board: ChessPieceDto[][][],
-    srcRow: number,
-    srcCol: number,
-    targetRow: number,
-    targetCol: number
-  ): ChessPieceDto[][][] {
-    return ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
   }
 
   private findKing(board: ChessPieceDto[][][], color: ChessColorsEnum): ChessPositionDto | null {
@@ -1795,7 +1775,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
             if (!canMove) {
               continue;
             }
-            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+            const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
             if (!this.isKingInCheck(afterMove, forColor)) {
               return true;
             }
@@ -2184,21 +2164,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return ChessBoardSuggestionFacade.formatEngineSuggestions(
       uciMoves,
       this.chessBoardStateService.field,
-      this.suggestedMovesCount,
-      (square) => this.parseSquareToCoords(square)
+      this.suggestedMovesCount
     );
-  }
-
-  private parseSquareToCoords(square: string): { row: number; col: number } | null {
-    return ChessBoardSuggestionFacade.parseSquareToCoords(square);
   }
 
   private resolveMoveToUci(move: string): string | null {
     return ChessBoardSuggestionFacade.resolveMoveToUci({
       move,
       board: this.chessBoardStateService.field,
-      turnColor: this.chessBoardStateService.boardHelper.colorTurn,
-      parseSquareToCoords: (square) => this.parseSquareToCoords(square)
+      turnColor: this.chessBoardStateService.boardHelper.colorTurn
     });
   }
 
@@ -2246,22 +2220,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getDebugPositionKey(): string {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
-      return '';
-    }
     return ChessBoardLogicUtils.getPositionKey(
       this.chessBoardStateService.field,
       this.chessBoardStateService.boardHelper.colorTurn,
-      this.chessBoardStateService.boardHelper.history
-    );
-  }
-
-  getDebugCastlingRights(): string {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
-      return '-';
-    }
-    return ChessRulesService.getCastlingRightsNotation(
-      this.chessBoardStateService.field,
       this.chessBoardStateService.boardHelper.history
     );
   }
