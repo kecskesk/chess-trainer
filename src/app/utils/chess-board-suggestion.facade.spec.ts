@@ -89,6 +89,17 @@ describe('Coverage extras', () => {
     expect(map.get('d4')).toBe('d2d4');
   });
 
+  it('covers early return in cctMoves.forEach callback when move is already present', () => {
+    const map = ChessBoardSuggestionFacade.buildDisplayToUciMap({
+      topMovesUci: ['e2e4'],
+      topMovesDisplay: ['e4'],
+      cctMoves: ['e4', 'd4'],
+      resolveMoveToUci: (m: string) => (m === 'd4' ? 'd2d4' : null)
+    });
+    expect(map.get('e4')).toBe('e2e4');
+    expect(map.get('d4')).toBe('d2d4');
+  });
+
   it('evaluateUciMovesForQuality returns early on runToken mismatch and handles missing engine', async () => {
     const result1 = await ChessBoardSuggestionFacade.evaluateUciMovesForQuality({
       runToken: 1,
