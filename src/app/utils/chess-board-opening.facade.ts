@@ -10,13 +10,24 @@ export interface IChessBoardOpeningState {
   activeOpeningHistoryKey: string;
 }
 
+export interface IChessBoardOpeningStateAccessors {
+  getOpeningsLoaded: () => boolean;
+  setOpeningsLoaded: (value: boolean) => void;
+  getOpenings: () => IParsedOpening[];
+  setOpenings: (value: IParsedOpening[]) => void;
+  getActiveOpening: () => IParsedOpening | null;
+  setActiveOpening: (value: IParsedOpening | null) => void;
+  getActiveOpeningHistoryKey: () => string;
+  setActiveOpeningHistoryKey: (value: string) => void;
+}
+
 export interface IOpeningAssetLoadParams {
   http: HttpClient;
   locale: string;
   defaultLocale: string;
   loadId: number;
   getCurrentLoadId: () => number;
-  state: IChessBoardOpeningState;
+  state: IChessBoardOpeningStateAccessors;
   onReady: () => void;
 }
 
@@ -28,7 +39,7 @@ export class ChessBoardOpeningFacade {
   }
 
   static getRecognitionLabel(
-    state: IChessBoardOpeningState,
+    state: IChessBoardOpeningStateAccessors,
     historySteps: string[],
     uiText: typeof UiText
   ): string {
@@ -36,31 +47,32 @@ export class ChessBoardOpeningFacade {
     if (moveCount < 1) {
       return uiText.recognition.waitingForOpening;
     }
-    if (!state.openingsLoaded) {
+    if (!state.getOpeningsLoaded()) {
       return uiText.recognition.loadingOpenings;
     }
-    if (state.activeOpening) {
-      return ChessBoardOpeningUtils.getDisplayedOpeningName(state.activeOpening, historySteps);
+    const activeOpening = state.getActiveOpening();
+    if (activeOpening) {
+      return ChessBoardOpeningUtils.getDisplayedOpeningName(activeOpening, historySteps);
     }
     return uiText.recognition.noOpeningMatch;
   }
 
-  static resetOpeningState(state: IChessBoardOpeningState): void {
-    state.openingsLoaded = false;
-    state.openings = [];
-    state.activeOpening = null;
-    state.activeOpeningHistoryKey = '';
+  static resetOpeningState(state: IChessBoardOpeningStateAccessors): void {
+    state.setOpeningsLoaded(false);
+    state.setOpenings([]);
+    state.setActiveOpening(null);
+    state.setActiveOpeningHistoryKey('');
   }
 
-  static appendParsedOpenings(state: IChessBoardOpeningState, parsedItems: IParsedOpening[]): void {
+  static appendParsedOpenings(state: IChessBoardOpeningStateAccessors, parsedItems: IParsedOpening[]): void {
     if (parsedItems.length < 1) {
       return;
     }
-    state.openings = [...state.openings, ...parsedItems];
+    state.setOpenings([...state.getOpenings(), ...parsedItems]);
   }
 
-  static markOpeningsLoaded(state: IChessBoardOpeningState): void {
-    state.openingsLoaded = true;
+  static markOpeningsLoaded(state: IChessBoardOpeningStateAccessors): void {
+    state.setOpeningsLoaded(true);
   }
 
   static loadOpeningsFromAssets(params: IOpeningAssetLoadParams): void {
@@ -95,26 +107,28 @@ export class ChessBoardOpeningFacade {
   }
 
   static updateRecognizedOpeningForHistory(
-    state: IChessBoardOpeningState,
+    state: IChessBoardOpeningStateAccessors,
     historySteps: string[],
     uiText: typeof UiText,
     naPlaceholder: string,
     onDebugText: (debugText: string) => void
   ): void {
-    if (state.openings.length < 1) {
-      state.activeOpening = null;
+    const openings = state.getOpenings();
+    if (openings.length < 1) {
+      state.setActiveOpening(null);
       return;
     }
 
-    const bestMatchResult = ChessBoardOpeningUtils.findBestOpeningMatch(state.openings, historySteps);
-    state.activeOpening = bestMatchResult.opening;
+    const bestMatchResult = ChessBoardOpeningUtils.findBestOpeningMatch(openings, historySteps);
+    const activeOpening = bestMatchResult.opening;
+    state.setActiveOpening(activeOpening);
     const historyKey = historySteps.join('|');
-    const debugKey = `${historyKey}::${state.activeOpening ? state.activeOpening.name : 'none'}`;
-    if (state.activeOpening && debugKey !== state.activeOpeningHistoryKey) {
-      state.activeOpeningHistoryKey = debugKey;
+    const debugKey = `${historyKey}::${activeOpening ? activeOpening.name : 'none'}`;
+    if (activeOpening && debugKey !== state.getActiveOpeningHistoryKey()) {
+      state.setActiveOpeningHistoryKey(debugKey);
       onDebugText(
         ChessBoardOpeningUtils.formatOpeningDebugText(
-          state.activeOpening,
+          activeOpening,
           bestMatchResult.baseMatchedDepth,
           historySteps.length,
           historySteps,

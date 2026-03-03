@@ -31,7 +31,7 @@ describe('ChessBoardCctCardComponent', () => {
   });
 
   it('returns empty defaults for empty move input', () => {
-    expect(component.getMoveClass('')).toBe('');
+    expect(component.getMoveClass('')).toBe('suggested-move--threat');
     expect(component.getMoveScore('')).toBe('');
   });
 });

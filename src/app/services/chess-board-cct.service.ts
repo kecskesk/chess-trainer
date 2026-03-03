@@ -210,7 +210,6 @@ export class ChessBoardCctService {
         this.activeOpening,
         bestMatchResult.baseMatchedDepth,
         normalizedSteps.length,
-        normalizedSteps,
         uiText,
         naPlaceholder
       );
@@ -223,7 +222,6 @@ export class ChessBoardCctService {
     opening: IParsedOpening,
     matchedDepth: number,
     historyDepth: number,
-    historySteps: string[],
     uiText: IOpeningUiText,
     naPlaceholder: string
   ): string {

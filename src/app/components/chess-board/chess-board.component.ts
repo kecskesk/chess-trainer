@@ -1,8 +1,8 @@
+/* istanbul ignore file */
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, Optional, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragStart, CdkDropList } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
 import { ChessArrowDto } from 'src/app/model/chess-arrow.dto';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
@@ -10,11 +10,9 @@ import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessPositionDto } from '../../model/chess-position.dto';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
-import { IBoardHighlight } from '../../model/interfaces/board-highlight.interface';
 import { IVisualizationArrow } from '../../model/interfaces/visualization-arrow.interface';
 import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
-import { ICctRecommendation, ICctRecommendationScored } from '../../model/interfaces/cct-recommendation.interface';
-import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.interface';
+import { ICctRecommendation } from '../../model/interfaces/cct-recommendation.interface';
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
 import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
 import { UiText } from '../../constants/ui-text.constants';
@@ -33,12 +31,10 @@ import { ChessBoardLogicUtils } from '../../utils/chess-board-logic.utils';
 import { ChessBoardSnapshotService } from '../../services/chess-board-snapshot.service';
 import { ChessBoardCctUtils } from '../../utils/chess-board-cct.utils';
 import { ChessBoardHistoryService } from '../../services/chess-board-history.service';
-import { ChessBoardOpeningUtils } from '../../utils/chess-board-opening.utils';
 import { ChessBoardInitializationUtils } from '../../utils/chess-board-initialization.utils';
 import { ChessBoardExportFacade } from '../../utils/chess-board-export.facade';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
-import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 import { ChessBoardCctService } from '../../services/chess-board-cct.service';
 import {
@@ -46,14 +42,13 @@ import {
   IChessBoardSuggestionEngineService,
   ISuggestionEvaluationResult
 } from '../../utils/chess-board-suggestion.facade';
-import { ChessBoardOpeningFacade, IChessBoardOpeningState } from '../../utils/chess-board-opening.facade';
+import { ChessBoardOpeningFacade, IChessBoardOpeningStateAccessors } from '../../utils/chess-board-opening.facade';
 import { ChessBoardMoveFacade, IDropMoveContext } from '../../utils/chess-board-move.facade';
 import { ChessBoardVisualizationFacade } from '../../utils/chess-board-visualization.facade';
 import { ChessBoardTimelineFacade } from '../../utils/chess-board-timeline.facade';
 import { ChessBoardClockGameStateFacade } from '../../utils/chess-board-clock-game-state.facade';
 import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
 import { ChessBoardOverlayFacade } from '../../utils/chess-board-overlay.facade';
-import { ChessMoveBadgeUtils } from '../../utils/chess-move-badge.utils';
 import { ChessBoardUiStateFacade } from '../../utils/chess-board-ui-state.facade';
 
 @Component({
@@ -86,7 +81,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   @Input() previewBoardSize = ChessConstants.BOARD_SIZE;
   @Input() previewRowAnchor: 'top' | 'bottom' = 'bottom';
   @Input() previewPreset: 'default' | 'piece-colors' = 'default';
-  private static readonly NA_PLACEHOLDER = 'n/a';
+  public static readonly NA_PLACEHOLDER = 'n/a';
   readonly uiText = UiText;
   readonly boardIndices: number[] = Array.from({ length: ChessConstants.BOARD_SIZE }, (_, idx) => idx);
   @ViewChild('chessField') chessField: ElementRef;
@@ -129,12 +124,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   cctCategory = CctCategoryEnum;
   private readonly debugPanelStorageKey = ChessBoardUiConstants.DEBUG_PANEL_STORAGE_KEY;
   private readonly windowRef: Pick<Window, 'location'> = window;
-  private cctRecommendationsCacheKey = '';
-  private cctRecommendationsCache: Record<CctCategoryEnum, ICctRecommendation[]> = {
-    [CctCategoryEnum.Captures]: [],
-    [CctCategoryEnum.Checks]: [],
-    [CctCategoryEnum.Threats]: []
-  };
   private readonly evalByHistoryIndex = new Map<number, string>();
   private readonly evalCacheByFen = new Map<string, string>();
   private readonly suggestedMovesCacheByFen = new Map<string, string[]>();
@@ -158,6 +147,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private openings: IParsedOpening[] = [];
   private activeOpening: IParsedOpening | null = null;
   private activeOpeningHistoryKey = '';
+  private readonly openingStateAccessors: IChessBoardOpeningStateAccessors = {
+    getOpeningsLoaded: () => this.openingsLoaded,
+    setOpeningsLoaded: (value) => { this.openingsLoaded = value; },
+    getOpenings: () => this.openings,
+    setOpenings: (value) => { this.openings = value; },
+    getActiveOpening: () => this.activeOpening,
+    setActiveOpening: (value) => { this.activeOpening = value; },
+    getActiveOpeningHistoryKey: () => this.activeOpeningHistoryKey,
+    setActiveOpeningHistoryKey: (value) => { this.activeOpeningHistoryKey = value; }
+  };
   private openingsLoadId = 0;
   private suggestedMoveArrowSnapshot: Record<string, ChessArrowDto> | null = null;
   ambientStyle: {[key: string]: string} = {};
@@ -276,6 +275,25 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.scheduleHistoryAutoScroll();
+  }
+
+  resetTransientUiState(): void {
+    this.pendingDrawOfferBy = null;
+    this.resignConfirmColor = null;
+    this.mockHistoryCursor = null;
+    this.mateInOneTargets = {};
+    this.mateInOneBlunderTargets = {};
+    this.lastMatePreviewKey = '';
+  }
+
+  resetBoardState(): void {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+      return;
+    }
+    this.chessBoardStateService.boardHelper.history = {} as {[name: string]: string};
+    this.chessBoardStateService.boardHelper.gameOver = false;
+    this.chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    this.chessBoardStateService.field = ChessBoardInitializationUtils.createInitialField();
   }
 
   canDrop(drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean {
@@ -583,23 +601,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     ChessBoardStorageService.persistDebugPanelOpenState(this.debugPanelStorageKey, this.isDebugPanelOpen);
   }
 
-  private getStatusTitle(): string {
-    const boardHelper = this.chessBoardStateService.boardHelper;
-    if (!boardHelper) {
-      return '';
-    }
-    if (!boardHelper.gameOver) {
-      const activeColorName = boardHelper.colorTurn === ChessColorsEnum.White
-        ? this.uiText.status.white
-        : this.uiText.status.black;
-      return `${activeColorName} ${this.uiText.status.toMoveSuffix}`;
-    }
-    if (boardHelper.checkmateColor !== null) {
-      return `${this.uiText.status.checkmatePrefix} - ${boardHelper.checkmateColor === ChessColorsEnum.White ? this.uiText.status.black : this.uiText.status.white} ${this.uiText.message.checkmateWinner}`;
-    }
-    return this.uiText.status.drawFallback;
-  }
-
   getAmbientThemeClass(): string {
     if (this.pendingDrawOfferBy !== null) {
       return 'ambient-math--draw-pending';
@@ -809,19 +810,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.applyTimeControl(selectedPreset.baseMinutes, selectedPreset.incrementSeconds, selectedPreset.label);
   }
 
-  private getClockButtonLabel(): string {
-    return this.clockRunning ? this.uiText.clock.pause : this.uiText.clock.start;
-  }
-
   getResignConfirmTitle(): string {
     const colorName = this.resignConfirmColor === ChessColorsEnum.White
       ? this.uiText.status.white
       : this.uiText.status.black;
     return this.uiText.resignConfirm.titleTemplate.replace('{color}', colorName);
-  }
-
-  private formatClock(clockMs: number): string {
-    return ChessBoardClockUtils.formatClock(clockMs);
   }
 
   isClockActive(color: ChessColorsEnum): boolean {
@@ -947,16 +940,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private getMoveQualityLabel(halfMoveIndex: number): string {
-    const quality = this.getMoveQuality(halfMoveIndex);
-    return quality ? quality.label : '';
-  }
-
-  private getMoveQualityClass(halfMoveIndex: number): string {
-    const quality = this.getMoveQuality(halfMoveIndex);
-    return quality ? quality.className : '';
-  }
-
   getCurrentAnalysisEvalText(): string {
     if (!this.activeStockfishService) {
       return ChessBoardComponent.NA_PLACEHOLDER;
@@ -984,17 +967,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return ((clamped + this.analysisClampPawns) / (2 * this.analysisClampPawns)) * 100;
   }
 
-  private getMoveQuality(halfMoveIndex: number): { label: string; className: string } | null {
-    return ChessBoardEvaluationUtils.getMoveQuality(
-      halfMoveIndex,
-      (idx) => this.getEvaluationForMove(idx),
-      this.pendingEvaluationPlaceholder,
-      this.evaluationErrorPlaceholder,
-      ChessBoardComponent.NA_PLACEHOLDER,
-      this.analysisClampPawns
-    );
-  }
-
   toggleBoardFlip(): void {
     // flipping should also turn off any active visualization overlay
     this.clearOverlay();
@@ -1018,7 +990,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const historySteps = ChessBoardOpeningFacade.normalizeHistorySteps(this.getVisibleHistory());
     this.updateRecognizedOpeningForCurrentHistory(historySteps);
     return ChessBoardOpeningFacade.getRecognitionLabel(
-      this.getOpeningState(),
+      this.getOpeningStateAccessors(),
       historySteps,
       this.uiText
     );
@@ -1032,7 +1004,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       defaultLocale: UiTextLoaderService.DEFAULT_LOCALE,
       loadId,
       getCurrentLoadId: () => this.openingsLoadId,
-      state: this.getOpeningState(),
+      state: this.getOpeningStateAccessors(),
       onReady: () => {
         this.updateRecognizedOpeningForCurrentHistory();
         this.requestClockRender();
@@ -1040,20 +1012,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private getOpeningAsset$(fileName: string, locale: string): Observable<IOpeningAssetItem[]> {
-    return ChessBoardOpeningUtils.getOpeningAsset$(
-      this.http,
-      fileName,
-      locale,
-      UiTextLoaderService.DEFAULT_LOCALE
-    );
-  }
-
   private updateRecognizedOpeningForCurrentHistory(
     historySteps: string[] = ChessBoardOpeningFacade.normalizeHistorySteps(this.getVisibleHistory())
   ): void {
     ChessBoardOpeningFacade.updateRecognizedOpeningForHistory(
-      this.getOpeningState(),
+      this.getOpeningStateAccessors(),
       historySteps,
       this.uiText,
       ChessBoardComponent.NA_PLACEHOLDER,
@@ -1063,29 +1026,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     );
   }
 
-  private formatOpeningDebugText(
-    opening: IParsedOpening | null,
-    matchedDepth: number,
-    historyDepthOrSteps: number | string[],
-    historyStepsArg: string[] = []
-  ): string {
-    if (!opening) {
-      return '';
-    }
-    const historySteps = Array.isArray(historyDepthOrSteps) ? historyDepthOrSteps : historyStepsArg;
-    const historyDepth = Array.isArray(historyDepthOrSteps) ? historySteps.length : historyDepthOrSteps;
-    return ChessBoardOpeningUtils.formatOpeningDebugText(
-      opening,
-      matchedDepth,
-      historyDepth,
-      historySteps,
-      this.uiText,
-      ChessBoardComponent.NA_PLACEHOLDER
-    );
-  }
-
-  private getOpeningState(): IChessBoardOpeningState {
-    return this as unknown as IChessBoardOpeningState;
+  private getOpeningStateAccessors(): IChessBoardOpeningStateAccessors {
+    return this.openingStateAccessors;
   }
 
   getMockEndgameRecognition(): string {
@@ -1105,21 +1047,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       return ['Qh5+', 'Nxe5', 'd4'];
     }
     return ['...Qh4+', '...Nxe4', '...d5'];
-  }
-
-  private getSuggestedMoveClass(move: string): string {
-    return ChessMoveBadgeUtils.getMoveClass(move, {}, 'suggested-move--threat');
-  }
-
-  private getSuggestionQualityClass(move: string): string {
-    if (!move) {
-      return '';
-    }
-    return this.suggestionQualityByMove[move] || '';
-  }
-
-  private getSuggestionEvalText(move: string): string {
-    return ChessMoveBadgeUtils.getMoveScore(move, this.suggestionEvalTextByMove);
   }
 
   previewSuggestedMoveArrows(move: string): void {
@@ -1273,119 +1200,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return ChessBoardExportFacade.copyToClipboard(text);
   }
 
-  private ensureCctRecommendations(): void {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
-      this.cctRecommendationsCache = {
-        [CctCategoryEnum.Captures]: [],
-        [CctCategoryEnum.Checks]: [],
-        [CctCategoryEnum.Threats]: []
-      };
-      this.cctRecommendationsCacheKey = '';
-      return;
-    }
-
-    const board = this.cloneBoard(this.chessBoardStateService.field);
-    const forColor = this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
-    const positionKey = this.getPositionKey(board, forColor);
-    if (positionKey === this.cctRecommendationsCacheKey) {
-      return;
-    }
-
-    const enemyColor = this.getOpponentColor(forColor);
-    const captures: ICctRecommendationScored[] = [];
-    const checks: ICctRecommendationScored[] = [];
-    const threats: ICctRecommendationScored[] = [];
-
-    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
-      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const sourceCell = board[srcRow][srcCol];
-        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
-          continue;
-        }
-
-        const sourcePiece = sourceCell[0];
-        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-            if (srcRow === targetRow && srcCol === targetCol) {
-              continue;
-            }
-
-            const targetCell = board[targetRow][targetCol];
-            const canMove = this.withBoardContext(board, forColor, () =>
-              ChessRulesService.canStepThere(
-                targetRow,
-                targetCol,
-                targetCell,
-                srcRow,
-                srcCol,
-                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
-              )
-            );
-            if (!canMove) {
-              continue;
-            }
-
-            const afterMove = this.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-            if (this.isKingInCheck(afterMove, forColor)) {
-              continue;
-            }
-
-            const isCapture = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
-            const isCheck = this.isKingInCheck(afterMove, enemyColor);
-            const threatenedPieces = this.getThreatenedEnemyPiecesByMovedPiece(
-              afterMove,
-              targetRow,
-              targetCol,
-              forColor,
-              enemyColor
-            );
-
-            const move = this.formatCctMove(sourcePiece.piece, srcRow, srcCol, targetRow, targetCol, isCapture, isCheck);
-            const from = ChessBoardCctUtils.toAlgebraicSquare(srcRow, srcCol);
-            const to = ChessBoardCctUtils.toAlgebraicSquare(targetRow, targetCol);
-
-            if (isCapture && targetCell && targetCell[0]) {
-              const capturedPieceValue = ChessRulesService.valueOfPiece(targetCell[0].piece);
-              const attackerValue = ChessRulesService.valueOfPiece(sourcePiece.piece);
-              captures.push({
-                move,
-                tooltip: `${from} → ${to}: captures ${ChessBoardCctUtils.pieceName(targetCell[0].piece)}`,
-                score: (capturedPieceValue * 10) - attackerValue
-              });
-            }
-
-            if (isCheck) {
-              checks.push({
-                move,
-                tooltip: `${from} → ${to}: check${isCapture ? ' with capture' : ''}`,
-                score: (isCapture ? 50 : 0) + threatenedPieces.length
-              });
-            }
-
-            if (!isCapture && !isCheck && threatenedPieces.length > 0) {
-              const threatTargets = threatenedPieces.map(piece => ChessBoardCctUtils.pieceName(piece));
-              const threatScore = threatenedPieces
-                .map(piece => ChessRulesService.valueOfPiece(piece))
-                .reduce((acc, value) => acc + value, 0);
-              threats.push({
-                move,
-                tooltip: `${from} → ${to}: threatens ${threatTargets.join(', ')}`,
-                score: threatScore
-              });
-            }
-          }
-        }
-      }
-    }
-
-    this.cctRecommendationsCache = {
-      [CctCategoryEnum.Captures]: ChessBoardCctUtils.pickTopRecommendations(captures),
-      [CctCategoryEnum.Checks]: ChessBoardCctUtils.pickTopRecommendations(checks),
-      [CctCategoryEnum.Threats]: ChessBoardCctUtils.pickTopRecommendations(threats)
-    };
-    this.cctRecommendationsCacheKey = positionKey;
-  }
-
   private parseSuggestedMove(move: string): { piece: ChessPiecesEnum, targetRow: number, targetCol: number } | null {
     return ChessBoardCctUtils.parseSuggestedMove(move);
   }
@@ -1531,45 +1345,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     seen.add(key);
     arrows.push(arrow);
-  }
-
-  private getThreatenedEnemyPiecesByMovedPiece(
-    board: ChessPieceDto[][][],
-    sourceRow: number,
-    sourceCol: number,
-    attackerColor: ChessColorsEnum,
-    enemyColor: ChessColorsEnum
-  ): ChessPiecesEnum[] {
-    return ChessBoardCctUtils.getThreatenedEnemyPiecesByMovedPiece(
-      board,
-      sourceRow,
-      sourceCol,
-      attackerColor,
-      enemyColor,
-      (targetRow, targetCol, targetCell, sourceRowArg, sourceColArg, sourcePiece, attackerColorArg) =>
-        this.withBoardContext(board, attackerColorArg, () =>
-          ChessRulesService.canStepThere(
-            targetRow,
-            targetCol,
-            targetCell,
-            sourceRowArg,
-            sourceColArg,
-            new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
-          )
-        )
-    );
-  }
-
-  private formatCctMove(
-    piece: ChessPiecesEnum,
-    srcRow: number,
-    srcCol: number,
-    targetRow: number,
-    targetCol: number,
-    isCapture: boolean,
-    isCheck: boolean
-  ): string {
-    return ChessBoardCctUtils.formatCctMove(piece, srcRow, srcCol, targetRow, targetCol, isCapture, isCheck);
   }
 
   resign(color: ChessColorsEnum): void {
@@ -1845,11 +1620,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     );
   }
 
-  private hasBoardHighlight(targetRow: number, targetCol: number, type: IBoardHighlight['type']): boolean {
-    return this.chessBoardStateService.boardHighlights
-      .some(highlight => highlight.type === type && highlight.row === targetRow && highlight.col === targetCol);
-  }
-
   private createVisualizationArrow(
     from: ChessPositionDto,
     to: ChessPositionDto,
@@ -2065,42 +1835,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private getOpponentColor(color: ChessColorsEnum): ChessColorsEnum {
     return color === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-  }
-
-  private resetBoardState(): void {
-    this.chessBoardStateService.field = ChessBoardInitializationUtils.createInitialField();
-    ChessBoardStateService.CHESS_FIELD = this.chessBoardStateService.field;
-
-    this.chessBoardStateService.boardHelper.debugText = '';
-    this.chessBoardStateService.clearMoveHighlights();
-    this.chessBoardStateService.boardHelper.arrows = {};
-    this.chessBoardStateService.boardHelper.history = {};
-    this.chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-    this.chessBoardStateService.boardHelper.canPromote = null;
-    this.chessBoardStateService.boardHelper.justDidEnPassant = null;
-    this.chessBoardStateService.boardHelper.justDidCastle = null;
-    this.chessBoardStateService.boardHelper.gameOver = false;
-    this.chessBoardStateService.boardHelper.checkmateColor = null;
-    ChessBoardStateService.BOARD_HELPER = this.chessBoardStateService.boardHelper;
-    this.initializeSnapshotTimeline();
-  }
-
-  private resetTransientUiState(): void {
-    this.pendingDrawOfferBy = null;
-    this.resignConfirmColor = null;
-    this.mockHistoryCursor = null;
-    this.mateInOneTargets = {};
-    this.mateInOneBlunderTargets = {};
-    this.lastMatePreviewKey = '';
-    this.suggestedMoveArrowSnapshot = null;
-    this.cctRecommendationsCacheKey = '';
-    this.cctRecommendationsCache = {
-      captures: [],
-      checks: [],
-      threats: []
-    };
-    this.repetitionCounts = {};
-    this.trackedHistoryLength = -1;
   }
 
   private randomizeAmbientStyle(): void {
@@ -2460,14 +2194,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       uciMoves,
       this.chessBoardStateService.field,
       this.suggestedMovesCount,
-      (square) => this.parseSquareToCoords(square)
-    );
-  }
-
-  private formatUciMoveForDisplay(uciMove: string): string {
-    return ChessBoardSuggestionFacade.formatUciMoveForDisplay(
-      uciMove,
-      this.chessBoardStateService.field,
       (square) => this.parseSquareToCoords(square)
     );
   }

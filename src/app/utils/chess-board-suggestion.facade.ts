@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';

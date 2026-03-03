@@ -1,5 +1,18 @@
 import { UiText } from '../constants/ui-text.constants';
-import { ChessBoardOpeningFacade, IChessBoardOpeningState } from './chess-board-opening.facade';
+import { ChessBoardOpeningFacade, IChessBoardOpeningState, IChessBoardOpeningStateAccessors } from './chess-board-opening.facade';
+
+function buildAccessors(state: IChessBoardOpeningState): IChessBoardOpeningStateAccessors {
+  return {
+    getOpeningsLoaded: () => state.openingsLoaded,
+    setOpeningsLoaded: (value) => { state.openingsLoaded = value; },
+    getOpenings: () => state.openings,
+    setOpenings: (value) => { state.openings = value; },
+    getActiveOpening: () => state.activeOpening,
+    setActiveOpening: (value) => { state.activeOpening = value; },
+    getActiveOpeningHistoryKey: () => state.activeOpeningHistoryKey,
+    setActiveOpeningHistoryKey: (value) => { state.activeOpeningHistoryKey = value; }
+  };
+}
 
 describe('ChessBoardOpeningFacade', () => {
   it('keeps state unchanged when appendParsedOpenings is called with empty list', () => {
@@ -10,7 +23,7 @@ describe('ChessBoardOpeningFacade', () => {
       activeOpeningHistoryKey: ''
     };
 
-    ChessBoardOpeningFacade.appendParsedOpenings(state, []);
+    ChessBoardOpeningFacade.appendParsedOpenings(buildAccessors(state), []);
 
     expect(state.openings).toEqual([]);
   });
@@ -22,6 +35,7 @@ describe('ChessBoardOpeningFacade', () => {
       activeOpening: null,
       activeOpeningHistoryKey: ''
     };
-    expect(ChessBoardOpeningFacade.getRecognitionLabel(state, [], UiText)).toBe(UiText.recognition.waitingForOpening);
+    expect(ChessBoardOpeningFacade.getRecognitionLabel(buildAccessors(state), [], UiText))
+      .toBe(UiText.recognition.waitingForOpening);
   });
 });

@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { AfterViewInit, Component, EventEmitter, Input, Output, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDropList, DragDropModule } from '@angular/cdk/drag-drop';

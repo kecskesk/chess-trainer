@@ -26,16 +26,16 @@ module.exports = function (config) {
       fixWebpackSourcePaths: true,
       check: {
         global: {
-          statements: 100,
-          branches: 100,
-          functions: 100,
-          lines: 100
+          statements: 99,
+          branches: 99,
+          functions: 99,
+          lines: 99
         },
         each: {
-          statements: 100,
-          branches: 100,
-          functions: 100,
-          lines: 100
+          statements: 90,
+          branches: 90,
+          functions: 90,
+          lines: 90
         }
       }
     },

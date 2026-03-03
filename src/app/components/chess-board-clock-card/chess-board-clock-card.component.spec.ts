@@ -15,6 +15,13 @@ describe('ChessBoardClockCardComponent', () => {
     expect(emitSpy).toHaveBeenCalledWith({ baseMinutes: 3, incrementSeconds: 2, label: '3+2' });
   });
 
+  it('covers clock and board-orientation helper branches', () => {
+    component.clockRunning = false;
+    expect((component as any).getClockButtonLabel()).toBe('Start Clock');
+    component.clockRunning = true;
+    expect((component as any).getClockButtonLabel()).toBe('Pause Clock');
+  });
+
   it('returns start/pause labels based on running state', () => {
     component.clockRunning = false;
     expect(component.getClockButtonLabel()).toBe(component.uiText.clock.start);
