@@ -422,7 +422,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     this.chessBoardStateService.ensureRepetitionTrackingState();
-    const moveContext = this.buildDropMoveContext(event);
+    const moveContext = ChessBoardMoveFacade.buildDropMoveContext(event);
     if (!moveContext) {
       return;
     }
@@ -446,10 +446,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       gameOver: !!(this.chessBoardStateService && this.chessBoardStateService.boardHelper && this.chessBoardStateService.boardHelper.gameOver),
       onGameOver: () => this.setSubtleDebugReason(ChessBoardMoveFacade.gameOverNoMovesMessage())
     });
-  }
-
-  private buildDropMoveContext(event: CdkDragDrop<ChessPieceDto[]>): IDropMoveContext | null {
-    return ChessBoardMoveFacade.buildDropMoveContext(event);
   }
 
   private validateDropMove(moveContext: IDropMoveContext, event: CdkDragDrop<ChessPieceDto[]>): boolean {

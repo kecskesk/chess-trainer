@@ -11,6 +11,7 @@ import { ChessBoardOpeningUtils } from '../../utils/chess-board-opening.utils';
 import { ChessBoardCctUtils } from '../../utils/chess-board-cct.utils';
 import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
 import { ChessBoardSuggestionFacade } from '../../utils/chess-board-suggestion.facade';
+import { ChessBoardMoveFacade } from '../../utils/chess-board-move.facade';
 import { UiTextLoaderService } from '../../services/ui-text-loader.service';
 import { ChessBoardCctService } from '../../services/chess-board-cct.service';
 import { ChessBoardHistoryService } from '../../services/chess-board-history.service';
@@ -2281,7 +2282,7 @@ describe('ChessBoardComponent branch coverage helpers (drag and drop guards)', (
     chessBoardStateService.boardHelper.gameOver = true;
     expect((component as any).canProcessDropEvent({ previousContainer: { data: [] }, container: { data: [] } })).toBeFalse();
     chessBoardStateService.boardHelper.gameOver = false;
-    expect((component as any).buildDropMoveContext({ previousContainer: { id: 'field60', data: [] }, container: { id: 'field50', data: [] } })).toBeNull();
+    expect(ChessBoardMoveFacade.buildDropMoveContext({ previousContainer: { id: 'field60', data: [] }, container: { id: 'field50', data: [] } } as any)).toBeNull();
     expect((component as any).canProcessDropEvent({ previousContainer: {}, container: {} })).toBeFalse();
   });
 
