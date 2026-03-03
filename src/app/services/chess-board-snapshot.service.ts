@@ -16,7 +16,6 @@ export interface IRestoreSnapshotResult {
 export class ChessBoardSnapshotService {
   static captureSnapshot(
     chessBoardStateService: ChessBoardStateService,
-    repetitionCounts: {[positionKey: string]: number},
     trackedHistoryLength: number,
     pendingDrawOfferBy: ChessColorsEnum | null,
     clockStarted: boolean,
@@ -37,7 +36,7 @@ export class ChessBoardSnapshotService {
         gameOver: !!(boardHelper && boardHelper.gameOver),
         checkmateColor: boardHelper ? boardHelper.checkmateColor : null
       },
-      repetitionCounts: { ...repetitionCounts },
+      repetitionCounts: { ...(chessBoardStateService.repetitionCounts || {}) },
       trackedHistoryLength,
       pendingDrawOfferBy,
       clockStarted,
@@ -70,6 +69,8 @@ export class ChessBoardSnapshotService {
     boardHelper.checkmateColor = snapshot.boardHelper.checkmateColor;
     ChessBoardStateService.BOARD_HELPER = boardHelper;
 
+    // restore repetition counts into the state service as well
+    chessBoardStateService.repetitionCounts = { ...snapshot.repetitionCounts };
     return {
       pendingDrawOfferBy: snapshot.pendingDrawOfferBy,
       repetitionCounts: { ...snapshot.repetitionCounts },

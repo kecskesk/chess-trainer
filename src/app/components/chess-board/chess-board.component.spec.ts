@@ -728,7 +728,7 @@ describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
     chessBoardStateService.field[5][5] = [];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
-    (component as any).repetitionCounts = { [targetPositionKey]: 4 };
+    chessBoardStateService.repetitionCounts = { [targetPositionKey]: 4 };
     (component as any).trackedHistoryLength = chessBoardStateService.history.length;
 
         movePiece(7, 6, 5, 5);

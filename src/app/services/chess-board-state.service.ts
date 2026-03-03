@@ -8,6 +8,7 @@ import { ChessPositionDto } from '../model/chess-position.dto';
 import { IBoardHighlight } from '../model/interfaces/board-highlight.interface';
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
 import { ChessConstants, VisualizationConstants } from '../constants/chess.constants';
+import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 
 @Injectable()
 export class ChessBoardStateService {
@@ -73,6 +74,9 @@ export class ChessBoardStateService {
     ]
   ];
 
+  // Tracks position repetition counts for draw detection
+  public repetitionCounts: {[positionKey: string]: number} = {};
+
   constructor() {
     ChessBoardStateService.CHESS_FIELD = this.field;
     ChessBoardStateService.BOARD_HELPER = this.boardHelper;
@@ -103,6 +107,36 @@ export class ChessBoardStateService {
 
   get history(): string[] {
     return Object.values(this.boardHelper.history);
+  }
+
+  isFiftyMoveRule(): boolean {
+    return this.isNMoveRule(100);
+  }
+
+  isSeventyFiveMoveRule(): boolean {
+    return this.isNMoveRule(150);
+  }
+
+  isThreefoldRepetition(): boolean {
+    return this.hasNfoldRepetition(3);
+  }
+
+  isFivefoldRepetition(): boolean {
+    return this.hasNfoldRepetition(5);
+  }
+
+  hasNfoldRepetition(requiredCount: number): boolean {
+    return Object.values(this.repetitionCounts || {}).some(count => count >= requiredCount);
+  }
+
+  private isNMoveRule(halfMoveCount: number): boolean {
+    const history = this.history;
+    if (history.length < halfMoveCount) {
+      return false;
+    }
+
+    const recentHalfMoves = history.slice(-halfMoveCount);
+    return recentHalfMoves.every(move => ChessBoardLogicUtils.isNonPawnNonCaptureMove(move));
   }
 
   clearMoveHighlights(): void {
