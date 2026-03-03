@@ -105,6 +105,12 @@ export class ChessBoardStateService {
     return Object.values(this.boardHelper.history);
   }
 
+  clearMoveHighlights(): void {
+    this.boardHelper.possibles = {};
+    this.boardHelper.hits = {};
+    this.boardHelper.checks = {};
+  }
+
   static addPossible(newPossible: ChessPositionDto): void {
     if (!newPossible) {
       console.warn('Attempted to add null/undefined possible move');

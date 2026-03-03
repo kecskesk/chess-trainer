@@ -81,20 +81,34 @@ export class ChessBoardEvaluationUtils {
     naPlaceholder: string,
     analysisClampPawns: number
   ): { label: string; className: string } | null {
-    const previousEval = ChessBoardComponentUtils.parseEvaluationPawns(
-      getEvaluationForMove(halfMoveIndex - 1),
+    const previousEvalText = getEvaluationForMove(halfMoveIndex - 1);
+    const currentEvalText = getEvaluationForMove(halfMoveIndex);
+
+    let previousEval = ChessBoardComponentUtils.parseEvaluationPawns(
+      previousEvalText,
       pendingEvaluationPlaceholder,
       evaluationErrorPlaceholder,
       naPlaceholder,
       analysisClampPawns
     );
-    const currentEval = ChessBoardComponentUtils.parseEvaluationPawns(
-      getEvaluationForMove(halfMoveIndex),
+    let currentEval = ChessBoardComponentUtils.parseEvaluationPawns(
+      currentEvalText,
       pendingEvaluationPlaceholder,
       evaluationErrorPlaceholder,
       naPlaceholder,
       analysisClampPawns
     );
+
+    // Some engines can emit mate-zero as "#0" without explicit sign.
+    // Preserve mate direction from adjacent explicit mate scores so the
+    // quality classifier does not invert (e.g. "#-1" -> "#0").
+    if (currentEvalText === '#0' && previousEval !== null) {
+      currentEval = previousEval > 0 ? analysisClampPawns : -analysisClampPawns;
+    }
+    if (previousEvalText === '#0' && currentEval !== null) {
+      previousEval = currentEval > 0 ? analysisClampPawns : -analysisClampPawns;
+    }
+
     return ChessBoardComponentUtils.getMoveQuality(halfMoveIndex, previousEval, currentEval);
   }
 

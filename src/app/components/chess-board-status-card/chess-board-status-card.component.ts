@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessBoardClockGameStateFacade } from '../../utils/chess-board-clock-game-state.facade';
 
 interface IStatusBoardState {
   colorTurn: ChessColorsEnum;
@@ -25,11 +26,7 @@ export class ChessBoardStatusCardComponent {
   @Input() clockRunning = false;
   @Input() resignConfirmColor: ChessColorsEnum | null = null;
   @Input() chessColors: typeof ChessColorsEnum = ChessColorsEnum;
-  @Input() canOfferDraw = false;
-  @Input() canRespondToDrawOffer = false;
   @Input() canClaimDraw = false;
-  @Input() canResignWhite = false;
-  @Input() canResignBlack = false;
 
   @Output() showPossibleMoves = new EventEmitter<ChessColorsEnum | null>();
   @Output() startNewGame = new EventEmitter<void>();
@@ -62,5 +59,31 @@ export class ChessBoardStatusCardComponent {
       ? this.uiText.status.white
       : this.uiText.status.black;
     return this.uiText.resignConfirm.titleTemplate.replace('{color}', colorName);
+  }
+
+  get canOfferDraw(): boolean {
+    if (!this.boardState) {
+      return false;
+    }
+    return ChessBoardClockGameStateFacade.canOfferDraw(this.boardState.gameOver, this.pendingDrawOfferBy);
+  }
+
+  get canRespondToDrawOffer(): boolean {
+    if (!this.boardState) {
+      return false;
+    }
+    return ChessBoardClockGameStateFacade.canRespondToDrawOffer(
+      this.boardState.gameOver,
+      this.pendingDrawOfferBy,
+      this.boardState.colorTurn
+    );
+  }
+
+  get canResignWhite(): boolean {
+    return !!this.boardState && ChessBoardClockGameStateFacade.canResign(this.boardState.gameOver, ChessColorsEnum.White);
+  }
+
+  get canResignBlack(): boolean {
+    return !!this.boardState && ChessBoardClockGameStateFacade.canResign(this.boardState.gameOver, ChessColorsEnum.Black);
   }
 }

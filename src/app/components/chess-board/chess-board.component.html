@@ -15,48 +15,28 @@
   <div class="ambient-math" *ngIf="!previewMode" [ngClass]="getAmbientThemeClass()" [ngStyle]="ambientStyle" aria-hidden="true"></div>
   <section class="board-panel">
     <div class="board-stack">
-          <div class="outer-container board-shell">
+      <div class="outer-container board-shell">
         <div class="container" #chessField>
-          <div #row class="field-row" *ngFor="let displayRow of renderedBoardRows">
-            <div class="field-cell" *ngFor="let displayCol of renderedBoardCols">
-              <div class="piece-box">
-                <div class="square"
-                     cdkDropList
-                     cdkDropListOrientation="horizontal"
-                     [cdkDropListSortingDisabled]="true"
-                     [cdkDropListEnterPredicate]="canDropPredicate"
-                     [cdkDropListDisabled]="previewMode"
-                     [id]="getDisplayFieldId(displayRow, displayCol)"
-                     [ngClass]="getDisplaySquareHighlightClass(displayRow, displayCol)"
-                     [cdkDropListData]="getDisplayCell(displayRow, displayCol)"
-                     [cdkDropListConnectedTo]="dropLists"
-                     (cdkDropListEntered)="onDropListEntered($event)"
-                     (cdkDropListDropped)="onDrop($event)"
-                     [class.white-square]="isDisplaySquareWhite(displayRow, displayCol)"
-                     [class.black-square]="!isDisplaySquareWhite(displayRow, displayCol)">
-                  <div class="drag-box" (mousedown)="onSquarePointerDown(getDisplayCell(displayRow, displayCol))">
-                    <app-chess-piece [piece]="piece"
-                                     [pieceStyle]="pieceStyle"
-                                     *ngIf="getDisplayPiece(displayRow, displayCol) as piece"
-                                     cdkDrag
-                                     [cdkDragData]="piece"
-                                     [cdkDragDisabled]="previewMode || chessBoardStateService.boardHelper.gameOver || piece.color !== chessBoardStateService.boardHelper.colorTurn"
-                                     (cdkDragStarted)="onDragStarted()"
-                                     (cdkDragEnded)="onDragEnded()"></app-chess-piece>
-                  </div>
-                  <div class="notation">{{getDisplayNotation(displayRow, displayCol)}}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="arrowPointer" *ngFor="let arrow of chessBoardStateService.arrows; index as arrowIdx"
-             [style.top]="getArrowTopForDisplay(arrow)" [style.left]="getArrowLeftForDisplay(arrow)" [style.color]="arrow.color"
-             [style.width]="arrow.length"
-             [style.--arrow-thickness]="arrow.thickness"
-             [style.transform]="getArrowTransformForDisplay(arrow)">
-          <span class="arrow-shaft"></span>
-          <span class="arrow-head"></span>
+          <app-chess-board-grid
+            [renderedBoardRows]="renderedBoardRows"
+            [renderedBoardCols]="renderedBoardCols"
+            [field]="chessBoardStateService.field"
+            [boardHighlights]="chessBoardStateService.boardHighlights"
+            [arrows]="chessBoardStateService.arrows"
+            [mateInOneTargets]="mateInOneTargets"
+            [mateInOneBlunderTargets]="mateInOneBlunderTargets"
+            [isBoardFlipped]="isBoardFlipped"
+            [previewMode]="previewMode"
+            [previewPreset]="previewPreset"
+            [pieceStyle]="pieceStyle"
+            [gameOver]="chessBoardStateService.boardHelper.gameOver"
+            [turnColor]="chessBoardStateService.boardHelper.colorTurn"
+            [canDropPredicate]="canDropPredicate"
+            (dropListEntered)="onDropListEntered($event)"
+            (pieceDropped)="onDrop($event)"
+            (dragStarted)="onDragStarted()"
+            (dragEnded)="onDragEnded()"
+            (squarePointerDown)="onSquarePointerDown($event)"></app-chess-board-grid>
         </div>
       </div>
 
@@ -75,17 +55,15 @@
       [uiText]="uiText"
       [selectedLocale]="selectedLocale"
       [chessColors]="chessColors"
-      [selectedClockPresetLabel]="clockVm.selectedClockPresetLabel"
-      [clockStarted]="clockVm.clockStarted"
-      [clockRunning]="clockVm.clockRunning"
-      [blackClockMs]="clockVm.blackClockMs"
-      [whiteClockMs]="clockVm.whiteClockMs"
-      [analysisMeterOffsetPercent]="clockVm.analysisMeterOffsetPercent"
-      [currentAnalysisEvalText]="clockVm.currentAnalysisEvalText"
-      [isBlackClockActive]="clockVm.isBlackClockActive"
-      [isWhiteClockActive]="clockVm.isWhiteClockActive"
-      [isBlackClockLow]="clockVm.isBlackClockLow"
-      [isWhiteClockLow]="clockVm.isWhiteClockLow"
+      [selectedClockPresetLabel]="selectedClockPresetLabel"
+      [clockStarted]="clockStarted"
+      [clockRunning]="clockRunning"
+      [blackClockMs]="blackClockMs"
+      [whiteClockMs]="whiteClockMs"
+      [analysisMeterOffsetPercent]="getAnalysisMeterOffsetPercent()"
+      [currentAnalysisEvalText]="getCurrentAnalysisEvalText()"
+      [turnColor]="chessBoardStateService.boardHelper.colorTurn"
+      [isGameOver]="chessBoardStateService.boardHelper.gameOver"
       (timeControlChange)="applyTimeControl($event.baseMinutes, $event.incrementSeconds, $event.label)"
       (toggleClock)="startOrPauseClock()"
       (resetClock)="resetClock()"></app-chess-board-clock-card>
@@ -93,16 +71,12 @@
     <app-chess-board-status-card
       [uiText]="uiText"
       [selectedLocale]="selectedLocale"
-      [boardState]="statusVm.boardState"
-      [pendingDrawOfferBy]="statusVm.pendingDrawOfferBy"
-      [clockRunning]="statusVm.clockRunning"
-      [resignConfirmColor]="statusVm.resignConfirmColor"
+      [boardState]="chessBoardStateService.boardHelper"
+      [pendingDrawOfferBy]="pendingDrawOfferBy"
+      [clockRunning]="clockRunning"
+      [resignConfirmColor]="resignConfirmColor"
       [chessColors]="chessColors"
-      [canOfferDraw]="statusVm.canOfferDraw"
-      [canRespondToDrawOffer]="statusVm.canRespondToDrawOffer"
-      [canClaimDraw]="statusVm.canClaimDraw"
-      [canResignWhite]="statusVm.canResignWhite"
-      [canResignBlack]="statusVm.canResignBlack"
+      [canClaimDraw]="canClaimDraw()"
       (showPossibleMoves)="showPossibleMoves($event)"
       (startNewGame)="startNewGame()"
       (offerDraw)="offerDraw()"
@@ -139,14 +113,14 @@
     <app-chess-board-history-card
       #historyLog
       [uiText]="uiText"
-      [canUndo]="historyVm.canUndo"
-      [canRedo]="historyVm.canRedo"
-      [visibleHistory]="historyVm.visibleHistory"
-      [evaluations]="historyVm.evaluations"
-      [pendingEvaluationPlaceholder]="historyVm.pendingEvaluationPlaceholder"
-      [evaluationErrorPlaceholder]="historyVm.evaluationErrorPlaceholder"
-      [naPlaceholder]="historyVm.naPlaceholder"
-      [analysisClampPawns]="historyVm.analysisClampPawns"
+      [history]="chessBoardStateService.history"
+      [historyCursor]="mockHistoryCursor"
+      [maxMoveIndex]="getHistoryMaxMoveIndex()"
+      [evaluations]="allHistoryEvaluations"
+      [pendingEvaluationPlaceholder]="pendingEvaluationPlaceholderText"
+      [evaluationErrorPlaceholder]="evaluationErrorPlaceholderText"
+      [naPlaceholder]="naPlaceholderText"
+      [analysisClampPawns]="analysisClampPawnsLimit"
       (undo)="undoMove()"
       (redo)="redoMove()"></app-chess-board-history-card>
 

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
+import { ChessBoardTimelineFacade } from '../../utils/chess-board-timeline.facade';
 
 @Component({
   selector: 'app-chess-board-history-card',
@@ -12,9 +13,9 @@ import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.ut
 })
 export class ChessBoardHistoryCardComponent {
   @Input() uiText: typeof UiText = UiText;
-  @Input() canUndo = false;
-  @Input() canRedo = false;
-  @Input() visibleHistory: string[] = [];
+  @Input() history: string[] = [];
+  @Input() historyCursor: number | null = null;
+  @Input() maxMoveIndex = -1;
   @Input() evaluations: string[] = [];
   @Input() pendingEvaluationPlaceholder = '...';
   @Input() evaluationErrorPlaceholder = 'err';
@@ -25,6 +26,18 @@ export class ChessBoardHistoryCardComponent {
   @Output() redo = new EventEmitter<void>();
 
   @ViewChild('historyLog') historyLogRef!: ElementRef<HTMLDivElement>;
+
+  get visibleHistory(): string[] {
+    return ChessBoardTimelineFacade.getVisibleHistory(this.history || [], this.historyCursor);
+  }
+
+  get canUndo(): boolean {
+    return ChessBoardTimelineFacade.canUndoMove(this.maxMoveIndex, this.historyCursor);
+  }
+
+  get canRedo(): boolean {
+    return ChessBoardTimelineFacade.canRedoMove(this.maxMoveIndex, this.historyCursor);
+  }
 
   getMoveQualityLabel(halfMoveIndex: number): string {
     const quality = this.getMoveQuality(halfMoveIndex);

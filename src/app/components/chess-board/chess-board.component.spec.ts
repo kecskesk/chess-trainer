@@ -540,6 +540,7 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
     expect(chessBoardStateService.boardHelper.checkmateColor).toBe(ChessColorsEnum.White);
     expect(lastMove).toContain('#');
+    expect(lastMove).toContain('0-1 {Checkmate}');
     expect(component.canDropPredicate(
       {
         dropContainer: {
@@ -573,6 +574,17 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.field[1][3].length).toBe(0);
     expect(chessBoardStateService.field[2][2][0].piece).toBe(ChessPiecesEnum.Pawn);
     expect(chessBoardStateService.field[2][2][0].color).toBe(ChessColorsEnum.Black);
+  });
+
+  it('includes checkmate comment in PGN debug export', () => {
+        movePiece(6, 5, 5, 5);
+        movePiece(1, 4, 3, 4);
+        movePiece(6, 6, 4, 6);
+        movePiece(0, 3, 4, 7);
+
+    component.exportPgn();
+    expect(chessBoardStateService.boardHelper.debugText).toContain('{Checkmate}');
+    expect(chessBoardStateService.boardHelper.debugText).toContain('0-1');
   });
 
   it('triggers and applies white promotion on back rank', () => {

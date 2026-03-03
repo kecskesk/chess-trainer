@@ -87,6 +87,18 @@ describe('ChessBoardStateService state helpers (highlights/arrows)', () => {
     expect(chessBoardStateService.history).toEqual(['e2-e4']);
   });
 
+  it('clears move highlights through service helper', () => {
+    chessBoardStateService.boardHelper.possibles['11'] = { row: 1, col: 1 } as any;
+    chessBoardStateService.boardHelper.hits['22'] = { row: 2, col: 2 } as any;
+    chessBoardStateService.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
+
+    chessBoardStateService.clearMoveHighlights();
+
+    expect(chessBoardStateService.boardHelper.possibles).toEqual({});
+    expect(chessBoardStateService.boardHelper.hits).toEqual({});
+    expect(chessBoardStateService.boardHelper.checks).toEqual({});
+  });
+
   it('adds possible/hit/check via addHighlight switch cases', () => {
     ChessBoardStateService.addHighlight({ row: 4, col: 4, type: 'possible' });
     ChessBoardStateService.addHighlight({ row: 5, col: 5, type: 'capture' });

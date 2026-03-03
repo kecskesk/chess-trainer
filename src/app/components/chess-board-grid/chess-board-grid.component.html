@@ -1,0 +1,40 @@
+<div #row class="field-row" *ngFor="let displayRow of renderedBoardRows">
+  <div class="field-cell" *ngFor="let displayCol of renderedBoardCols">
+    <div class="piece-box">
+      <div class="square"
+           cdkDropList
+           cdkDropListOrientation="horizontal"
+           [cdkDropListSortingDisabled]="true"
+           [cdkDropListEnterPredicate]="canDropPredicate"
+           [cdkDropListDisabled]="previewMode"
+           [id]="getDisplayFieldId(displayRow, displayCol)"
+           [ngClass]="getDisplaySquareHighlightClass(displayRow, displayCol)"
+           [cdkDropListData]="getDisplayCell(displayRow, displayCol)"
+           [cdkDropListConnectedTo]="dropLists"
+           (cdkDropListEntered)="dropListEntered.emit($event)"
+           (cdkDropListDropped)="pieceDropped.emit($event)"
+           [class.white-square]="isDisplaySquareWhite(displayRow, displayCol)"
+           [class.black-square]="!isDisplaySquareWhite(displayRow, displayCol)">
+        <div class="drag-box" (mousedown)="squarePointerDown.emit(getDisplayCell(displayRow, displayCol))">
+          <app-chess-piece [piece]="piece"
+                           [pieceStyle]="pieceStyle"
+                           *ngIf="getDisplayPiece(displayRow, displayCol) as piece"
+                           cdkDrag
+                           [cdkDragData]="piece"
+                           [cdkDragDisabled]="previewMode || gameOver || piece.color !== turnColor"
+                           (cdkDragStarted)="dragStarted.emit()"
+                           (cdkDragEnded)="dragEnded.emit()"></app-chess-piece>
+        </div>
+        <div class="notation">{{getDisplayNotation(displayRow, displayCol)}}</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="arrowPointer" *ngFor="let arrow of arrows; index as arrowIdx"
+     [style.top]="getArrowTopForDisplay(arrow)" [style.left]="getArrowLeftForDisplay(arrow)" [style.color]="arrow.color"
+     [style.width]="arrow.length"
+     [style.--arrow-thickness]="arrow.thickness"
+     [style.transform]="getArrowTransformForDisplay(arrow)">
+  <span class="arrow-shaft"></span>
+  <span class="arrow-head"></span>
+</div>

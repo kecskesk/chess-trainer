@@ -72,6 +72,27 @@ describe('ChessBoardEvaluationUtils', () => {
     expect(quality).not.toBeNull();
     expect(quality?.label).toBe('genius');
   });
+
+  it('does not misclassify mate-zero continuation as blunder when sign is implicit', () => {
+    const quality = ChessBoardEvaluationUtils.getMoveQuality(
+      3,
+      (idx) => {
+        if (idx === 2) {
+          return '#-1';
+        }
+        if (idx === 3) {
+          return '#0';
+        }
+        return 'n/a';
+      },
+      '...',
+      'err',
+      'n/a',
+      10
+    );
+
+    expect(quality).toBeNull();
+  });
 });
 
 describe('ChessBoardEvaluationUtils async evaluation refresh', () => {

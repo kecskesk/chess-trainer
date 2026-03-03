@@ -1,9 +1,8 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, Input, NgZone, OnDestroy, Optional, QueryList, ViewChild, ViewChildren, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList, DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDragEnter, CdkDragStart, CdkDropList } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import html2canvas from 'html2canvas';
 import { ChessArrowDto } from 'src/app/model/chess-arrow.dto';
 import { ChessPieceDto } from 'src/app/model/chess-piece.dto';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
@@ -17,13 +16,12 @@ import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 import { ICctRecommendation, ICctRecommendationScored } from '../../model/interfaces/cct-recommendation.interface';
 import { IOpeningAssetItem } from '../../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
-import { ChessFenUtils } from '../../utils/chess-fen.utils';
 import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
 import { UiText } from '../../constants/ui-text.constants';
-import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
 import { UiTextLoaderService } from '../../services/ui-text-loader.service';
 import { StockfishService } from '../../services/stockfish.service';
 import { ChessBoardLanguageToolsComponent } from '../chess-board-language-tools/chess-board-language-tools.component';
+import { ChessBoardGridComponent } from '../chess-board-grid/chess-board-grid.component';
 import { ChessBoardPositionKeyComponent } from '../chess-board-position-key/chess-board-position-key.component';
 import { ChessBoardClockCardComponent } from '../chess-board-clock-card/chess-board-clock-card.component';
 import { ChessBoardStatusCardComponent } from '../chess-board-status-card/chess-board-status-card.component';
@@ -38,7 +36,7 @@ import { ChessBoardDisplayUtils } from '../../utils/chess-board-display.utils';
 import { ChessBoardHistoryService } from '../../services/chess-board-history.service';
 import { ChessBoardOpeningUtils } from '../../utils/chess-board-opening.utils';
 import { ChessBoardInitializationUtils } from '../../utils/chess-board-initialization.utils';
-import { ChessBoardExportUtils } from '../../utils/chess-board-export.utils';
+import { ChessBoardExportFacade } from '../../utils/chess-board-export.facade';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
@@ -64,8 +62,7 @@ import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.f
   encapsulation: ViewEncapsulation.None,
   imports: [
     CommonModule,
-    DragDropModule,
-    ChessPieceComponent,
+    ChessBoardGridComponent,
     ChessBoardLanguageToolsComponent,
     ChessBoardPositionKeyComponent,
     ChessBoardClockCardComponent,
@@ -176,6 +173,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.suggestionEvalTextByMove;
   }
 
+  get allHistoryEvaluations(): string[] {
+    const fullHistory = this.chessBoardStateService.history || [];
+    return fullHistory.map((_, idx) => this.getEvaluationForMove(idx));
+  }
+
   get visibleHistoryEvaluations(): string[] {
     const visibleHistory = this.getVisibleHistory();
     return visibleHistory.map((_, idx) => this.getEvaluationForMove(idx));
@@ -197,58 +199,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.analysisClampPawns;
   }
 
-  get clockVm(): {
-    selectedClockPresetLabel: string;
-    clockStarted: boolean;
-    clockRunning: boolean;
-    blackClockMs: number;
-    whiteClockMs: number;
-    analysisMeterOffsetPercent: number;
-    currentAnalysisEvalText: string;
-    isBlackClockActive: boolean;
-    isWhiteClockActive: boolean;
-    isBlackClockLow: boolean;
-    isWhiteClockLow: boolean;
-  } {
-    return {
-      selectedClockPresetLabel: this.selectedClockPresetLabel,
-      clockStarted: this.clockStarted,
-      clockRunning: this.clockRunning,
-      blackClockMs: this.blackClockMs,
-      whiteClockMs: this.whiteClockMs,
-      analysisMeterOffsetPercent: this.getAnalysisMeterOffsetPercent(),
-      currentAnalysisEvalText: this.getCurrentAnalysisEvalText(),
-      isBlackClockActive: this.isClockActive(this.chessColors.Black),
-      isWhiteClockActive: this.isClockActive(this.chessColors.White),
-      isBlackClockLow: this.isClockLow(this.chessColors.Black),
-      isWhiteClockLow: this.isClockLow(this.chessColors.White)
-    };
-  }
-
-  get statusVm(): {
-    boardState: ChessBoardStateService['boardHelper'];
-    pendingDrawOfferBy: ChessColorsEnum | null;
-    clockRunning: boolean;
-    resignConfirmColor: ChessColorsEnum | null;
-    canOfferDraw: boolean;
-    canRespondToDrawOffer: boolean;
-    canClaimDraw: boolean;
-    canResignWhite: boolean;
-    canResignBlack: boolean;
-  } {
-    return {
-      boardState: this.chessBoardStateService.boardHelper,
-      pendingDrawOfferBy: this.pendingDrawOfferBy,
-      clockRunning: this.clockRunning,
-      resignConfirmColor: this.resignConfirmColor,
-      canOfferDraw: this.canOfferDraw(),
-      canRespondToDrawOffer: this.canRespondToDrawOffer(),
-      canClaimDraw: this.canClaimDraw(),
-      canResignWhite: this.canResign(this.chessColors.White),
-      canResignBlack: this.canResign(this.chessColors.Black)
-    };
-  }
-
   get toolsVm(): {
     activeTool: string | null;
     isBoardFlipped: boolean;
@@ -268,28 +218,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       suggestedMoveEvalByMove: this.suggestionEvalTextByMoveMap,
       openingRecognition: this.getMockOpeningRecognition(),
       endgameRecognition: this.getMockEndgameRecognition()
-    };
-  }
-
-  get historyVm(): {
-    canUndo: boolean;
-    canRedo: boolean;
-    visibleHistory: string[];
-    evaluations: string[];
-    pendingEvaluationPlaceholder: string;
-    evaluationErrorPlaceholder: string;
-    naPlaceholder: string;
-    analysisClampPawns: number;
-  } {
-    return {
-      canUndo: this.canUndoMove(),
-      canRedo: this.canRedoMove(),
-      visibleHistory: this.getVisibleHistory(),
-      evaluations: this.visibleHistoryEvaluations,
-      pendingEvaluationPlaceholder: this.pendingEvaluationPlaceholderText,
-      evaluationErrorPlaceholder: this.evaluationErrorPlaceholderText,
-      naPlaceholder: this.naPlaceholderText,
-      analysisClampPawns: this.analysisClampPawnsLimit
     };
   }
 
@@ -627,8 +555,22 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       addIncrementToColor: (color) => this.addIncrementToColor(color),
       applyDrawRules: (hasLegalMoves, isCheck) => this.applyDrawRules(hasLegalMoves, isCheck)
     });
+    this.appendCheckmateResultIfNeeded();
     this.isFinalizingDropState = false;
     this.pushSnapshotForCurrentState();
+  }
+
+  private appendCheckmateResultIfNeeded(): void {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
+      return;
+    }
+    const matedColor = this.chessBoardStateService.boardHelper.checkmateColor;
+    if (matedColor === null) {
+      return;
+    }
+    const winnerResult: '1-0' | '0-1' = matedColor === ChessColorsEnum.White ? '0-1' : '1-0';
+    const checkmateReason = (this.uiText.status.checkmatePrefix || 'Checkmate').trim() || 'Checkmate';
+    this.appendGameResultToLastMove(winnerResult, checkmateReason);
   }
 
   private setSubtleDebugReason(reason: string): void {
@@ -862,11 +804,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     // de-activate any visualization tool and clear overlay arrows
     this.clearOverlay();
 
-    // Clear existing move/highlight state
-    this.chessBoardStateService.boardHelper.possibles = {};
-    this.chessBoardStateService.boardHelper.hits = {};
-    this.chessBoardStateService.boardHelper.checks = {};
-    this.chessBoardStateService.boardHelper.arrows = {};
+    // clearOverlay already clears arrows and show-moves highlights
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
     if (!ofColor) {
@@ -1111,6 +1049,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   getVisibleHistory(): string[] {
     return ChessBoardTimelineFacade.getVisibleHistory(this.chessBoardStateService.history || [], this.mockHistoryCursor);
+  }
+
+  getHistoryMaxMoveIndex(): number {
+    return this.getMaxMoveIndex();
   }
 
   canUndoMove(): boolean {
@@ -1403,12 +1345,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   async exportBoardImageMock(): Promise<void> {
-    this.chessBoardStateService.boardHelper.debugText = `${this.uiText.message.mockExportImageReady} (${new Date().toLocaleTimeString()})`;
+    const now = new Date();
+    this.chessBoardStateService.boardHelper.debugText = ChessBoardExportFacade.getImageDebugText(
+      this.uiText.message.mockExportImageReady,
+      now
+    );
     const imageDataUrl = await this.createBoardImageDataUrlFromDom();
     if (imageDataUrl) {
       this.downloadDataUrl(
         imageDataUrl,
-        `chess-board-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+        ChessBoardExportFacade.getImageFileName(now)
       );
     }
   }
@@ -1450,80 +1396,36 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private getCurrentPgn(): string {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
-      return '';
-    }
-    return ChessBoardExportUtils.getCurrentPgn(this.chessBoardStateService.history || []);
+    return ChessBoardExportFacade.getCurrentPgn(
+      !!(this.chessBoardStateService && this.chessBoardStateService.boardHelper),
+      this.chessBoardStateService ? (this.chessBoardStateService.history || []) : []
+    );
   }
 
   private getCurrentFen(): string {
-    if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper || !this.chessBoardStateService.field) {
-      return '8/8/8/8/8/8/8/8 w - - 0 1';
-    }
-
-    const board = this.chessBoardStateService.field;
-    const turn = this.chessBoardStateService.boardHelper.colorTurn;
-    const moveHistory = this.chessBoardStateService.history || [];
-    const castlingRights = ChessRulesService.getCastlingRightsNotation(
-      board,
-      this.chessBoardStateService.boardHelper.history || {}
-    );
-    const enPassantRights = ChessRulesService.getEnPassantRightsNotation(
-      board,
-      this.chessBoardStateService.boardHelper.history || {},
-      turn
-    );
-    const plyCount = ChessFenUtils.getPlyCountFromHistory(moveHistory);
-    const fullmoveNumber = ChessFenUtils.getFullmoveNumberFromPlyCount(plyCount);
-    const halfmoveClock = ChessFenUtils.getHalfmoveClockFromHistory(moveHistory);
-    return ChessFenUtils.generateFen(
-      board,
-      turn,
-      castlingRights,
-      enPassantRights,
-      halfmoveClock,
-      fullmoveNumber
-    );
+    return ChessBoardExportFacade.getCurrentFen({
+      hasBoardState: !!(this.chessBoardStateService && this.chessBoardStateService.boardHelper && this.chessBoardStateService.field),
+      board: this.chessBoardStateService ? this.chessBoardStateService.field : null,
+      turn: this.chessBoardStateService && this.chessBoardStateService.boardHelper
+        ? this.chessBoardStateService.boardHelper.colorTurn
+        : null,
+      moveHistory: this.chessBoardStateService ? (this.chessBoardStateService.history || []) : [],
+      helperHistory: this.chessBoardStateService && this.chessBoardStateService.boardHelper
+        ? (this.chessBoardStateService.boardHelper.history || {})
+        : {}
+    });
   }
 
   private async createBoardImageDataUrlFromDom(): Promise<string | null> {
-    const win = this.getWindowRef();
-    if (!this.getDocumentRef() || !win) {
-      return null;
-    }
-
-    const boardElement = this.chessField?.nativeElement?.closest('.board-shell') as HTMLElement | null;
-    if (!boardElement) {
-      return null;
-    }
-
-    try {
-      const deviceScale = Math.max(1, Math.ceil(win.devicePixelRatio || 1));
-      const canvas = await html2canvas(boardElement, {
-        backgroundColor: null,
-        scale: deviceScale,
-        useCORS: true,
-        logging: false
-      });
-      return canvas.toDataURL('image/png');
-    } catch {
-      return null;
-    }
+    return ChessBoardExportFacade.createBoardImageDataUrlFromDom({
+      getDocumentRef: () => this.getDocumentRef(),
+      getWindowRef: () => this.getWindowRef(),
+      chessFieldNativeElement: this.chessField?.nativeElement || null
+    });
   }
 
   private downloadDataUrl(dataUrl: string, fileName: string): void {
-    const doc = this.getDocumentRef();
-    if (!doc) {
-      return;
-    }
-
-    const link = doc.createElement('a');
-    link.href = dataUrl;
-    link.download = fileName;
-    link.rel = 'noopener';
-    doc.body.appendChild(link);
-    link.click();
-    doc.body.removeChild(link);
+    ChessBoardExportFacade.downloadDataUrl(dataUrl, fileName, () => this.getDocumentRef());
   }
 
   private getDocumentRef(): Document {
@@ -1535,10 +1437,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private copyToClipboard(text: string): Promise<boolean> {
-    if (typeof navigator === 'undefined' || !navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
-      return Promise.resolve(false);
-    }
-    return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
+    return ChessBoardExportFacade.copyToClipboard(text);
   }
 
   private ensureCctRecommendations(): void {
@@ -1961,9 +1860,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.chessBoardStateService || !this.chessBoardStateService.boardHelper) {
       return;
     }
-    this.chessBoardStateService.boardHelper.possibles = {};
-    this.chessBoardStateService.boardHelper.hits = {};
-    this.chessBoardStateService.boardHelper.checks = {};
+    this.chessBoardStateService.clearMoveHighlights();
   }
 
   /**
@@ -1973,6 +1870,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
    */
   clearOverlay(): void {
     this.chessBoardStateService.boardHelper.arrows = {};
+    this.chessBoardStateService.clearMoveHighlights();
     this.suggestedMoveArrowSnapshot = null;
     this.activeTool = null;
   }
@@ -2328,9 +2226,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     ChessBoardStateService.CHESS_FIELD = this.chessBoardStateService.field;
 
     this.chessBoardStateService.boardHelper.debugText = '';
-    this.chessBoardStateService.boardHelper.possibles = {};
-    this.chessBoardStateService.boardHelper.hits = {};
-    this.chessBoardStateService.boardHelper.checks = {};
+    this.chessBoardStateService.clearMoveHighlights();
     this.chessBoardStateService.boardHelper.arrows = {};
     this.chessBoardStateService.boardHelper.history = {};
     this.chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;

@@ -23,10 +23,8 @@ export class ChessBoardClockCardComponent {
   @Input() whiteClockMs = 0;
   @Input() analysisMeterOffsetPercent = 50;
   @Input() currentAnalysisEvalText = 'n/a';
-  @Input() isBlackClockActive = false;
-  @Input() isWhiteClockActive = false;
-  @Input() isBlackClockLow = false;
-  @Input() isWhiteClockLow = false;
+  @Input() turnColor: ChessColorsEnum = ChessColorsEnum.White;
+  @Input() isGameOver = false;
 
   @Output() timeControlChange = new EventEmitter<{ baseMinutes: number; incrementSeconds: number; label: string }>();
   @Output() toggleClock = new EventEmitter<void>();
@@ -42,5 +40,33 @@ export class ChessBoardClockCardComponent {
 
   formatClock(clockMs: number): string {
     return ChessBoardClockUtils.formatClock(clockMs);
+  }
+
+  get isBlackClockActive(): boolean {
+    return this.isClockActive(this.chessColors.Black);
+  }
+
+  get isWhiteClockActive(): boolean {
+    return this.isClockActive(this.chessColors.White);
+  }
+
+  get isBlackClockLow(): boolean {
+    return this.isClockLow(this.chessColors.Black);
+  }
+
+  get isWhiteClockLow(): boolean {
+    return this.isClockLow(this.chessColors.White);
+  }
+
+  private isClockActive(color: ChessColorsEnum): boolean {
+    if (!this.clockRunning || !this.clockStarted || this.isGameOver) {
+      return false;
+    }
+    return this.turnColor === color;
+  }
+
+  private isClockLow(color: ChessColorsEnum): boolean {
+    const remainingTime = color === ChessColorsEnum.White ? this.whiteClockMs : this.blackClockMs;
+    return remainingTime <= 10000;
   }
 }
