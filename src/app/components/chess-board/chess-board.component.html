@@ -89,14 +89,14 @@
 
     <app-chess-board-tools-card
       [uiText]="uiText"
-      [activeTool]="toolsVm.activeTool"
-      [isBoardFlipped]="toolsVm.isBoardFlipped"
-      [canPromote]="toolsVm.canPromote"
-      [suggestedMoves]="toolsVm.suggestedMoves"
-      [suggestedMoveQualityByMove]="toolsVm.suggestedMoveQualityByMove"
-      [suggestedMoveEvalByMove]="toolsVm.suggestedMoveEvalByMove"
-      [openingRecognition]="toolsVm.openingRecognition"
-      [endgameRecognition]="toolsVm.endgameRecognition"
+      [activeTool]="activeTool"
+      [isBoardFlipped]="isBoardFlipped"
+      [canPromote]="chessBoardStateService.boardHelper.canPromote !== null"
+      [suggestedMoves]="suggestedMoves"
+      [suggestedMoveQualityByMove]="suggestionQualityByMoveMap"
+      [suggestedMoveEvalByMove]="suggestionEvalTextByMoveMap"
+      [openingRecognition]="getMockOpeningRecognition()"
+      [endgameRecognition]="getMockEndgameRecognition()"
       (promotePiece)="promotePiece($event)"
       (showThreats)="showThreats($event)"
       (showProtected)="showProtected($event)"
@@ -126,11 +126,11 @@
 
     <app-chess-board-cct-card
       [uiText]="uiText"
-      [captures]="cctVm.captures"
-      [checks]="cctVm.checks"
-      [threats]="cctVm.threats"
-      [moveQualityByMove]="cctVm.moveQualityByMove"
-      [moveEvalByMove]="cctVm.moveEvalByMove"
+      [captures]="getCctRecommendations(cctCategory.Captures)"
+      [checks]="getCctRecommendations(cctCategory.Checks)"
+      [threats]="getCctRecommendations(cctCategory.Threats)"
+      [moveQualityByMove]="suggestionQualityByMoveMap"
+      [moveEvalByMove]="suggestionEvalTextByMoveMap"
       (previewMove)="previewSuggestedMoveArrows($event)"
       (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-cct-card>
   </section>

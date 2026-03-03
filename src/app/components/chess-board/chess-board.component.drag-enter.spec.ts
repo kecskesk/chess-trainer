@@ -175,11 +175,12 @@ describe('ChessBoardComponent template drag-enter integration - UI buttons', () 
     expect(arrowEl.style.transform).toContain('rotate(210deg)');
   });
 
-  it('populates drop lists after view init and tears down on destroy', fakeAsync(() => {
+  it('runs view-init hooks and tears down on destroy', fakeAsync(() => {
     const stopClockSpy = spyOn<any>(component, 'stopClock').and.callThrough();
+    const scheduleHistoryAutoScrollSpy = spyOn<any>(component, 'scheduleHistoryAutoScroll').and.callThrough();
     fixture.detectChanges();
     tick(0);
-    expect(component.dropLists.length).toBeGreaterThanOrEqual(0);
+    expect(scheduleHistoryAutoScrollSpy).toHaveBeenCalled();
     fixture.destroy();
     expect(stopClockSpy).toHaveBeenCalled();
   }));

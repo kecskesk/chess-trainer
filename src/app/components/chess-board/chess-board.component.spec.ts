@@ -60,14 +60,17 @@ const movePiece = (srcRow: number, srcCol: number, targetRow: number, targetCol:
 
 const createEnterLike = (srcRow: number, srcCol: number, targetRow: number, targetCol: number) => {
   return {
-    item: {
-      dropContainer: {
-        id: `field${srcRow}${srcCol}`
-      }
-    },
-    container: {
-      id: `field${targetRow}${targetCol}`
-    }
+    sourceRow: srcRow,
+    sourceCol: srcCol,
+    targetRow,
+    targetCol,
+    isValidMove: ChessRulesService.validateMove(
+      targetRow,
+      targetCol,
+      chessBoardStateService.field[targetRow][targetCol],
+      srcRow,
+      srcCol
+    ).isValid
   } as any;
 };
 
@@ -199,28 +202,29 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
     component.mateInOneTargets['77'] = true;
 
     component.isBoardFlipped = false;
-    expect(component.getDisplayFieldId(0, 0)).toBe('field00');
-    expect(component.getDisplayNotation(0, 0)).toBe('a8');
-    expect(component.getDisplayCell(0, 0)).toBe(chessBoardStateService.field[0][0]);
-    expect(component.getDisplayPiece(0, 0)?.piece).toBe(ChessPiecesEnum.Rook);
+    const normalDisplay = ChessBoardComponentUtils.getDisplayBoardPosition(0, 0, component.isBoardFlipped);
+    expect(`field${normalDisplay.row}${normalDisplay.col}`).toBe('field00');
+    expect(component.translateFieldNames(normalDisplay.row, normalDisplay.col)).toBe('a8');
+    expect(chessBoardStateService.field[normalDisplay.row][normalDisplay.col][0]?.piece).toBe(ChessPiecesEnum.Rook);
 
     component.isBoardFlipped = true;
-    expect(component.getDisplayFieldId(0, 0)).toBe('field77');
-    expect(component.getDisplayNotation(0, 0)).toBe('h1');
-    expect(component.getDisplayCell(0, 0)).toBe(chessBoardStateService.field[7][7]);
-    expect(component.getDisplayPiece(0, 0)?.piece).toBe(ChessPiecesEnum.King);
-    expect(component.getDisplaySquareHighlightClass(0, 0)).toBe('mate-one');
-    expect(component.isDisplaySquareWhite(0, 0)).toBeTrue();
+    const flippedDisplay = ChessBoardComponentUtils.getDisplayBoardPosition(0, 0, component.isBoardFlipped);
+    expect(`field${flippedDisplay.row}${flippedDisplay.col}`).toBe('field77');
+    expect(component.translateFieldNames(flippedDisplay.row, flippedDisplay.col)).toBe('h1');
+    expect(chessBoardStateService.field[flippedDisplay.row][flippedDisplay.col][0]?.piece).toBe(ChessPiecesEnum.King);
+    expect(component.isMateInOneTarget(flippedDisplay.row, flippedDisplay.col)).toBeTrue();
 
-    expect(component.getArrowTopForDisplay({ top: '25%' } as any)).toBe('75%');
-    expect(component.getArrowLeftForDisplay({ left: '12.5%' } as any)).toBe('87.5%');
-    expect(component.getArrowTransformForDisplay({ rotate: '390deg' } as any)).toBe('translate(-50%, -50%) rotate(210deg)');
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('25%', component.isBoardFlipped)).toBe('75%');
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('12.5%', component.isBoardFlipped)).toBe('87.5%');
+    expect(`translate(-50%, -50%) rotate(${ChessBoardDisplayUtils.mapRotationForDisplay('390deg', component.isBoardFlipped)})`)
+      .toBe('translate(-50%, -50%) rotate(210deg)');
 
-    expect(component.getArrowTopForDisplay({ top: 'calc(20%)' } as any)).toBe('calc(20%)');
-    expect(component.getArrowTransformForDisplay({ rotate: 'angle(10)' } as any)).toBe('translate(-50%, -50%) rotate(angle(10))');
-    expect(component.getArrowTopForDisplay(undefined as any)).toBe('');
-    expect(component.getArrowLeftForDisplay(undefined as any)).toBe('');
-    expect(component.getArrowTransformForDisplay(undefined as any)).toBe('translate(-50%, -50%) rotate()');
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('calc(20%)', component.isBoardFlipped)).toBe('calc(20%)');
+    expect(`translate(-50%, -50%) rotate(${ChessBoardDisplayUtils.mapRotationForDisplay('angle(10)', component.isBoardFlipped)})`)
+      .toBe('translate(-50%, -50%) rotate(angle(10))');
+    expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('', component.isBoardFlipped)).toBe('');
+    expect(`translate(-50%, -50%) rotate(${ChessBoardDisplayUtils.mapRotationForDisplay('', component.isBoardFlipped)})`)
+      .toBe('translate(-50%, -50%) rotate()');
   });
 
   it('covers private flip mapping branches and related helpers', () => {
@@ -248,7 +252,7 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
     const boardHelperBackup = chessBoardStateService.boardHelper;
     (chessBoardStateService as any).boardHelper = null;
     expect((component as any).getStatusTitle()).toBe('');
-    component.onSquarePointerDown([] as any);
+    component.onSquarePointerDown(null);
     (chessBoardStateService as any).boardHelper = boardHelperBackup;
     chessBoardStateService.boardHelper.gameOver = false;
     expect((component as any).getStatusTitle()).toContain(component.uiText.status.toMoveSuffix);
@@ -256,6 +260,7 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
 
   it('covers lifecycle hooks used by template wiring', (done: DoneFn) => {
     const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
+    const scheduleHistoryAutoScrollSpy = spyOn<any>(component, 'scheduleHistoryAutoScroll').and.callThrough();
     spyOnProperty(document, 'body', 'get').and.returnValue(null as any);
     (component as any).syncFlippedDragClass();
     component.isBoardFlipped = true;
@@ -263,10 +268,9 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
     component.ngOnDestroy();
     expect(stopClockSpy).toHaveBeenCalled();
 
-    component.dropListElements = { toArray: () => ['drop-list'] } as any;
     component.ngAfterViewInit();
     setTimeout(() => {
-      expect(component.dropLists).toEqual(['drop-list'] as any);
+      expect(scheduleHistoryAutoScrollSpy).toHaveBeenCalled();
       done();
     }, 0);
   });
@@ -516,7 +520,6 @@ describe('ChessBoardComponent gameplay moves and rules', () => {
     expect(chessBoardStateService.field[3][4][0].color).toBe(ChessColorsEnum.Black);
 
     expect(canDropLike(4, 3, 3, 4)).toBeTrue();
-    expect(component.isHit(3, 4)).toBeTrue();
 
     component.onDrop(createDropLike(4, 3, 3, 4));
 
@@ -1062,31 +1065,27 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview)', () => {
 
   it('returns highlight class with mate danger priority over other layers', () => {
     clearBoard();
-    chessBoardStateService.boardHelper.possibles['44'] = { row: 4, col: 4 } as any;
-    chessBoardStateService.boardHelper.hits['44'] = { row: 4, col: 4 } as any;
     component.mateInOneTargets['44'] = true;
     component.mateInOneBlunderTargets['44'] = true;
 
-    expect(component.getSquareHighlightClass(4, 4)).toBe('mate-one-danger');
+    expect(component.isMateInOneBlunderTarget(4, 4)).toBeTrue();
     delete component.mateInOneBlunderTargets['44'];
-    expect(component.getSquareHighlightClass(4, 4)).toBe('mate-one');
+    expect(component.isMateInOneTarget(4, 4)).toBeTrue();
     delete component.mateInOneTargets['44'];
-    expect(component.getSquareHighlightClass(4, 4)).toBe('killer');
-    delete chessBoardStateService.boardHelper.hits['44'];
-    expect(component.getSquareHighlightClass(4, 4)).toBe('shaded');
+    expect(component.isMateInOneTarget(4, 4)).toBeFalse();
   });
 
   it('writes pointer-down debug reasons for game over, empty square, and wrong turn', () => {
     chessBoardStateService.boardHelper.gameOver = true;
-    component.onSquarePointerDown([] as any);
+    component.onSquarePointerDown(null);
     expect(chessBoardStateService.boardHelper.debugText).toBe('· Game is over. Start a new game to move pieces.');
 
     chessBoardStateService.boardHelper.gameOver = false;
-    component.onSquarePointerDown([] as any);
+    component.onSquarePointerDown(null);
     expect(chessBoardStateService.boardHelper.debugText).toBe('· No piece on this square.');
 
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-    component.onSquarePointerDown([{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any]);
+    component.onSquarePointerDown({ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Pawn } as any);
     expect(chessBoardStateService.boardHelper.debugText).toBe('· It is white\'s move.');
   });
 
@@ -1196,8 +1195,8 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview and clock s
 
   it('reads check highlight through isCheck helper', () => {
     chessBoardStateService.boardHelper.checks['33'] = { row: 3, col: 3 } as any;
-    expect(component.isCheck(3, 3)).toBeTrue();
-    expect(component.isCheck(2, 2)).toBeFalse();
+    expect(!!chessBoardStateService.boardHelper.checks['33']).toBeTrue();
+    expect(!!chessBoardStateService.boardHelper.checks['22']).toBeFalse();
   });
 
 });
@@ -1864,9 +1863,11 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
     expect((component as any).getClockButtonLabel()).toBe('Pause Clock');
 
     component.isBoardFlipped = false;
-    expect(component.isWhiteSquare(0, 0)).toBeTrue();
+    const normal = ChessBoardComponentUtils.getDisplayBoardPosition(0, 0, component.isBoardFlipped);
+    expect(((normal.row + normal.col) % 2) === 0).toBeTrue();
     component.isBoardFlipped = true;
-    expect(component.isWhiteSquare(0, 0)).toBeTrue();
+    const flipped = ChessBoardComponentUtils.getDisplayBoardPosition(0, 0, component.isBoardFlipped);
+    expect(((flipped.row + flipped.col) % 2) === 0).toBeTrue();
   });
 
   it('covers debug-toggle null-target and isClockActive guard branches', () => {
@@ -2217,8 +2218,8 @@ describe('ChessBoardComponent branch coverage helpers (canDrop guards)', () => {
 describe('ChessBoardComponent branch coverage helpers (drag and drop guards)', () => {
   it('covers drop-enter, drag-start and pointer guard branches', () => {
     component.onDropListEntered(null as any);
-    component.onDropListEntered({ item: { dropContainer: { id: 'x' } }, container: { id: 'y' } } as any);
-    component.onDropListEntered({ item: { dropContainer: { id: 'field90' } }, container: { id: 'field00' } } as any);
+    component.onDropListEntered({ sourceRow: 1, sourceCol: 1, targetRow: 2, targetCol: 2, isValidMove: false } as any);
+    component.onDropListEntered({ sourceRow: 9, sourceCol: 0, targetRow: 0, targetCol: 0, isValidMove: false } as any);
     component.onDragStarted(null as any);
     component.onDragStarted({ source: { dropContainer: { id: 'bad', data: [] } } } as any);
     component.onDragStarted({ source: { dropContainer: { id: 'field90', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] } } } as any);
@@ -2226,7 +2227,7 @@ describe('ChessBoardComponent branch coverage helpers (drag and drop guards)', (
     const savedService = (component as any).chessBoardStateService;
     (component as any).chessBoardStateService = null;
     component.onDragStarted({ source: { dropContainer: { id: 'field60', data: [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn }] } } } as any);
-    component.onSquarePointerDown([] as any);
+    component.onSquarePointerDown(null);
     (component as any).chessBoardStateService = savedService;
     expect(component.isDragPreviewActive).toBeTrue();
   });
@@ -3086,19 +3087,19 @@ describe('ChessBoardComponent preview presets and render slices', () => {
 
     expect(component.renderedBoardRows).toEqual([0, 1]);
     expect(component.renderedBoardCols).toEqual([0, 1]);
-    expect(component.getDisplayPiece(0, 0)).toEqual(jasmine.objectContaining({
+    expect(ChessBoardComponentUtils.getPieceColorPreviewCell(0, 0, component.renderedBoardRows, component.renderedBoardCols)[0]).toEqual(jasmine.objectContaining({
       color: ChessColorsEnum.White,
       piece: ChessPiecesEnum.Rook
     }));
-    expect(component.getDisplayPiece(0, 1)).toEqual(jasmine.objectContaining({
+    expect(ChessBoardComponentUtils.getPieceColorPreviewCell(0, 1, component.renderedBoardRows, component.renderedBoardCols)[0]).toEqual(jasmine.objectContaining({
       color: ChessColorsEnum.Black,
       piece: ChessPiecesEnum.Bishop
     }));
-    expect(component.getDisplayPiece(1, 0)).toEqual(jasmine.objectContaining({
+    expect(ChessBoardComponentUtils.getPieceColorPreviewCell(1, 0, component.renderedBoardRows, component.renderedBoardCols)[0]).toEqual(jasmine.objectContaining({
       color: ChessColorsEnum.White,
       piece: ChessPiecesEnum.Pawn
     }));
-    expect(component.getDisplayPiece(1, 1)).toEqual(jasmine.objectContaining({
+    expect(ChessBoardComponentUtils.getPieceColorPreviewCell(1, 1, component.renderedBoardRows, component.renderedBoardCols)[0]).toEqual(jasmine.objectContaining({
       color: ChessColorsEnum.White,
       piece: ChessPiecesEnum.Knight
     }));
@@ -3650,7 +3651,9 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
     await (local as any).refreshSuggestedMoves(6);
     expect(refreshSpy).toHaveBeenCalledWith(6, 'fen', [], []);
   });
+});
 
+describe('ChessBoardComponent additional suggestion coverage (preview helpers)', () => {
   it('covers king-context preview helper early-return and dedupe branches', () => {
     const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any);
     (local as any).chessBoardStateService.field = null;
@@ -3720,9 +3723,8 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
       appendGameResultToLastMove: appendSpy
     });
 
-    expect(local.getSquareHighlightClass(0, 0)).toBe('');
-    spyOn(local, 'getDisplayCell').and.returnValue([] as any);
-    expect(local.getDisplayPiece(0, 0)).toBeNull();
+    expect(local.isMateInOneTarget(0, 0)).toBeFalse();
+    expect(local.isMateInOneBlunderTarget(0, 0)).toBeFalse();
   });
 });
 

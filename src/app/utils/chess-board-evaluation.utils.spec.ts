@@ -98,7 +98,9 @@ describe('ChessBoardEvaluationUtils', () => {
     expect(quality).not.toBeNull();
     expect(quality?.label).toBe('genius');
   });
+});
 
+describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
   it('does not misclassify mate-zero continuation as blunder when sign is implicit', () => {
     const quality = ChessBoardEvaluationUtils.getMoveQuality(
       3,

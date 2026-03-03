@@ -11,11 +11,11 @@
            [ngClass]="getDisplaySquareHighlightClass(displayRow, displayCol)"
            [cdkDropListData]="getDisplayCell(displayRow, displayCol)"
            [cdkDropListConnectedTo]="dropLists"
-           (cdkDropListEntered)="dropListEntered.emit($event)"
+           (cdkDropListEntered)="onDropListEntered($event)"
            (cdkDropListDropped)="pieceDropped.emit($event)"
            [class.white-square]="isDisplaySquareWhite(displayRow, displayCol)"
            [class.black-square]="!isDisplaySquareWhite(displayRow, displayCol)">
-        <div class="drag-box" (mousedown)="squarePointerDown.emit(getDisplayCell(displayRow, displayCol))">
+        <div class="drag-box" (mousedown)="onSquarePointerDown(displayRow, displayCol)">
           <app-chess-piece [piece]="piece"
                            [pieceStyle]="pieceStyle"
                            *ngIf="getDisplayPiece(displayRow, displayCol) as piece"

@@ -9,6 +9,15 @@ import { IBoardHighlight } from '../../model/interfaces/board-highlight.interfac
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardDisplayUtils } from '../../utils/chess-board-display.utils';
 import { ChessPieceComponent } from '../chess-piece/chess-piece.component';
+import { ChessRulesService } from '../../services/chess-rules.service';
+
+export interface IChessBoardGridMovePreviewEvent {
+  sourceRow: number;
+  sourceCol: number;
+  targetRow: number;
+  targetCol: number;
+  isValidMove: boolean;
+}
 
 @Component({
   selector: 'app-chess-board-grid',
@@ -32,11 +41,11 @@ export class ChessBoardGridComponent implements AfterViewInit {
   @Input() turnColor: ChessColorsEnum = ChessColorsEnum.White;
   @Input() canDropPredicate: (drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>) => boolean = () => false;
 
-  @Output() dropListEntered = new EventEmitter<CdkDragEnter<ChessPieceDto[]>>();
+  @Output() dropListEntered = new EventEmitter<IChessBoardGridMovePreviewEvent>();
   @Output() pieceDropped = new EventEmitter<CdkDragDrop<ChessPieceDto[]>>();
   @Output() dragStarted = new EventEmitter<void>();
   @Output() dragEnded = new EventEmitter<void>();
-  @Output() squarePointerDown = new EventEmitter<ChessPieceDto[]>();
+  @Output() squarePointerDown = new EventEmitter<ChessPieceDto | null>();
 
   @ViewChildren(CdkDropList) dropListElements: QueryList<CdkDropList>;
   dropLists: CdkDropList[] = [];
@@ -124,6 +133,40 @@ export class ChessBoardGridComponent implements AfterViewInit {
     return `translate(-50%, -50%) rotate(${rotate})`;
   }
 
+  onDropListEntered(event: CdkDragEnter<ChessPieceDto[]>): void {
+    if (!event || !event.item || !event.container || !event.item.dropContainer) {
+      return;
+    }
+    const sourcePosition = ChessBoardComponentUtils.parseFieldId(event.item.dropContainer.id);
+    const targetPosition = ChessBoardComponentUtils.parseFieldId(event.container.id);
+    if (!sourcePosition || !targetPosition) {
+      return;
+    }
+
+    const targetCell = this.field[targetPosition.row]?.[targetPosition.col];
+    if (!targetCell) {
+      return;
+    }
+
+    this.dropListEntered.emit({
+      sourceRow: sourcePosition.row,
+      sourceCol: sourcePosition.col,
+      targetRow: targetPosition.row,
+      targetCol: targetPosition.col,
+      isValidMove: ChessRulesService.validateMove(
+        targetPosition.row,
+        targetPosition.col,
+        targetCell,
+        sourcePosition.row,
+        sourcePosition.col
+      ).isValid
+    });
+  }
+
+  onSquarePointerDown(displayRow: number, displayCol: number): void {
+    this.squarePointerDown.emit(this.getDisplayPiece(displayRow, displayCol));
+  }
+
   private getSquareHighlightClass(targetRow: number, targetCol: number): string {
     if (this.mateInOneBlunderTargets[`${targetRow}${targetCol}`]) {
       return 'mate-one-danger';
@@ -144,4 +187,3 @@ export class ChessBoardGridComponent implements AfterViewInit {
     return this.boardHighlights.some(highlight => highlight.type === type && highlight.row === targetRow && highlight.col === targetCol);
   }
 }
-
