@@ -45,13 +45,11 @@ export class ChessBoardSnapshotService {
   restoreSnapshot(
     snapshot: IGameplaySnapshot,
     chessBoardStateService: ChessBoardStateService,
-    timeControlService: ChessBoardTimeControlService,
-    startClock: () => void,
-    stopClock: () => void
-  ): void {
+    timeControlService: ChessBoardTimeControlService
+  ): boolean {
     const restoredState = this.restoreSnapshotToState(snapshot, chessBoardStateService);
     if (!restoredState) {
-      return;
+      return false;
     }
     this.pendingDrawOfferBy = restoredState.pendingDrawOfferBy;
     this.resignConfirmColor = null;
@@ -60,11 +58,7 @@ export class ChessBoardSnapshotService {
     timeControlService.clockStarted = restoredState.clockStarted;
     timeControlService.whiteClockMs = restoredState.whiteClockMs;
     timeControlService.blackClockMs = restoredState.blackClockMs;
-    if (restoredState.shouldRunClock) {
-      startClock();
-      return;
-    }
-    stopClock();
+    return restoredState.shouldRunClock;
   }
 
   captureSnapshot(

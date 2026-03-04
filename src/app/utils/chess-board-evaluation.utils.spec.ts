@@ -202,4 +202,35 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
     expect(renderSpy).toHaveBeenCalled();
     expect(fenForIdxSpy).toHaveBeenCalled();
   });
+
+  it('returns early from catch branch when run token changes after an evaluation error', async () => {
+    const evalByHistoryIndex = new Map<number, string>();
+    const evalCacheByFen = new Map<string, string>();
+    const pendingEvalByHistoryIndex = new Set<number>();
+    const evalErrorByHistoryIndex = new Set<number>();
+    const renderSpy = jasmine.createSpy('render');
+    let currentRunToken = 1;
+
+    spyOn(ChessBoardEvaluationUtils, 'getFenForHistoryIndex').and.returnValue('fen-error');
+    spyOn(StockfishService, 'evaluateFen').and.callFake(async () => {
+      currentRunToken = 2;
+      throw new Error('engine failed');
+    });
+
+    await ChessBoardEvaluationUtils.refreshVisibleHistoryEvaluations({
+      runToken: 1,
+      getCurrentRunToken: () => currentRunToken,
+      visibleHistoryLength: 1,
+      moveSnapshots: [{}, {}] as any,
+      evalByHistoryIndex,
+      evalCacheByFen,
+      pendingEvalByHistoryIndex,
+      evalErrorByHistoryIndex,
+      requestRender: renderSpy
+    });
+
+    expect(evalErrorByHistoryIndex.size).toBe(0);
+    expect(pendingEvalByHistoryIndex.has(0)).toBeTrue();
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+  });
 });

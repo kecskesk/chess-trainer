@@ -7,6 +7,7 @@ import { ChessBoardMessageConstants } from '../constants/chess.constants';
 import { ChessRulesService } from '../services/chess-rules.service';
 import { ChessBoardStateService } from '../services/chess-board-state.service';
 import { ChessBoardLogicUtils } from './chess-board-logic.utils';
+import { ChessBoardInitializationUtils } from './chess-board-initialization.utils';
 
 export interface IDropMoveContext {
   targetRow: number;
@@ -36,8 +37,6 @@ export interface IPrepareUiForDropParams {
   clockStarted: boolean;
   pendingDrawOfferBy: ChessColorsEnum | null;
   srcColor: ChessColorsEnum;
-  startClock: () => void;
-  randomizeAmbientStyle: () => void;
   boardHelper: {
     debugText: string;
     possibles: Record<string, unknown>;
@@ -45,6 +44,12 @@ export interface IPrepareUiForDropParams {
     checks: Record<string, unknown>;
     arrows: Record<string, unknown>;
   };
+}
+
+export interface IPrepareUiForDropResult {
+  pendingDrawOfferBy: ChessColorsEnum | null;
+  ambientStyle: { [key: string]: string };
+  shouldStartClock: boolean;
 }
 
 export interface IApplyPreTransferBoardStateParams {
@@ -137,21 +142,21 @@ export class ChessBoardMoveFacade {
     return false;
   }
 
-  static prepareUiForDrop(params: IPrepareUiForDropParams): ChessColorsEnum | null {
-    const { clockStarted, pendingDrawOfferBy, srcColor, startClock, randomizeAmbientStyle, boardHelper } = params;
-    if (!clockStarted) {
-      startClock();
-    }
-    randomizeAmbientStyle();
+  static prepareUiForDrop(params: IPrepareUiForDropParams): IPrepareUiForDropResult {
+    const { clockStarted, pendingDrawOfferBy, srcColor, boardHelper } = params;
     boardHelper.debugText = '';
     boardHelper.possibles = {};
     boardHelper.hits = {};
     boardHelper.checks = {};
     boardHelper.arrows = {};
-    if (pendingDrawOfferBy !== null && pendingDrawOfferBy !== srcColor) {
-      return null;
-    }
-    return pendingDrawOfferBy;
+    const nextPendingDrawOfferBy = pendingDrawOfferBy !== null && pendingDrawOfferBy !== srcColor
+      ? null
+      : pendingDrawOfferBy;
+    return {
+      pendingDrawOfferBy: nextPendingDrawOfferBy,
+      ambientStyle: ChessBoardInitializationUtils.randomizeAmbientStyle(),
+      shouldStartClock: !clockStarted
+    };
   }
 
   static applyPromotionAvailability(moveContext: IDropMoveContext, canPromoteRef: { canPromote: number | null }): void {

@@ -91,13 +91,11 @@ describe('ChessBoardSnapshotService restore helpers', () => {
     restoreContext();
   });
 
-  it('restoreSnapshot updates service variables and starts/stops clock', () => {
+  it('restoreSnapshot updates service variables and returns whether clock should run', () => {
     const snapshot = service.captureSnapshot(chessBoardStateService, 3, ChessColorsEnum.White, false, true, 10, 20);
     service.resignConfirmColor = ChessColorsEnum.Black;
-    const startClock = jasmine.createSpy('startClock');
-    const stopClock = jasmine.createSpy('stopClock');
 
-    service.restoreSnapshot(snapshot, chessBoardStateService, timeControlService, startClock, stopClock);
+    const shouldRunClock = service.restoreSnapshot(snapshot, chessBoardStateService, timeControlService);
 
     expect(service.pendingDrawOfferBy).toBe(ChessColorsEnum.White);
     expect(service.resignConfirmColor).toBeNull();
@@ -105,12 +103,10 @@ describe('ChessBoardSnapshotService restore helpers', () => {
     expect(timeControlService.clockStarted).toBeFalse();
     expect(timeControlService.whiteClockMs).toBe(10);
     expect(timeControlService.blackClockMs).toBe(20);
-    expect(startClock).toHaveBeenCalled();
-    expect(stopClock).not.toHaveBeenCalled();
+    expect(shouldRunClock).toBeTrue();
 
     const pausedSnapshot = service.captureSnapshot(chessBoardStateService, 4, null, true, false, 15, 25);
-    service.restoreSnapshot(pausedSnapshot, chessBoardStateService, timeControlService, startClock, stopClock);
-    expect(stopClock).toHaveBeenCalled();
+    expect(service.restoreSnapshot(pausedSnapshot, chessBoardStateService, timeControlService)).toBeFalse();
   });
 
   it('restoreSnapshotToState returns null for invalid inputs', () => {

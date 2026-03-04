@@ -430,16 +430,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private prepareUiForDrop(moveContext: { srcColor: ChessColorsEnum }): void {
-    const wasClockStarted = this.timeControlService.clockStarted;
-    this.snapshotService.pendingDrawOfferBy = ChessBoardMoveFacade.prepareUiForDrop({
+    const uiState = ChessBoardMoveFacade.prepareUiForDrop({
       clockStarted: this.timeControlService.clockStarted,
       pendingDrawOfferBy: this.snapshotService.pendingDrawOfferBy,
       srcColor: moveContext.srcColor,
-      startClock: () => this.startClock(),
-      randomizeAmbientStyle: () => this.randomizeAmbientStyle(),
       boardHelper: this.chessBoardStateService.boardHelper
     });
-    if (!wasClockStarted) {
+    this.snapshotService.pendingDrawOfferBy = uiState.pendingDrawOfferBy;
+    this.ambientStyle = uiState.ambientStyle;
+    if (uiState.shouldStartClock) {
+      this.startClock();
       this.timeControlService.clockStarted = true;
     }
     this.mateInOneTargets = {};
@@ -1789,13 +1789,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (targetSnapshotIndex < 0) {
       return;
     }
-    this.snapshotService.restoreSnapshot(
+    const shouldRunClock = this.snapshotService.restoreSnapshot(
       this.moveSnapshots[targetSnapshotIndex],
       this.chessBoardStateService,
-      this.timeControlService,
-      () => this.startClock(),
-      () => this.stopClock()
+      this.timeControlService
     );
+    if (shouldRunClock) {
+      this.startClock();
+    } else {
+      this.stopClock();
+    }
     this.scheduleEvaluationRefresh();
   }
 

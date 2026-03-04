@@ -285,18 +285,13 @@ export class ChessBoardSuggestionFacade {
     } = params;
     const evalByUci = new Map<string, number>();
     const evalTextByUci = new Map<string, string>();
-    if (!StockfishService) {
-      return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
-    }
 
     for (const uciMove of uniqueUciMoves) {
       if (runToken !== getCurrentRunToken()) {
         return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
       }
       try {
-        const evaluation = typeof StockfishService.evaluateFenAfterMoves === 'function'
-          ? await StockfishService.evaluateFenAfterMoves(fen, [uciMove], { depth: suggestedMovesDepth })
-          : await StockfishService.evaluateFen(fen, { depth: suggestedMovesDepth });
+        const evaluation = await StockfishService.evaluateFenAfterMoves(fen, [uciMove], { depth: suggestedMovesDepth });
         if (evaluation && evaluation !== ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER && evaluation !== ChessBoardEvalConstants.EVALUATION_ERROR_PLACEHOLDER &&
           evaluation !== ChessBoardEvalConstants.NA_PLACEHOLDER) {
           evalTextByUci.set(uciMove, evaluation);

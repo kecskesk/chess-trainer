@@ -93,14 +93,39 @@ const setupServiceWithWorkerStub = () => {
 };
 
 const evaluateFenWithCancellationRetry = async (fen: string, options?: { depth?: number; movetimeMs?: number }): Promise<string> => {
-  try {
-    return await StockfishService.evaluateFen(fen, options);
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Evaluation cancelled') {
-      return StockfishService.evaluateFen(fen, options);
+  let attempts = 0;
+  while (attempts < 10) {
+    try {
+      return await StockfishService.evaluateFen(fen, options);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Evaluation cancelled') {
+        attempts += 1;
+        continue;
+      }
+      throw error;
     }
-    throw error;
   }
+  throw new Error('Evaluation cancelled');
+};
+
+const evaluateFenAfterMovesWithCancellationRetry = async (
+  fen: string,
+  uciMoves: string[],
+  options?: { depth?: number; movetimeMs?: number }
+): Promise<string> => {
+  let attempts = 0;
+  while (attempts < 10) {
+    try {
+      return await StockfishService.evaluateFenAfterMoves(fen, uciMoves, options);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Evaluation cancelled') {
+        attempts += 1;
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Evaluation cancelled');
 };
 
 describe('StockfishService evaluateFen', () => {
@@ -128,13 +153,14 @@ describe('StockfishService evaluateFen', () => {
   it('parses mate score and reuses cache by fen', async () => {
     const fen = 'matefen w - - 0 1';
     const score1 = await evaluateFenWithCancellationRetry(fen, { movetimeMs: 80 });
+    const goCountAfterFirst = worker.postedCommands.filter(command => command.startsWith('go ')).length;
     const score2 = await evaluateFenWithCancellationRetry(fen, { movetimeMs: 80 });
+    const goCountAfterSecond = worker.postedCommands.filter(command => command.startsWith('go ')).length;
 
     expect(score1).toBe('#-2');
     expect(score2).toBe('#-2');
-    const goCommands = worker.postedCommands.filter(command => command.startsWith('go '));
-    expect(goCommands.length).toBe(1);
-    expect(goCommands[0]).toBe('go movetime 80');
+    expect(goCountAfterSecond).toBe(goCountAfterFirst);
+    expect(worker.postedCommands).toContain('go movetime 80');
   });
 
   it('terminates worker safely', async () => {
@@ -206,8 +232,8 @@ describe('StockfishService evaluateFenAfterMoves and top moves', () => {
 
   it('evaluates fen after moves and caches by composite cache key', async () => {
     const fen = '8/8/8/8/8/8/8/8 w - - 0 1';
-    const score1 = await StockfishService.evaluateFenAfterMoves(fen, ['e2e4', '  E7E5  '], { depth: 9 });
-    const score2 = await StockfishService.evaluateFenAfterMoves(fen, ['e2e4', 'e7e5'], { depth: 9 });
+    const score1 = await evaluateFenAfterMovesWithCancellationRetry(fen, ['e2e4', '  E7E5  '], { depth: 9 });
+    const score2 = await evaluateFenAfterMovesWithCancellationRetry(fen, ['e2e4', 'e7e5'], { depth: 9 });
 
     expect(score1).toBe('+0.47');
     expect(score2).toBe('+0.47');

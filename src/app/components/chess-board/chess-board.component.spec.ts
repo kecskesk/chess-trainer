@@ -2475,10 +2475,10 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     expect(fallbackSnapshot.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
     chessBoardStateService.boardHelper = savedBoardHelper;
 
-    anyComponent.snapshotService.restoreSnapshot(null, anyComponent.chessBoardStateService, anyComponent.timeControlService, () => anyComponent.startClock(), () => anyComponent.stopClock());
+    anyComponent.snapshotService.restoreSnapshot(null, anyComponent.chessBoardStateService, anyComponent.timeControlService);
     const savedService = anyComponent.chessBoardStateService;
     anyComponent.chessBoardStateService = null;
-    anyComponent.snapshotService.restoreSnapshot(baseSnapshot, anyComponent.chessBoardStateService, anyComponent.timeControlService, () => anyComponent.startClock(), () => anyComponent.stopClock());
+    anyComponent.snapshotService.restoreSnapshot(baseSnapshot, anyComponent.chessBoardStateService, anyComponent.timeControlService);
     anyComponent.chessBoardStateService = savedService;
 
     expect(ChessBoardLogicUtils.cloneField(null as any)).toEqual([]);
