@@ -1658,12 +1658,8 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls expor
     document.body.appendChild(boardShell);
     (component as any).chessField = { nativeElement: child };
 
-    const getWindowRefSpy = spyOn<any>(component, 'getWindowRef').and.returnValue({
-      devicePixelRatio: 0
-    } as Window);
     const imageUrl = await (component as any).createBoardImageDataUrlFromDom();
     expect(typeof imageUrl === 'string' || imageUrl === null).toBeTrue();
-    getWindowRefSpy.and.callThrough();
 
     (component as any).chessField = {
       nativeElement: {
@@ -1672,10 +1668,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls expor
     };
     await expectAsync((component as any).createBoardImageDataUrlFromDom()).toBeResolvedTo(null);
 
-    const getDocumentRefSpy = spyOn<any>(component, 'getDocumentRef').and.returnValue(null);
-    await expectAsync((component as any).createBoardImageDataUrlFromDom()).toBeResolvedTo(null);
     expect(() => (component as any).downloadDataUrl('data:image/png;base64,DD', 'no-doc.png')).not.toThrow();
-    getDocumentRefSpy.and.callThrough();
 
     document.body.removeChild(boardShell);
   });
@@ -2395,7 +2388,7 @@ describe('ChessBoardComponent branch coverage helpers (castling and debug guards
     expect(computeStatusTitle(chessBoardStateService.boardHelper)).toBe(`${component.uiText.status.black} ${component.uiText.status.toMoveSuffix}`);
 
     const targetCountSpy = spyOn<any>(component, 'getLegalTargetCount').and.returnValue(0);
-    const inCheckSpy = spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
+    const inCheckSpy = spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.returnValue(true);
     const reason = (component as any).getDragFailureReason(
       0,
       0,
@@ -2839,7 +2832,7 @@ describe('ChessBoardComponent branch coverage helpers (locale and asset loading 
     chessBoardStateService.field[6][4] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Pawn } as any];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
-    const kingSpy = spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
+    const kingSpy = spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.returnValue(true);
     (component as any).previewHoverMateInOne(6, 4, 5, 4, true);
     expect(kingSpy).toHaveBeenCalled();
   });
@@ -2999,8 +2992,8 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
     chessBoardStateService.field[0][4] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.King } as any];
     chessBoardStateService.field[6][0] = [{ color: ChessColorsEnum.White, piece: ChessPiecesEnum.Rook } as any];
     chessBoardStateService.field[5][0] = [{ color: ChessColorsEnum.Black, piece: ChessPiecesEnum.Knight } as any];
-    spyOn<any>(component, 'canPlayLegalMove').and.returnValue(true);
-    spyOn<any>(component, 'isKingInCheck').and.returnValue(true);
+    spyOn(ChessBoardLogicUtils, 'canPlayLegalMove').and.returnValue(true);
+    spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.returnValue(true);
     const possibleSpy = spyOn(ChessBoardStateService, 'addPossible').and.callThrough();
     const hitSpy = spyOn(ChessBoardStateService, 'addHit').and.callThrough();
     const checkSpy = spyOn(ChessBoardStateService, 'addCheck').and.callThrough();
@@ -3277,7 +3270,7 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
     expect(canStepSpy).toHaveBeenCalled();
     expect(checkSpy).toHaveBeenCalled();
 
-    const found = (component as any).findKing(chessBoardStateService.field, ChessColorsEnum.White);
+    const found = ChessBoardLogicUtils.findKing(chessBoardStateService.field, ChessColorsEnum.White);
     expect(found?.row).toBe(7);
     expect(found?.col).toBe(4);
   });

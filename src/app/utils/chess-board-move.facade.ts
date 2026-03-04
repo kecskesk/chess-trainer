@@ -79,8 +79,6 @@ export interface IFinalizeDropStateParams {
     debugText: string;
     colorTurn: ChessColorsEnum;
   };
-  isKingInCheck: (board: ChessPieceDto[][][], color: ChessColorsEnum) => boolean;
-  hasAnyLegalMove: (board: ChessPieceDto[][][], color: ChessColorsEnum) => boolean;
   checkmateDebugText: string;
   addIncrementToColor: (color: ChessColorsEnum) => void;
   applyDrawRules: (hasLegalMovesForCurrentTurn: boolean, isCurrentTurnInCheck: boolean) => void;
@@ -265,15 +263,13 @@ export class ChessBoardMoveFacade {
       moveFlags,
       field,
       boardHelper,
-      isKingInCheck,
-      hasAnyLegalMove,
       checkmateDebugText,
       addIncrementToColor,
       applyDrawRules
     } = params;
     const enemyColor = moveContext.srcColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const isCheck = isKingInCheck(field, enemyColor);
-    const hasLegalMoves = hasAnyLegalMove(field, enemyColor);
+    const isCheck = ChessBoardLogicUtils.isKingInCheck(field, enemyColor);
+    const hasLegalMoves = ChessBoardLogicUtils.hasAnyLegalMove(field, enemyColor);
     const isMatch = isCheck && !hasLegalMoves;
     if (isMatch) {
       boardHelper.gameOver = true;

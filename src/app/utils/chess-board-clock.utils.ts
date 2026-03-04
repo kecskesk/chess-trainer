@@ -22,30 +22,27 @@ export class ChessBoardClockUtils {
     lastClockTickAt: number,
     clockTickIntervalMs: number,
     tick: () => void,
-    ngZone?: NgZone,
-    nowProvider: () => number = () => Date.now(),
-    setIntervalFn: (handler: () => void, timeoutMs: number) => number = (handler, timeoutMs) => window.setInterval(handler, timeoutMs)
+    ngZone?: NgZone
   ): { started: boolean, clockIntervalId: number | null, lastClockTickAt: number, clockRunning: boolean } {
     if (clockIntervalId !== null) {
       return { started: false, clockIntervalId, lastClockTickAt, clockRunning: true };
     }
 
     const scheduledTick = ngZone ? () => ngZone.run(tick) : tick;
-    const nextClockIntervalId = setIntervalFn(scheduledTick, clockTickIntervalMs);
+    const nextClockIntervalId = window.setInterval(scheduledTick, clockTickIntervalMs);
     return {
       started: true,
       clockIntervalId: nextClockIntervalId,
-      lastClockTickAt: nowProvider(),
+      lastClockTickAt: Date.now(),
       clockRunning: true
     };
   }
 
   static stopClock(
-    clockIntervalId: number | null,
-    clearIntervalFn: (id: number) => void = (id) => window.clearInterval(id)
+    clockIntervalId: number | null
   ): { clockIntervalId: null, clockRunning: boolean } {
     if (clockIntervalId !== null) {
-      clearIntervalFn(clockIntervalId);
+      window.clearInterval(clockIntervalId);
     }
     return { clockIntervalId: null, clockRunning: false };
   }
@@ -57,8 +54,7 @@ export class ChessBoardClockUtils {
     lastClockTickAt: number,
     activeColor: ChessColorsEnum,
     whiteClockMs: number,
-    blackClockMs: number,
-    nowProvider: () => number = () => Date.now()
+    blackClockMs: number
   ): IClockTickResult {
     if (!clockRunning || !clockStarted || isGameOver) {
       return {
@@ -71,7 +67,7 @@ export class ChessBoardClockUtils {
       };
     }
 
-    const now = nowProvider();
+    const now = Date.now();
     const elapsedMs = now - lastClockTickAt;
     if (elapsedMs <= 0) {
       return {

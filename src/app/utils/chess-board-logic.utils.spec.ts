@@ -125,7 +125,7 @@ describe('ChessBoardLogicUtils position keys and notation helpers', () => {
 });
 
 describe('ChessBoardLogicUtils move legality and simulation', () => {
-  it('finds kings and evaluates check states with default and custom attack fn', () => {
+  it('finds kings and evaluates check states', () => {
     const board = emptyBoard();
     board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
     board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
@@ -139,35 +139,19 @@ describe('ChessBoardLogicUtils move legality and simulation', () => {
     expect(blackKing?.col).toBe(4);
 
     expect(ChessBoardLogicUtils.isKingInCheck(board, ChessColorsEnum.White)).toBeFalse();
-    expect(ChessBoardLogicUtils.isKingInCheck(
-      board,
-      ChessColorsEnum.White,
-      (targetRow, targetCol, _targetCell, sourceRow, sourceCol) =>
-        sourceRow === 7 && sourceCol === 0 && targetRow === 7 && targetCol === 4
-    )).toBeTrue();
-    expect(ChessBoardLogicUtils.isKingInCheck(board, ChessColorsEnum.White, () => false)).toBeFalse();
     expect(ChessBoardLogicUtils.isKingInCheck(emptyBoard(), ChessColorsEnum.White)).toBeFalse();
   });
 
-  it('detects legal-move availability with callback and default simulation paths', () => {
+  it('detects legal-move availability', () => {
     const board = emptyBoard();
     board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];
     board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
     board[6][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)];
 
-    const hasLegal = ChessBoardLogicUtils.hasAnyLegalMove(
-      board,
-      ChessColorsEnum.White,
-      (targetRow, targetCol, _targetCell, srcRow, srcCol) => srcRow === 6 && srcCol === 4 && targetRow === 5 && targetCol === 4,
-      (b, srcRow, srcCol, targetRow, targetCol) => ChessBoardLogicUtils.simulateMove(b, srcRow, srcCol, targetRow, targetCol)
-    );
+    const hasLegal = ChessBoardLogicUtils.hasAnyLegalMove(board, ChessColorsEnum.White);
     expect(hasLegal).toBeTrue();
 
-    const hasNoLegal = ChessBoardLogicUtils.hasAnyLegalMove(
-      board,
-      ChessColorsEnum.White,
-      () => false
-    );
+    const hasNoLegal = ChessBoardLogicUtils.hasAnyLegalMove(emptyBoard(), ChessColorsEnum.White);
     expect(hasNoLegal).toBeFalse();
   });
 
@@ -219,9 +203,7 @@ describe('ChessBoardLogicUtils legal move evaluation branches', () => {
       5,
       4,
       ChessColorsEnum.White,
-      source,
-      (targetRow, targetCol) => targetRow === 5 && targetCol === 4,
-      (b, srcRow, srcCol, targetRow, targetCol) => ChessBoardLogicUtils.simulateMove(b, srcRow, srcCol, targetRow, targetCol)
+      source
     );
     expect(legal).toBeTrue();
 
@@ -229,11 +211,10 @@ describe('ChessBoardLogicUtils legal move evaluation branches', () => {
       board,
       6,
       4,
+      6,
       5,
-      4,
       ChessColorsEnum.White,
-      source,
-      () => false
+      source
     );
     expect(illegal).toBeFalse();
   });

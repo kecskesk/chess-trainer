@@ -7,22 +7,7 @@ export class ChessBoardDragPreviewUtils {
   static collectMateInOneTargets(
     board: ChessPieceDto[][][],
     attackerColor: ChessColorsEnum,
-    defenderColor: ChessColorsEnum,
-    canStepThereFn?: (
-      targetRow: number,
-      targetCol: number,
-      targetCell: ChessPieceDto[],
-      srcRow: number,
-      srcCol: number,
-      sourcePiece: ChessPieceDto
-    ) => boolean,
-    simulateMoveFn?: (
-      board: ChessPieceDto[][][],
-      srcRow: number,
-      srcCol: number,
-      targetRow: number,
-      targetCol: number
-    ) => ChessPieceDto[][][]
+    defenderColor: ChessColorsEnum
   ): {[key: string]: boolean} {
     const targets: {[key: string]: boolean} = {};
     for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
@@ -38,39 +23,23 @@ export class ChessBoardDragPreviewUtils {
               continue;
             }
             
-            let canMove: boolean;
-            if (canStepThereFn) {
-              canMove = canStepThereFn(
-                targetRow,
-                targetCol,
-                board[targetRow][targetCol],
-                srcRow,
-                srcCol,
-                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
-              );
-            } else {
-              canMove = ChessBoardLogicUtils.canPlayLegalMove(
-                board,
-                srcRow,
-                srcCol,
-                targetRow,
-                targetCol,
-                attackerColor,
-                sourcePiece
-              );
-            }
+            const canMove = ChessBoardLogicUtils.canPlayLegalMove(
+              board,
+              srcRow,
+              srcCol,
+              targetRow,
+              targetCol,
+              attackerColor,
+              sourcePiece
+            );
             if (!canMove) {
               continue;
             }
 
-            let afterMove: ChessPieceDto[][][];
-            if (simulateMoveFn) {
-              afterMove = simulateMoveFn(board, srcRow, srcCol, targetRow, targetCol);
-            } else {
-              afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-            }
+            const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
             
-            if (ChessBoardLogicUtils.isKingInCheck(afterMove, attackerColor)) {
+            const attackerInCheck = ChessBoardLogicUtils.isKingInCheck(afterMove, attackerColor);
+            if (attackerInCheck) {
               continue;
             }
 
@@ -97,22 +66,7 @@ export class ChessBoardDragPreviewUtils {
     targetRow: number,
     targetCol: number,
     isValidMove: boolean,
-    colorTurn: ChessColorsEnum,
-    canStepThereFn?: (
-      targetRow: number,
-      targetCol: number,
-      targetCell: ChessPieceDto[],
-      srcRow: number,
-      srcCol: number,
-      sourcePiece: ChessPieceDto
-    ) => boolean,
-    simulateMoveFn?: (
-      board: ChessPieceDto[][][],
-      srcRow: number,
-      srcCol: number,
-      targetRow: number,
-      targetCol: number
-    ) => ChessPieceDto[][][]
+    colorTurn: ChessColorsEnum
   ): { mateInOneTargets: {[key: string]: boolean}, mateInOneBlunderTargets: {[key: string]: boolean}, lastMatePreviewKey: string } {
     if (!isValidMove) {
       return { mateInOneTargets: {}, mateInOneBlunderTargets: {}, lastMatePreviewKey: '' };
@@ -126,14 +80,10 @@ export class ChessBoardDragPreviewUtils {
       : colorTurn;
     const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     
-    let afterMove: ChessPieceDto[][][];
-    if (simulateMoveFn) {
-      afterMove = simulateMoveFn(board, srcRow, srcCol, targetRow, targetCol);
-    } else {
-      afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-    }
+    const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
 
-    if (ChessBoardLogicUtils.isKingInCheck(afterMove, forColor)) {
+    const currentSideInCheck = ChessBoardLogicUtils.isKingInCheck(afterMove, forColor);
+    if (currentSideInCheck) {
       return { mateInOneTargets: {}, mateInOneBlunderTargets: {}, lastMatePreviewKey: previewKey };
     }
 
@@ -150,9 +100,7 @@ export class ChessBoardDragPreviewUtils {
     const enemyMateInOneTargets = ChessBoardDragPreviewUtils.collectMateInOneTargets(
       afterMove,
       enemyColor,
-      forColor,
-      canStepThereFn,
-      simulateMoveFn
+      forColor
     );
     if (Object.keys(enemyMateInOneTargets).length > 0) {
       mateInOneBlunderTargets[`${targetRow}${targetCol}`] = true;

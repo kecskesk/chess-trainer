@@ -10,16 +10,12 @@ const emptyBoard = (): ChessPieceDto[][][] =>
 describe('ChessBoardVisualizationFacade', () => {
   it('returns empty threats when source cell is empty', () => {
     const board = emptyBoard();
-    const canPlayLegalMove = jasmine.createSpy('canPlayLegalMove').and.returnValue(false);
-    expect(ChessBoardVisualizationFacade.getThreatsBy(board, 0, 0, ChessColorsEnum.White, ChessColorsEnum.Black, canPlayLegalMove)).toEqual([]);
-    expect(canPlayLegalMove).not.toHaveBeenCalled();
+    expect(ChessBoardVisualizationFacade.getThreatsBy(board, 0, 0, ChessColorsEnum.White, ChessColorsEnum.Black)).toEqual([]);
   });
 
   it('returns empty threats-on when target cell is empty', () => {
     const board = emptyBoard();
-    const canPlayLegalMove = jasmine.createSpy('canPlayLegalMove').and.returnValue(false);
-    expect(ChessBoardVisualizationFacade.getThreatsOn(board, 0, 0, ChessColorsEnum.Black, canPlayLegalMove)).toEqual([]);
-    expect(canPlayLegalMove).not.toHaveBeenCalled();
+    expect(ChessBoardVisualizationFacade.getThreatsOn(board, 0, 0, ChessColorsEnum.Black)).toEqual([]);
   });
 
   it('builds green overloaded arrows when one protector must defend multiple critical targets', () => {

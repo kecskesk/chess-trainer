@@ -50,6 +50,7 @@ import { ChessBoardClockGameStateFacade } from '../../utils/chess-board-clock-ga
 import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
 import { ChessBoardOverlayFacade } from '../../utils/chess-board-overlay.facade';
 import { ChessBoardUiStateFacade } from '../../utils/chess-board-ui-state.facade';
+import { ChessBoardDragPreviewUtils } from '../../utils/chess-board-drag-preview.utils';
 
 @Component({
   selector: 'app-chess-board',
@@ -503,8 +504,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       moveFlags,
       field: this.chessBoardStateService.field,
       boardHelper: this.chessBoardStateService.boardHelper,
-      isKingInCheck: (board, color) => this.isKingInCheck(board, color),
-      hasAnyLegalMove: (board, color) => this.hasAnyLegalMove(board, color),
       checkmateDebugText:
         `${this.uiText.message.checkmateCallout} ${moveContext.srcColor === ChessColorsEnum.White ? this.uiText.status.white : this.uiText.status.black} ${this.uiText.message.checkmateWinner}`,
       addIncrementToColor: (color) => this.addIncrementToColor(color),
@@ -553,7 +552,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
     if (this.getLegalTargetCount(sourceRow, sourceCol) < 1) {
       const activeColor = this.chessBoardStateService.boardHelper.colorTurn;
-      const isActiveKingInCheck = this.isKingInCheck(this.chessBoardStateService.field, activeColor);
+      const isActiveKingInCheck = ChessBoardLogicUtils.isKingInCheck(this.chessBoardStateService.field, activeColor);
       if (isActiveKingInCheck) {
         return ChessBoardMessageConstants.noLegalTargetsWhileInCheckMessage(sourcePiece.piece);
       }
@@ -675,7 +674,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         if (srcRow === targetRow && srcCol === targetCol) {
           continue;
         }
-        const legalMove = this.canPlayLegalMove(
+        const legalMove = ChessBoardLogicUtils.canPlayLegalMove(
           board,
           srcRow,
           srcCol,
@@ -709,7 +708,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-    if (!this.isKingInCheck(afterMove, enemyColor)) {
+    if (!ChessBoardLogicUtils.isKingInCheck(afterMove, enemyColor)) {
       return;
     }
 
@@ -1191,22 +1190,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private async createBoardImageDataUrlFromDom(): Promise<string | null> {
     return ChessBoardExportFacade.createBoardImageDataUrlFromDom({
-      getDocumentRef: () => this.getDocumentRef(),
-      getWindowRef: () => this.getWindowRef(),
       chessFieldNativeElement: this.chessField?.nativeElement || null
     });
   }
 
   private downloadDataUrl(dataUrl: string, fileName: string): void {
-    ChessBoardExportFacade.downloadDataUrl(dataUrl, fileName, () => this.getDocumentRef());
-  }
-
-  private getDocumentRef(): Document {
-    return document;
-  }
-
-  private getWindowRef(): Window {
-    return window;
+    ChessBoardExportFacade.downloadDataUrl(dataUrl, fileName);
   }
 
   private copyToClipboard(text: string): Promise<boolean> {
@@ -1239,7 +1228,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         if (sourcePiece.color !== turnColor || sourcePiece.piece !== parsedMove.piece) {
           continue;
         }
-        const canMove = this.canPlayLegalMove(
+        const canMove = ChessBoardLogicUtils.canPlayLegalMove(
           board,
           srcRow,
           srcCol,
@@ -1268,7 +1257,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     arrows: IVisualizationArrow[],
     seen: Set<string>
   ): void {
-    const enemyKing = this.findKing(board, enemyColor);
+    const enemyKing = ChessBoardLogicUtils.findKing(board, enemyColor);
     if (!enemyKing) {
       return;
     }
@@ -1278,7 +1267,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         if (!(sourceCell && sourceCell[0] && sourceCell[0].color === attackerColor)) {
           continue;
         }
-        const canAttackKing = this.canPlayLegalMove(
+        const canAttackKing = ChessBoardLogicUtils.canPlayLegalMove(
           board,
           row,
           col,
@@ -1311,7 +1300,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     arrows: IVisualizationArrow[],
     seen: Set<string>
   ): void {
-    const ownKing = this.findKing(board, defenderColor);
+    const ownKing = ChessBoardLogicUtils.findKing(board, defenderColor);
     if (!ownKing) {
       return;
     }
@@ -1382,59 +1371,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.appendGameResultToLastMove(resignState.result, resignState.historyReason);
   }
 
-  private collectMateInOneTargets(
-    board: ChessPieceDto[][][],
-    attackerColor: ChessColorsEnum,
-    defenderColor: ChessColorsEnum
-  ): {[key: string]: boolean} {
-    const targets: {[key: string]: boolean} = {};
-    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
-      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const sourceCell = board[srcRow][srcCol];
-        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === attackerColor)) {
-          continue;
-        }
-        const sourcePiece = sourceCell[0];
-        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-            if (srcRow === targetRow && srcCol === targetCol) {
-              continue;
-            }
-            const canMove = this.withBoardContext(board, attackerColor, () =>
-              ChessRulesService.canStepThere(
-                targetRow,
-                targetCol,
-                board[targetRow][targetCol],
-                srcRow,
-                srcCol,
-                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
-              )
-            );
-            if (!canMove) {
-              continue;
-            }
-
-            const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-            if (this.isKingInCheck(afterMove, attackerColor)) {
-              continue;
-            }
-
-            const defenderInCheck = this.isKingInCheck(afterMove, defenderColor);
-            if (!defenderInCheck) {
-              continue;
-            }
-
-            const defenderHasResponse = this.hasAnyLegalMove(afterMove, defenderColor);
-            if (!defenderHasResponse) {
-              targets[`${targetRow}${targetCol}`] = true;
-            }
-          }
-        }
-      }
-    }
-    return targets;
-  }
-
   private previewHoverMateInOne(
     srcRow: number,
     srcCol: number,
@@ -1456,27 +1392,17 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.mateInOneBlunderTargets = {};
 
     const board = ChessBoardLogicUtils.cloneField(this.chessBoardStateService.field);
-    const sourceCell = board[srcRow][srcCol];
-    const forColor = sourceCell && sourceCell[0]
-      ? sourceCell[0].color
-      : this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum;
-    const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-
-    if (this.isKingInCheck(afterMove, forColor)) {
-      return;
-    }
-
-    const enemyInCheck = this.isKingInCheck(afterMove, enemyColor);
-    const enemyHasResponse = this.hasAnyLegalMove(afterMove, enemyColor);
-    if (enemyInCheck && !enemyHasResponse) {
-      this.mateInOneTargets[`${targetRow}${targetCol}`] = true;
-    }
-
-    const enemyMateInOneTargets = this.collectMateInOneTargets(afterMove, enemyColor, forColor);
-    if (Object.keys(enemyMateInOneTargets).length > 0) {
-      this.mateInOneBlunderTargets[`${targetRow}${targetCol}`] = true;
-    }
+    const previewResult = ChessBoardDragPreviewUtils.previewHoverMateInOne(
+      board,
+      srcRow,
+      srcCol,
+      targetRow,
+      targetCol,
+      isValidMove,
+      this.chessBoardStateService.boardHelper.colorTurn as ChessColorsEnum
+    );
+    this.mateInOneTargets = previewResult.mateInOneTargets;
+    this.mateInOneBlunderTargets = previewResult.mateInOneBlunderTargets;
   }
 
   private clearDragPreviewHighlights(): void {
@@ -1537,9 +1463,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       rowIdx,
       cellIdx,
       ofColor,
-      enemyColor,
-      (boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece) =>
-        this.canPlayLegalMove(boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece)
+      enemyColor
     );
   }
 
@@ -1555,9 +1479,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       board,
       rowIdx,
       cellIdx,
-      attackerColor,
-      (boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece) =>
-        this.canPlayLegalMove(boardArg, srcRow, srcCol, targetRow, targetCol, forColor, sourcePiece)
+      attackerColor
     );
   }
 
@@ -1718,98 +1640,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private canPlayLegalMove(
-    board: ChessPieceDto[][][],
-    srcRow: number,
-    srcCol: number,
-    targetRow: number,
-    targetCol: number,
-    forColor: ChessColorsEnum,
-    sourcePiece: ChessPieceDto
-  ): boolean {
-    const targetCell = board[targetRow][targetCol];
-    const canStepThere = this.withBoardContext(board, forColor, () =>
-      ChessRulesService.canStepThere(
-        targetRow,
-        targetCol,
-        targetCell,
-        srcRow,
-        srcCol,
-        new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
-      )
-    );
-    if (!canStepThere) {
-      return false;
-    }
-
-    const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-    return !this.isKingInCheck(afterMove, forColor);
-  }
-
-  private findKing(board: ChessPieceDto[][][], color: ChessColorsEnum): ChessPositionDto | null {
-    for (let row = ChessConstants.MIN_INDEX; row <= ChessConstants.MAX_INDEX; row++) {
-      for (let col = ChessConstants.MIN_INDEX; col <= ChessConstants.MAX_INDEX; col++) {
-        const cell = board[row][col];
-        if (cell && cell[0] && cell[0].color === color && cell[0].piece === ChessPiecesEnum.King) {
-          return new ChessPositionDto(row, col);
-        }
-      }
-    }
-    return null;
-  }
-
-  private isKingInCheck(board: ChessPieceDto[][][], kingColor: ChessColorsEnum): boolean {
-    return ChessBoardLogicUtils.isKingInCheck(board, kingColor, (
-      targetRow,
-      targetCol,
-      targetCell,
-      sourceRow,
-      sourceCol,
-      sourcePiece
-    ) =>
-      this.withBoardContext(board, sourcePiece.color, () =>
-        ChessRulesService.canStepThere(targetRow, targetCol, targetCell, sourceRow, sourceCol, sourcePiece)
-      )
-    );
-  }
-
-  private hasAnyLegalMove(board: ChessPieceDto[][][], forColor: ChessColorsEnum): boolean {
-    for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
-      for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const sourceCell = board[srcRow][srcCol];
-        if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
-          continue;
-        }
-        const sourcePiece = sourceCell[0];
-        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-            if (srcRow === targetRow && srcCol === targetCol) {
-              continue;
-            }
-            const canMove = this.withBoardContext(board, forColor, () =>
-              ChessRulesService.canStepThere(
-                targetRow,
-                targetCol,
-                board[targetRow][targetCol],
-                srcRow,
-                srcCol,
-                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
-              )
-            );
-            if (!canMove) {
-              continue;
-            }
-            const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-            if (!this.isKingInCheck(afterMove, forColor)) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   private applyDrawRules(hasLegalMovesForCurrentTurn: boolean, isCurrentTurnInCheck: boolean): void {
     ChessBoardMoveFacade.applyDrawRules({
       gameOver: this.chessBoardStateService.boardHelper.gameOver,
@@ -1837,9 +1667,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private randomizeAmbientStyle(): void {
-    this.ambientStyle = ChessBoardInitializationUtils.randomizeAmbientStyle((min, max) =>
-      ChessBoardInitializationUtils.randomBetween(min, max)
-    );
+    this.ambientStyle = ChessBoardInitializationUtils.randomizeAmbientStyle();
   }
 
   private appendGameResultToLastMove(result: '1-0' | '0-1' | '1/2-1/2', reason: string): void {
@@ -2084,7 +1912,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       runToken,
       getCurrentRunToken: () => this.evaluationRunToken,
       visibleHistoryLength: this.getVisibleHistory().length,
-      getFenForHistoryIndex: (idx) => ChessBoardEvaluationUtils.getFenForHistoryIndex(idx, this.moveSnapshots),
+      moveSnapshots: this.moveSnapshots,
       evaluateFen: (fen) => this.activeStockfishService!.evaluateFen(fen),
       evalByHistoryIndex: this.evalByHistoryIndex,
       evalCacheByFen: this.evalCacheByFen,

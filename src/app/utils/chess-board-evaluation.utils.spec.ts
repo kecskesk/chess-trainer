@@ -202,20 +202,21 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
       }
       return '+0.80';
     });
+    const fenForIdxSpy = spyOn(ChessBoardEvaluationUtils, 'getFenForHistoryIndex').and.callFake((idx: number) => {
+      if (idx === 0) {
+        return 'fen-cached';
+      }
+      if (idx === 1) {
+        return 'fen-new';
+      }
+      return 'fen-error';
+    });
 
     await ChessBoardEvaluationUtils.refreshVisibleHistoryEvaluations({
       runToken: 5,
       getCurrentRunToken: () => 5,
       visibleHistoryLength: 3,
-      getFenForHistoryIndex: (idx) => {
-        if (idx === 0) {
-          return 'fen-cached';
-        }
-        if (idx === 1) {
-          return 'fen-new';
-        }
-        return 'fen-error';
-      },
+      moveSnapshots: [{}, {}, {}, {}] as any,
       evaluateFen: evaluateFenSpy,
       evalByHistoryIndex,
       evalCacheByFen,
@@ -231,5 +232,6 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
     expect(evalErrorByHistoryIndex.has(2)).toBeTrue();
     expect(pendingEvalByHistoryIndex.size).toBe(0);
     expect(renderSpy).toHaveBeenCalled();
+    expect(fenForIdxSpy).toHaveBeenCalled();
   });
 });

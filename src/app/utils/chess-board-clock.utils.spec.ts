@@ -19,28 +19,28 @@ describe('ChessBoardClockUtils formatting', () => {
 describe('ChessBoardClockUtils interval lifecycle', () => {
   it('starts and stops clock intervals', () => {
     const tick = jasmine.createSpy('tick');
-    let scheduledTick: (() => void) | null = null;
+    let scheduledTick: TimerHandler | null = null;
+    const setIntervalSpy = spyOn(window, 'setInterval').and.callFake((handler: TimerHandler) => {
+      scheduledTick = handler;
+      return 9 as any;
+    });
+    spyOn(Date, 'now').and.returnValue(500);
     const startResult = ChessBoardClockUtils.startClock(
       null,
       0,
       100,
-      tick,
-      undefined,
-      () => 500,
-      (handler) => {
-        scheduledTick = handler;
-        return 9;
-      }
+      tick
     );
     expect(startResult.started).toBeTrue();
     expect(startResult.clockIntervalId).toBe(9);
     expect(startResult.lastClockTickAt).toBe(500);
     expect(startResult.clockRunning).toBeTrue();
     expect(scheduledTick).not.toBeNull();
+    expect(setIntervalSpy).toHaveBeenCalled();
 
-    const stopSpy = jasmine.createSpy('clear');
-    const stopResult = ChessBoardClockUtils.stopClock(9, stopSpy);
-    expect(stopSpy).toHaveBeenCalledWith(9);
+    const stopSpy = spyOn(window, 'clearInterval').and.callThrough();
+    const stopResult = ChessBoardClockUtils.stopClock(9);
+    expect(stopSpy).toHaveBeenCalledWith(9 as any);
     expect(stopResult.clockIntervalId).toBeNull();
     expect(stopResult.clockRunning).toBeFalse();
   });
@@ -54,7 +54,12 @@ describe('ChessBoardClockUtils interval lifecycle', () => {
     const zone = {
       run: (fn: () => void) => fn()
     } as unknown as NgZone;
-    let handler: (() => void) | null = null;
+    let handler: TimerHandler | null = null;
+    spyOn(Date, 'now').and.returnValue(10);
+    spyOn(window, 'setInterval').and.callFake((tick: TimerHandler) => {
+      handler = tick;
+      return 1 as any;
+    });
     ChessBoardClockUtils.startClock(
       null,
       0,
@@ -62,14 +67,11 @@ describe('ChessBoardClockUtils interval lifecycle', () => {
       () => {
         ran = true;
       },
-      zone,
-      () => 10,
-      (tick) => {
-        handler = tick;
-        return 1;
-      }
+      zone
     );
-    handler?.();
+    if (typeof handler === 'function') {
+      handler();
+    }
     expect(ran).toBeTrue();
 
     const stopped = ChessBoardClockUtils.stopClock(null);
@@ -79,6 +81,7 @@ describe('ChessBoardClockUtils interval lifecycle', () => {
 
 describe('ChessBoardClockUtils tick behavior', () => {
   it('ticks the active side and marks forfeits', () => {
+    spyOn(Date, 'now').and.returnValue(1600);
     const tickWhite = ChessBoardClockUtils.tickClock(
       true,
       true,
@@ -86,8 +89,7 @@ describe('ChessBoardClockUtils tick behavior', () => {
       1000,
       ChessColorsEnum.White,
       1200,
-      2500,
-      () => 1600
+      2500
     );
     expect(tickWhite.whiteClockMs).toBe(600);
     expect(tickWhite.blackClockMs).toBe(2500);
@@ -100,14 +102,14 @@ describe('ChessBoardClockUtils tick behavior', () => {
       1000,
       ChessColorsEnum.Black,
       1200,
-      300,
-      () => 1600
+      300
     );
     expect(tickBlackForfeit.blackClockMs).toBe(0);
     expect(tickBlackForfeit.forfeitColor).toBe(ChessColorsEnum.Black);
   });
 
   it('covers tick early-return and non-progress branches', () => {
+    const nowSpy = spyOn(Date, 'now').and.returnValue(1001);
     const stopped = ChessBoardClockUtils.tickClock(
       false,
       true,
@@ -115,11 +117,11 @@ describe('ChessBoardClockUtils tick behavior', () => {
       1000,
       ChessColorsEnum.White,
       1000,
-      1000,
-      () => 1001
+      1000
     );
     expect(stopped.shouldStop).toBeTrue();
 
+    nowSpy.and.returnValue(1000);
     const nonProgress = ChessBoardClockUtils.tickClock(
       true,
       true,
@@ -127,8 +129,7 @@ describe('ChessBoardClockUtils tick behavior', () => {
       1000,
       ChessColorsEnum.White,
       1000,
-      1000,
-      () => 1000
+      1000
     );
     expect(nonProgress.shouldRender).toBeFalse();
     expect(nonProgress.shouldStop).toBeFalse();

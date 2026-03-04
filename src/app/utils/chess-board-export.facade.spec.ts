@@ -3,7 +3,7 @@ import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessFenUtils } from './chess-fen.utils';
 import { ChessRulesService } from '../services/chess-rules.service';
 
-describe('ChessBoardExportFacade', () => {
+describe('ChessBoardExportFacade FEN and PGN', () => {
   it('returns empty PGN when board state is absent and formatted PGN otherwise', () => {
     expect(ChessBoardExportFacade.getCurrentPgn(false, ['e2-e4'])).toBe('');
     expect(ChessBoardExportFacade.getCurrentPgn(true, ['e2-e4'])).toContain('1. e2-e4');
@@ -50,41 +50,80 @@ describe('ChessBoardExportFacade', () => {
     expect(fenWithFallbackInputs).toBe('fen');
   });
 
-  it('returns null image when document/window/board shell are unavailable', async () => {
-    await expectAsync(ChessBoardExportFacade.createBoardImageDataUrlFromDom({
-      getDocumentRef: () => null as any,
-      getWindowRef: () => window,
-      chessFieldNativeElement: document.createElement('div')
-    })).toBeResolvedTo(null);
+});
 
+describe('ChessBoardExportFacade DOM and clipboard', () => {
+  it('returns null image when board shell is unavailable', async () => {
     await expectAsync(ChessBoardExportFacade.createBoardImageDataUrlFromDom({
-      getDocumentRef: () => document,
-      getWindowRef: () => null as any,
-      chessFieldNativeElement: document.createElement('div')
-    })).toBeResolvedTo(null);
-
-    await expectAsync(ChessBoardExportFacade.createBoardImageDataUrlFromDom({
-      getDocumentRef: () => document,
-      getWindowRef: () => window,
       chessFieldNativeElement: document.createElement('div')
     })).toBeResolvedTo(null);
   });
 
-  it('downloads data url only when document exists', () => {
-    expect(() => ChessBoardExportFacade.downloadDataUrl('data:image/png;base64,AA', 'x.png', () => null as any)).not.toThrow();
+  it('returns null image when document is undefined', async () => {
+    spyOn<any>(ChessBoardExportFacade as any, 'getDocument').and.returnValue(null);
+    await expectAsync(ChessBoardExportFacade.createBoardImageDataUrlFromDom({
+      chessFieldNativeElement: null
+    })).toBeResolvedTo(null);
+  });
 
-    const doc = document.implementation.createHTMLDocument('x');
+  it('returns null image when window is unavailable', async () => {
+    spyOn<any>(ChessBoardExportFacade as any, 'getWindow').and.returnValue(null);
+    await expectAsync(ChessBoardExportFacade.createBoardImageDataUrlFromDom({
+      chessFieldNativeElement: null
+    })).toBeResolvedTo(null);
+  });
+
+  it('covers image export device pixel ratio fallback branch', async () => {
+    const boardShell = document.createElement('div');
+    boardShell.className = 'board-shell';
+    const child = document.createElement('div');
+    boardShell.appendChild(child);
+    document.body.appendChild(boardShell);
+
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    try {
+      Object.defineProperty(window, 'devicePixelRatio', {
+        configurable: true,
+        value: 0
+      });
+
+      const imageDataUrl = await ChessBoardExportFacade.createBoardImageDataUrlFromDom({
+        chessFieldNativeElement: child
+      });
+      expect(typeof imageDataUrl === 'string' || imageDataUrl === null).toBeTrue();
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(window, 'devicePixelRatio', descriptor);
+      }
+      document.body.removeChild(boardShell);
+    }
+  });
+
+  it('downloads data url via document link click', () => {
     const clickSpy = jasmine.createSpy('click');
-    spyOn(doc, 'createElement').and.callFake(((tag: string) => {
-      const el = document.createElement(tag);
+    const originalCreateElement = document.createElement.bind(document);
+    const createSpy = spyOn(document, 'createElement').and.callFake(((tag: string) => {
+      const el = originalCreateElement(tag);
       if (tag === 'a') {
         (el as HTMLAnchorElement).click = clickSpy;
       }
       return el;
     }) as any);
+    const appendSpy = spyOn(document.body, 'appendChild').and.callThrough();
+    const removeSpy = spyOn(document.body, 'removeChild').and.callThrough();
 
-    ChessBoardExportFacade.downloadDataUrl('data:image/png;base64,AA', 'x.png', () => doc);
+    ChessBoardExportFacade.downloadDataUrl('data:image/png;base64,AA', 'x.png');
     expect(clickSpy).toHaveBeenCalled();
+    expect(createSpy).toHaveBeenCalled();
+    expect(appendSpy).toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalled();
+  });
+
+  it('returns early for download when document is unavailable', () => {
+    const createSpy = spyOn(document, 'createElement').and.callThrough();
+    spyOn<any>(ChessBoardExportFacade as any, 'getDocument').and.returnValue(null);
+    expect(() => ChessBoardExportFacade.downloadDataUrl('data:image/png;base64,AA', 'x.png')).not.toThrow();
+    expect(createSpy).not.toHaveBeenCalled();
   });
 
   it('handles clipboard availability branches', async () => {

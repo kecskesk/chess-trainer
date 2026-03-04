@@ -18,7 +18,7 @@ export interface IRefreshVisibleEvaluationsParams {
   runToken: number;
   getCurrentRunToken: () => number;
   visibleHistoryLength: number;
-  getFenForHistoryIndex: (halfMoveIndex: number) => string;
+  moveSnapshots: IGameplaySnapshot[];
   evaluateFen: (fen: string) => Promise<string>;
   evalByHistoryIndex: Map<number, string>;
   evalCacheByFen: Map<string, string>;
@@ -128,7 +128,7 @@ export class ChessBoardEvaluationUtils {
       runToken,
       getCurrentRunToken,
       visibleHistoryLength,
-      getFenForHistoryIndex,
+      moveSnapshots,
       evaluateFen,
       evalByHistoryIndex,
       evalCacheByFen,
@@ -147,7 +147,7 @@ export class ChessBoardEvaluationUtils {
         return;
       }
 
-      const fen = getFenForHistoryIndex(idx);
+      const fen = ChessBoardEvaluationUtils.getFenForHistoryIndex(idx, moveSnapshots);
       if (!fen) {
         evalByHistoryIndex.set(idx, naPlaceholder);
         pendingEvalByHistoryIndex.delete(idx);

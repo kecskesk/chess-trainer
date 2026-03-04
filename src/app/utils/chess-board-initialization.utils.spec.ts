@@ -13,8 +13,9 @@ describe('ChessBoardInitializationUtils', () => {
     expect(field[3][3]).toEqual([]);
   });
 
-  it('builds ambient style values through provided random callback', () => {
-    const style = ChessBoardInitializationUtils.randomizeAmbientStyle(() => 7.5);
+  it('builds ambient style values from internal random helper', () => {
+    spyOn(ChessBoardInitializationUtils, 'randomBetween').and.returnValue(7.5);
+    const style = ChessBoardInitializationUtils.randomizeAmbientStyle();
     expect(style['--blob1-x']).toBe('7.5%');
     expect(style['--wobble-a']).toBe('7.5s');
     expect(Object.keys(style).length).toBeGreaterThan(0);

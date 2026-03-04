@@ -1,4 +1,5 @@
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
 import { ChessBoardEvaluationUtils } from './chess-board-evaluation.utils';
 import { ISuggestionEvaluationResult } from './chess-board-suggestion.facade';
 
@@ -41,7 +42,7 @@ export interface IRefreshVisibleHistoryEvaluationsParams {
   runToken: number;
   getCurrentRunToken: () => number;
   visibleHistoryLength: number;
-  getFenForHistoryIndex: (idx: number) => string;
+  moveSnapshots: IGameplaySnapshot[];
   evaluateFen: (fen: string) => Promise<string>;
   evalByHistoryIndex: Map<number, string>;
   evalCacheByFen: Map<string, string>;
@@ -145,7 +146,7 @@ export class ChessBoardEvaluationFacade {
       runToken: params.runToken,
       getCurrentRunToken: params.getCurrentRunToken,
       visibleHistoryLength: params.visibleHistoryLength,
-      getFenForHistoryIndex: params.getFenForHistoryIndex,
+      moveSnapshots: params.moveSnapshots,
       evaluateFen: params.evaluateFen,
       evalByHistoryIndex: params.evalByHistoryIndex,
       evalCacheByFen: params.evalCacheByFen,

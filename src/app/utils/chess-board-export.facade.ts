@@ -47,12 +47,11 @@ export class ChessBoardExportFacade {
   }
 
   static async createBoardImageDataUrlFromDom(params: {
-    getDocumentRef: () => Document;
-    getWindowRef: () => Window;
     chessFieldNativeElement: HTMLElement | null | undefined;
   }): Promise<string | null> {
-    const win = params.getWindowRef();
-    if (!params.getDocumentRef() || !win) {
+    const doc = ChessBoardExportFacade.getDocument();
+    const win = ChessBoardExportFacade.getWindow();
+    if (!doc || !win) {
       return null;
     }
 
@@ -75,12 +74,11 @@ export class ChessBoardExportFacade {
     }
   }
 
-  static downloadDataUrl(dataUrl: string, fileName: string, getDocumentRef: () => Document): void {
-    const doc = getDocumentRef();
+  static downloadDataUrl(dataUrl: string, fileName: string): void {
+    const doc = ChessBoardExportFacade.getDocument();
     if (!doc) {
       return;
     }
-
     const link = doc.createElement('a');
     link.href = dataUrl;
     link.download = fileName;
@@ -104,5 +102,12 @@ export class ChessBoardExportFacade {
   static getImageFileName(now: Date): string {
     return `chess-board-${now.toISOString().replace(/[:.]/g, '-')}.png`;
   }
-}
 
+  private static getDocument(): Document | null {
+    return typeof document === 'undefined' ? null : document;
+  }
+
+  private static getWindow(): Window | null {
+    return typeof window === 'undefined' ? null : window;
+  }
+}

@@ -5,6 +5,7 @@ import { ChessPositionDto } from '../model/chess-position.dto';
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
 import { ChessConstants } from '../constants/chess.constants';
 import { ChessRulesService } from '../services/chess-rules.service';
+import { ChessBoardLogicUtils } from './chess-board-logic.utils';
 
 export class ChessBoardVisualizationFacade {
   static initColors(turnColor: ChessColorsEnum, ofEnemy: boolean): { ofColor: ChessColorsEnum; enemyColor: ChessColorsEnum } {
@@ -41,16 +42,7 @@ export class ChessBoardVisualizationFacade {
     rowIdx: number,
     cellIdx: number,
     ofColor: ChessColorsEnum,
-    enemyColor: ChessColorsEnum,
-    canPlayLegalMove: (
-      boardArg: ChessPieceDto[][][],
-      srcRow: number,
-      srcCol: number,
-      targetRow: number,
-      targetCol: number,
-      forColor: ChessColorsEnum,
-      sourcePiece: ChessPieceDto
-    ) => boolean
+    enemyColor: ChessColorsEnum
   ): { pos: ChessPositionDto; piece: ChessPiecesEnum }[] {
     const cell = board[rowIdx][cellIdx];
     if (!(cell && cell[0])) {
@@ -67,7 +59,7 @@ export class ChessBoardVisualizationFacade {
         if (!isEnemyTarget) {
           continue;
         }
-        const legalMove = canPlayLegalMove(board, rowIdx, cellIdx, targetRow, targetCol, ofColor, cell[0]);
+        const legalMove = ChessBoardLogicUtils.canPlayLegalMove(board, rowIdx, cellIdx, targetRow, targetCol, ofColor, cell[0]);
         if (legalMove) {
           threats.push({ pos: new ChessPositionDto(targetRow, targetCol), piece: targetCell[0].piece });
         }
@@ -80,16 +72,7 @@ export class ChessBoardVisualizationFacade {
     board: ChessPieceDto[][][],
     rowIdx: number,
     cellIdx: number,
-    attackerColor: ChessColorsEnum,
-    canPlayLegalMove: (
-      boardArg: ChessPieceDto[][][],
-      srcRow: number,
-      srcCol: number,
-      targetRow: number,
-      targetCol: number,
-      forColor: ChessColorsEnum,
-      sourcePiece: ChessPieceDto
-    ) => boolean
+    attackerColor: ChessColorsEnum
   ): { pos: ChessPositionDto; piece: ChessPiecesEnum }[] {
     const cell = board[rowIdx][cellIdx];
     if (!(cell && cell[0])) {
@@ -105,7 +88,15 @@ export class ChessBoardVisualizationFacade {
         if (!(attackerCell && attackerCell[0] && attackerCell[0].color === attackerColor)) {
           continue;
         }
-        const legalMove = canPlayLegalMove(board, targetRow, targetCol, rowIdx, cellIdx, attackerColor, attackerCell[0]);
+        const legalMove = ChessBoardLogicUtils.canPlayLegalMove(
+          board,
+          targetRow,
+          targetCol,
+          rowIdx,
+          cellIdx,
+          attackerColor,
+          attackerCell[0]
+        );
         if (legalMove) {
           threats.push({ pos: new ChessPositionDto(targetRow, targetCol), piece: cell[0].piece });
         }
