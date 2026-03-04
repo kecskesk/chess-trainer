@@ -55,7 +55,7 @@ describe('ChessBoardComponent template drag-enter integration - mate detection',
     } as any);
     fixture.detectChanges();
 
-    expect(component.isMateInOneBlunderTarget(6, 0)).toBeTrue();
+    expect(!!component.mateInOneBlunderTargets['60']).toBeTrue();
     expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one-danger')).toBeTrue();
   });
 
@@ -75,7 +75,7 @@ describe('ChessBoardComponent template drag-enter integration - mate detection',
     } as any);
     fixture.detectChanges();
 
-    expect(component.isMateInOneTarget(1, 1)).toBeTrue();
+    expect(!!component.mateInOneTargets['11']).toBeTrue();
     expect((targetSquare.nativeElement as HTMLElement).classList.contains('mate-one')).toBeTrue();
   });
 });

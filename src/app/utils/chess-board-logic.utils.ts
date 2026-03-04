@@ -5,6 +5,7 @@ import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
 import { ChessRulesService } from '../services/chess-rules.service';
+import { ChessBoardStateService } from '../services/chess-board-state.service';
 import { ChessFenUtils } from './chess-fen.utils';
 import { ChessMoveNotation } from './chess-utils';
 
@@ -177,14 +178,18 @@ export class ChessBoardLogicUtils {
           continue;
         }
         const attacker = attackerCell[0];
-        
-        const canHitKing = ChessRulesService.canStepThere(
-          king.row,
-          king.col,
-          [new ChessPieceDto(kingColor, ChessPiecesEnum.King)],
-          row,
-          col,
-          new ChessPieceDto(attacker.color, attacker.piece)
+
+        const canHitKing = ChessBoardLogicUtils.withBoardContext(
+          board,
+          attackerColor,
+          () => ChessRulesService.canStepThere(
+            king.row,
+            king.col,
+            [new ChessPieceDto(kingColor, ChessPiecesEnum.King)],
+            row,
+            col,
+            new ChessPieceDto(attacker.color, attacker.piece)
+          )
         );
         if (canHitKing) {
           return true;
@@ -210,19 +215,23 @@ export class ChessBoardLogicUtils {
             if (srcRow === targetRow && srcCol === targetCol) {
               continue;
             }
-            
-            const canMove = ChessRulesService.canStepThere(
-              targetRow,
-              targetCol,
-              board[targetRow][targetCol],
-              srcRow,
-              srcCol,
-              new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+
+            const canMove = ChessBoardLogicUtils.withBoardContext(
+              board,
+              forColor,
+              () => ChessRulesService.canStepThere(
+                targetRow,
+                targetCol,
+                board[targetRow][targetCol],
+                srcRow,
+                srcCol,
+                new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+              )
             );
             if (!canMove) {
               continue;
             }
-            
+
             const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
             if (!ChessBoardLogicUtils.isKingInCheck(afterMove, forColor)) {
               return true;
@@ -293,13 +302,17 @@ export class ChessBoardLogicUtils {
     sourcePiece: ChessPieceDto
   ): boolean {
     const targetCell = board[targetRow][targetCol];
-    const canStepThere = ChessRulesService.canStepThere(
-      targetRow,
-      targetCol,
-      targetCell,
-      srcRow,
-      srcCol,
-      new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+    const canStepThere = ChessBoardLogicUtils.withBoardContext(
+      board,
+      forColor,
+      () => ChessRulesService.canStepThere(
+        targetRow,
+        targetCol,
+        targetCell,
+        srcRow,
+        srcCol,
+        new ChessPieceDto(sourcePiece.color, sourcePiece.piece)
+      )
     );
     if (!canStepThere) {
       return false;
@@ -307,5 +320,25 @@ export class ChessBoardLogicUtils {
 
     const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
     return !ChessBoardLogicUtils.isKingInCheck(afterMove, forColor);
+  }
+
+  private static withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
+    const previousField = ChessBoardStateService.CHESS_FIELD;
+    const previousTurn = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.colorTurn : null;
+    const previousCastle = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.justDidCastle : null;
+    try {
+      ChessBoardStateService.CHESS_FIELD = board;
+      if (ChessBoardStateService.BOARD_HELPER) {
+        ChessBoardStateService.BOARD_HELPER.colorTurn = turn;
+        ChessBoardStateService.BOARD_HELPER.justDidCastle = null;
+      }
+      return callback();
+    } finally {
+      ChessBoardStateService.CHESS_FIELD = previousField;
+      if (ChessBoardStateService.BOARD_HELPER) {
+        ChessBoardStateService.BOARD_HELPER.colorTurn = previousTurn;
+        ChessBoardStateService.BOARD_HELPER.justDidCastle = previousCastle;
+      }
+    }
   }
 }

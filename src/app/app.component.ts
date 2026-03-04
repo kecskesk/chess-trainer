@@ -41,6 +41,7 @@ export class AppComponent {
   } as const;
 
   readonly feedbackUrl = 'https://forms.gle/vymR8USxXXX6WEN99';
+  readonly donationUrl = 'https://ko-fi.com/krisztiankecskes';
   readonly boardThemeOptions: BoardThemeOption[] = [
     { id: 'classic', label: 'Classic', light: '#f1d9b5', dark: '#b58863' },
     { id: 'ocean', label: 'Ocean', light: '#d7edf9', dark: '#4a7997' },

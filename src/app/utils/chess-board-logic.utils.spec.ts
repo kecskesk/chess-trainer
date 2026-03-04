@@ -155,6 +155,18 @@ describe('ChessBoardLogicUtils move legality and simulation', () => {
     expect(hasNoLegal).toBeFalse();
   });
 
+  it('does not mark check as mate when a blocking move exists (Bb4+ pattern)', () => {
+    const board = emptyBoard();
+    board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)]; // Ke1
+    board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)]; // Ke8
+    board[4][1] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)]; // Bb4+
+    board[6][2] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]; // c2 pawn can block with c3
+    board[6][3] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]; // d2 pawn can also block with d3
+
+    expect(ChessBoardLogicUtils.isKingInCheck(board, ChessColorsEnum.White)).toBeTrue();
+    expect(ChessBoardLogicUtils.hasAnyLegalMove(board, ChessColorsEnum.White)).toBeTrue();
+  });
+
   it('simulates normal moves, en-passant, castling, promotion and empty-source guard', () => {
     const board = emptyBoard();
     board[7][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.King)];

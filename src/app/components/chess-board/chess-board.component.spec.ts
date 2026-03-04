@@ -277,7 +277,7 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
     expect(`field${flippedDisplay.row}${flippedDisplay.col}`).toBe('field77');
     expect(component.translateFieldNames(flippedDisplay.row, flippedDisplay.col)).toBe('h1');
     expect(chessBoardStateService.field[flippedDisplay.row][flippedDisplay.col][0]?.piece).toBe(ChessPiecesEnum.King);
-    expect(component.isMateInOneTarget(flippedDisplay.row, flippedDisplay.col)).toBeTrue();
+    expect(!!component.mateInOneTargets[`${flippedDisplay.row}${flippedDisplay.col}`]).toBeTrue();
 
     expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('25%', component.isBoardFlipped)).toBe('75%');
     expect(ChessBoardDisplayUtils.mapPercentCoordinateForDisplay('12.5%', component.isBoardFlipped)).toBe('87.5%');
@@ -1102,7 +1102,7 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview)', () => {
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.onDropListEntered(createEnterLike(7, 0, 6, 0));
-    expect(component.isMateInOneBlunderTarget(6, 0)).toBeTrue();
+    expect(!!component.mateInOneBlunderTargets['60']).toBeTrue();
   });
 
   it('drag-enter preview highlights mate-in-one winning target', () => {
@@ -1113,7 +1113,7 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview)', () => {
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     component.onDropListEntered(createEnterLike(2, 1, 1, 1));
-    expect(component.isMateInOneTarget(1, 1)).toBeTrue();
+    expect(!!component.mateInOneTargets['11']).toBeTrue();
   });
 
   it('canDrop legality check does not mutate mate preview state', () => {
@@ -1124,8 +1124,8 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview)', () => {
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 
     expect(canDropLike(6, 4, 5, 4)).toBeTrue();
-    expect(component.isMateInOneTarget(5, 4)).toBeFalse();
-    expect(component.isMateInOneBlunderTarget(5, 4)).toBeFalse();
+    expect(!!component.mateInOneTargets['54']).toBeFalse();
+    expect(!!component.mateInOneBlunderTargets['54']).toBeFalse();
   });
 
   it('returns highlight class with mate danger priority over other layers', () => {
@@ -1133,11 +1133,11 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview)', () => {
     component.mateInOneTargets['44'] = true;
     component.mateInOneBlunderTargets['44'] = true;
 
-    expect(component.isMateInOneBlunderTarget(4, 4)).toBeTrue();
+    expect(!!component.mateInOneBlunderTargets['44']).toBeTrue();
     delete component.mateInOneBlunderTargets['44'];
-    expect(component.isMateInOneTarget(4, 4)).toBeTrue();
+    expect(!!component.mateInOneTargets['44']).toBeTrue();
     delete component.mateInOneTargets['44'];
-    expect(component.isMateInOneTarget(4, 4)).toBeFalse();
+    expect(!!component.mateInOneTargets['44']).toBeFalse();
   });
 
   it('writes pointer-down debug reasons for game over, empty square, and wrong turn', () => {
@@ -3809,8 +3809,8 @@ describe('ChessBoardComponent additional suggestion coverage (preview helpers)',
       appendGameResultToLastMove: appendSpy
     });
 
-    expect(local.isMateInOneTarget(0, 0)).toBeFalse();
-    expect(local.isMateInOneBlunderTarget(0, 0)).toBeFalse();
+    expect(!!local.mateInOneTargets['00']).toBeFalse();
+    expect(!!local.mateInOneBlunderTargets['00']).toBeFalse();
 
     expect(
       (ChessBoardComponent.prototype as any).getVisibleHistory.call({

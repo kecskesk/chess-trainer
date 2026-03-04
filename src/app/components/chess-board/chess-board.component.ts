@@ -566,14 +566,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return legalTargetCount;
   }
 
-  isMateInOneTarget(targetRow: number, targetCol: number): boolean {
-    return !!this.mateInOneTargets[`${targetRow}${targetCol}`];
-  }
-
-  isMateInOneBlunderTarget(targetRow: number, targetCol: number): boolean {
-    return !!this.mateInOneBlunderTargets[`${targetRow}${targetCol}`];
-  }
-
   onDebugPanelToggle(isOpen: boolean): void {
     this.isDebugPanelOpen = !!isOpen;
     ChessBoardStorageService.persistDebugPanelOpenState(this.debugPanelStorageKey, this.isDebugPanelOpen);

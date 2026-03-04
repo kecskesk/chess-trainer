@@ -3,9 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "prestart": "node scripts/generate-build-info.js",
     "start": "ng serve",
     "lint": "ng lint",
+    "prebuild": "node scripts/generate-build-info.js",
     "build": "ng build",
+    "prebuild:prod": "node scripts/generate-build-info.js",
     "build:prod": "ng build --configuration production",
     "firebase:deploy": "npm run build:prod && npx firebase-tools deploy --only hosting",
     "firebase:preview": "npm run build:prod && npx firebase-tools hosting:channel:deploy preview",
