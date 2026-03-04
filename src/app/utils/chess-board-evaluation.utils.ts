@@ -4,7 +4,7 @@ import { ChessBoardLogicUtils } from './chess-board-logic.utils';
 
 export interface IEvaluationGetParams {
   halfMoveIndex: number;
-  getFenForHistoryIndex: (halfMoveIndex: number) => string;
+  moveSnapshots: IGameplaySnapshot[];
   evalByHistoryIndex: Map<number, string>;
   evalCacheByFen: Map<string, string>;
   pendingEvalByHistoryIndex: Set<number>;
@@ -32,7 +32,7 @@ export class ChessBoardEvaluationUtils {
   static getEvaluationForMove(params: IEvaluationGetParams): string {
     const {
       halfMoveIndex,
-      getFenForHistoryIndex,
+      moveSnapshots,
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
@@ -46,7 +46,7 @@ export class ChessBoardEvaluationUtils {
       return naPlaceholder;
     }
 
-    const fen = getFenForHistoryIndex(halfMoveIndex);
+    const fen = ChessBoardEvaluationUtils.getFenForHistoryIndex(halfMoveIndex, moveSnapshots);
     if (!fen) {
       return naPlaceholder;
     }

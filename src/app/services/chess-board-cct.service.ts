@@ -5,26 +5,19 @@ import { HttpClient } from '@angular/common/http';
 import { ChessConstants } from '../constants/chess.constants';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { CctCategoryEnum } from '../model/enums/cct-category.enum';
 import { ICctRecommendation, ICctRecommendationScored } from '../model/interfaces/cct-recommendation.interface';
 import { IOpeningAssetItem } from '../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../model/interfaces/parsed-opening.interface';
+import { IChessBoardCctOpeningUiText } from '../model/interfaces/chess-board-cct-opening-ui-text.interface';
+import { IChessBoardCctScoredBuckets } from '../model/interfaces/chess-board-cct-scored-buckets.interface';
 import { ChessRulesService } from '../services/chess-rules.service';
 import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessBoardCctUtils } from '../utils/chess-board-cct.utils';
 import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 import { UiTextLoaderService } from './ui-text-loader.service';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
-
-interface IOpeningUiText {
-  message: {
-    openingLabel: string;
-    matchedSteps: string;
-    bookRecommendationWhite: string;
-    bookRecommendationBlack: string;
-    lineLabel: string;
-  };
-}
 
 @Injectable({ providedIn: 'root' })
 export class ChessBoardCctService {
@@ -51,97 +44,184 @@ export class ChessBoardCctService {
     }
 
     const clonedBoard = ChessBoardLogicUtils.cloneField(board);
-    const positionKey = this.getPositionKey(clonedBoard, forColor);
+    const positionKey = ChessBoardLogicUtils.getPositionKey(clonedBoard, forColor, {});
     if (positionKey === this.cctRecommendationsCacheKey) {
       return this.cctRecommendationsCache;
     }
 
+    const buckets = this.collectScoredRecommendations(clonedBoard, forColor);
+    this.updateCctRecommendationsCache(positionKey, buckets);
+    return this.cctRecommendationsCache;
+  }
+
+  private collectScoredRecommendations(board: ChessPieceDto[][][], forColor: ChessColorsEnum): IChessBoardCctScoredBuckets {
     const enemyColor = forColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
-    const captures: ICctRecommendationScored[] = [], checks: ICctRecommendationScored[] = [], threats: ICctRecommendationScored[] = [];
+    const buckets: IChessBoardCctScoredBuckets = {
+      captures: [],
+      checks: [],
+      threats: []
+    };
 
     for (let srcRow = ChessConstants.MIN_INDEX; srcRow <= ChessConstants.MAX_INDEX; srcRow++) {
       for (let srcCol = ChessConstants.MIN_INDEX; srcCol <= ChessConstants.MAX_INDEX; srcCol++) {
-        const sourceCell = clonedBoard[srcRow][srcCol];
+        const sourceCell = board[srcRow][srcCol];
         if (!(sourceCell && sourceCell[0] && sourceCell[0].color === forColor)) {
           continue;
         }
+
         const sourcePiece = sourceCell[0];
         for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
           for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
             if (srcRow === targetRow && srcCol === targetCol) {
               continue;
             }
-
-            const targetCell = clonedBoard[targetRow][targetCol];
-            const canMove = this.canPieceMove(clonedBoard, forColor, targetRow, targetCol, targetCell, srcRow, srcCol, sourcePiece);
-            if (!canMove) {
-              continue;
-            }
-
-            const afterMove = ChessBoardLogicUtils.simulateMove(clonedBoard, srcRow, srcCol, targetRow, targetCol);
-            if (ChessBoardLogicUtils.isKingInCheck(afterMove, forColor)) {
-              continue;
-            }
-
-            const isCapture = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
-            const isCheck = ChessBoardLogicUtils.isKingInCheck(afterMove, enemyColor);
-            const threatenedPieces = ChessBoardCctUtils.getThreatenedEnemyPiecesByMovedPiece(
-              afterMove,
-              targetRow,
-              targetCol,
+            this.evaluateCctMoveCandidate(
+              board,
               forColor,
               enemyColor,
-              (tRow, tCol, tCell, sRow, sCol, sPiece, attackerColor) =>
-                this.withBoardContext(afterMove, attackerColor, () =>
-                  ChessRulesService.canStepThere(tRow, tCol, tCell, sRow, sCol, new ChessPieceDto(sPiece.color, sPiece.piece))
-                )
+              srcRow,
+              srcCol,
+              targetRow,
+              targetCol,
+              sourcePiece,
+              buckets
             );
-
-            const move = ChessBoardCctUtils.formatCctMove(sourcePiece.piece, srcRow, srcCol, targetRow, targetCol, isCapture, isCheck);
-            const from = ChessBoardCctUtils.toAlgebraicSquare(srcRow, srcCol);
-            const to = ChessBoardCctUtils.toAlgebraicSquare(targetRow, targetCol);
-
-            if (isCapture && targetCell && targetCell[0]) {
-              const capturedPieceValue = ChessRulesService.valueOfPiece(targetCell[0].piece);
-              const attackerValue = ChessRulesService.valueOfPiece(sourcePiece.piece);
-              captures.push({
-                move,
-                tooltip: `${from} → ${to}: captures ${ChessBoardCctUtils.pieceName(targetCell[0].piece)}`,
-                score: (capturedPieceValue * 10) - attackerValue
-              });
-            }
-
-            if (isCheck) {
-              checks.push({
-                move,
-                tooltip: `${from} → ${to}: check${isCapture ? ' with capture' : ''}`,
-                score: (isCapture ? 50 : 0) + threatenedPieces.length
-              });
-            }
-
-            if (!isCapture && !isCheck && threatenedPieces.length > 0) {
-              const threatTargets = threatenedPieces.map(piece => ChessBoardCctUtils.pieceName(piece));
-              const threatScore = threatenedPieces
-                .map(piece => ChessRulesService.valueOfPiece(piece))
-                .reduce((acc, value) => acc + value, 0);
-              threats.push({
-                move,
-                tooltip: `${from} → ${to}: threatens ${threatTargets.join(', ')}`,
-                score: threatScore
-              });
-            }
           }
         }
       }
     }
 
+    return buckets;
+  }
+
+  private evaluateCctMoveCandidate(
+    board: ChessPieceDto[][][],
+    forColor: ChessColorsEnum,
+    enemyColor: ChessColorsEnum,
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number,
+    sourcePiece: ChessPieceDto,
+    buckets: IChessBoardCctScoredBuckets
+  ): void {
+    const targetCell = board[targetRow][targetCol];
+    const canMove = this.canPieceMove(board, forColor, targetRow, targetCol, targetCell, srcRow, srcCol, sourcePiece);
+    if (!canMove) {
+      return;
+    }
+
+    const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+    if (ChessBoardLogicUtils.isKingInCheck(afterMove, forColor)) {
+      return;
+    }
+
+    const isCapture = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
+    const isCheck = ChessBoardLogicUtils.isKingInCheck(afterMove, enemyColor);
+    const threatenedPieces = this.getThreatenedEnemyPieces(afterMove, targetRow, targetCol, forColor, enemyColor);
+
+    const move = ChessBoardCctUtils.formatCctMove(sourcePiece.piece, srcRow, srcCol, targetRow, targetCol, isCapture, isCheck);
+    const from = ChessBoardCctUtils.toAlgebraicSquare(srcRow, srcCol);
+    const to = ChessBoardCctUtils.toAlgebraicSquare(targetRow, targetCol);
+
+    this.pushCaptureRecommendation(buckets.captures, sourcePiece, targetCell, move, from, to, isCapture);
+    this.pushCheckRecommendation(buckets.checks, move, from, to, isCapture, isCheck, threatenedPieces.length);
+    this.pushThreatRecommendation(buckets.threats, move, from, to, isCapture, isCheck, threatenedPieces);
+  }
+
+  private getThreatenedEnemyPieces(
+    afterMove: ChessPieceDto[][][],
+    targetRow: number,
+    targetCol: number,
+    forColor: ChessColorsEnum,
+    enemyColor: ChessColorsEnum
+  ): ChessPiecesEnum[] {
+    return ChessBoardCctUtils.getThreatenedEnemyPiecesByMovedPiece(
+      afterMove,
+      targetRow,
+      targetCol,
+      forColor,
+      enemyColor,
+      (tRow, tCol, tCell, sRow, sCol, sPiece, attackerColor) =>
+        this.withBoardContext(afterMove, attackerColor, () =>
+          ChessRulesService.canStepThere(tRow, tCol, tCell, sRow, sCol, new ChessPieceDto(sPiece.color, sPiece.piece))
+        )
+    );
+  }
+
+  private pushCaptureRecommendation(
+    captures: ICctRecommendationScored[],
+    sourcePiece: ChessPieceDto,
+    targetCell: ChessPieceDto[],
+    move: string,
+    from: string,
+    to: string,
+    isCapture: boolean
+  ): void {
+    if (!(isCapture && targetCell && targetCell[0])) {
+      return;
+    }
+
+    const capturedPieceValue = ChessRulesService.valueOfPiece(targetCell[0].piece);
+    const attackerValue = ChessRulesService.valueOfPiece(sourcePiece.piece);
+    captures.push({
+      move,
+      tooltip: `${from} → ${to}: captures ${ChessBoardCctUtils.pieceName(targetCell[0].piece)}`,
+      score: (capturedPieceValue * 10) - attackerValue
+    });
+  }
+
+  private pushCheckRecommendation(
+    checks: ICctRecommendationScored[],
+    move: string,
+    from: string,
+    to: string,
+    isCapture: boolean,
+    isCheck: boolean,
+    threatenedCount: number
+  ): void {
+    if (!isCheck) {
+      return;
+    }
+
+    checks.push({
+      move,
+      tooltip: `${from} → ${to}: check${isCapture ? ' with capture' : ''}`,
+      score: (isCapture ? 50 : 0) + threatenedCount
+    });
+  }
+
+  private pushThreatRecommendation(
+    threats: ICctRecommendationScored[],
+    move: string,
+    from: string,
+    to: string,
+    isCapture: boolean,
+    isCheck: boolean,
+    threatenedPieces: ChessPiecesEnum[]
+  ): void {
+    if (isCapture || isCheck || threatenedPieces.length < 1) {
+      return;
+    }
+
+    const threatTargets = threatenedPieces.map(piece => ChessBoardCctUtils.pieceName(piece));
+    const threatScore = threatenedPieces
+      .map(piece => ChessRulesService.valueOfPiece(piece))
+      .reduce((acc, value) => acc + value, 0);
+    threats.push({
+      move,
+      tooltip: `${from} → ${to}: threatens ${threatTargets.join(', ')}`,
+      score: threatScore
+    });
+  }
+
+  private updateCctRecommendationsCache(positionKey: string, buckets: IChessBoardCctScoredBuckets): void {
     this.cctRecommendationsCache = {
-      [CctCategoryEnum.Captures]: ChessBoardCctUtils.pickTopRecommendations(captures),
-      [CctCategoryEnum.Checks]: ChessBoardCctUtils.pickTopRecommendations(checks),
-      [CctCategoryEnum.Threats]: ChessBoardCctUtils.pickTopRecommendations(threats)
+      [CctCategoryEnum.Captures]: ChessBoardCctUtils.pickTopRecommendations(buckets.captures),
+      [CctCategoryEnum.Checks]: ChessBoardCctUtils.pickTopRecommendations(buckets.checks),
+      [CctCategoryEnum.Threats]: ChessBoardCctUtils.pickTopRecommendations(buckets.threats)
     };
     this.cctRecommendationsCacheKey = positionKey;
-    return this.cctRecommendationsCache;
   }
 
   loadOpeningsFromAssets(
@@ -186,7 +266,7 @@ export class ChessBoardCctService {
 
   updateRecognizedOpeningForCurrentHistory(
     historySteps: string[],
-    uiText: IOpeningUiText,
+    uiText: IChessBoardCctOpeningUiText,
     naPlaceholder: string
   ): { activeOpening: IParsedOpening | null, debugText: string } {
     if (this.openings.length < 1) {
@@ -222,7 +302,7 @@ export class ChessBoardCctService {
     opening: IParsedOpening,
     matchedDepth: number,
     historyDepth: number,
-    uiText: IOpeningUiText,
+    uiText: IChessBoardCctOpeningUiText,
     naPlaceholder: string
   ): string {
     if (!opening) {
@@ -251,10 +331,6 @@ export class ChessBoardCctService {
     }
 
     return parts.join('\n');
-  }
-
-  private getPositionKey(board: ChessPieceDto[][][], turn: ChessColorsEnum): string {
-    return ChessBoardLogicUtils.getPositionKey(board, turn, {});
   }
 
   private withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
@@ -407,4 +483,5 @@ export class ChessBoardCctService {
     return { opening: bestMatch, baseMatchedDepth: bestMatchDepth };
   }
 }
+
 

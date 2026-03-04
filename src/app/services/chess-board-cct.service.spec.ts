@@ -36,7 +36,7 @@ describe('ChessBoardCctService recommendation cache', () => {
       [CctCategoryEnum.Threats]: []
     };
     (service as any).cctRecommendationsCacheKey = 'same';
-    spyOn<any>(service, 'getPositionKey').and.returnValue('same');
+    spyOn(ChessBoardLogicUtils, 'getPositionKey').and.returnValue('same');
 
     const cached = service.ensureCctRecommendations(emptyBoard(), ChessColorsEnum.White, 0);
     expect(cached[CctCategoryEnum.Captures][0].move).toBe('a');
@@ -49,7 +49,7 @@ describe('ChessBoardCctService recommendation cache', () => {
     board[4][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)];
     board[3][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
 
-    spyOn<any>(service, 'getPositionKey').and.returnValue('p1');
+    spyOn(ChessBoardLogicUtils, 'getPositionKey').and.returnValue('p1');
     spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) => targetRow === 3 && targetCol === 4);
     spyOn(ChessBoardLogicUtils, 'simulateMove').and.callFake((b) => ChessBoardLogicUtils.cloneField(b));
     spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.callFake((_b, color) => color === ChessColorsEnum.Black);
@@ -67,7 +67,7 @@ describe('ChessBoardCctService recommendation cache', () => {
     board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
     board[4][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Bishop)];
 
-    spyOn<any>(service, 'getPositionKey').and.returnValue('p2');
+    spyOn(ChessBoardLogicUtils, 'getPositionKey').and.returnValue('p2');
     spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) => targetRow === 3 && targetCol === 3);
     spyOn(ChessBoardLogicUtils, 'simulateMove').and.callFake((b) => ChessBoardLogicUtils.cloneField(b));
     spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.returnValues(true, false, false);
@@ -83,7 +83,7 @@ describe('ChessBoardCctService recommendation cache', () => {
     board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)];
     board[1][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Rook)];
 
-    spyOn<any>(service, 'getPositionKey').and.returnValue('p3');
+    spyOn(ChessBoardLogicUtils, 'getPositionKey').and.returnValue('p3');
     spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) => targetRow === 2 && targetCol === 4);
     spyOn(ChessBoardLogicUtils, 'simulateMove').and.callFake((b) => ChessBoardLogicUtils.cloneField(b));
     spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.callFake((_b, color) => color === ChessColorsEnum.White);
@@ -340,7 +340,7 @@ describe('ChessBoardCctService opening helper formatting and matching', () => {
     expect((service as any).normalizeNotationToken('2...Nf3 ')).toBe('..Nf3');
     expect((service as any).normalizeNotationToken('')).toBe('');
     expect((service as any).parseOpeningsPayload(null)).toEqual([]);
-    expect(typeof (service as any).getPositionKey(emptyBoard(), ChessColorsEnum.White)).toBe('string');
+    expect(typeof ChessBoardLogicUtils.getPositionKey(emptyBoard(), ChessColorsEnum.White, {})).toBe('string');
 
     const openings = [
       { name: 'Complete', steps: ['e4'], raw: {} },
@@ -387,7 +387,7 @@ describe('ChessBoardCctService threatened-piece callback wiring', () => {
     board[4][4] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Queen)];
     board[3][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Pawn)];
 
-    spyOn<any>(service, 'getPositionKey').and.returnValue('cb');
+    spyOn(ChessBoardLogicUtils, 'getPositionKey').and.returnValue('cb');
     const threatSpy = spyOn(ChessBoardCctUtils, 'getThreatenedEnemyPiecesByMovedPiece').and.callThrough();
     const stepSpy = spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) => targetRow === 3 && targetCol === 4);
     spyOn(ChessBoardLogicUtils, 'simulateMove').and.returnValue(board);

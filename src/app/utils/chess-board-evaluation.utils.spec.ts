@@ -17,10 +17,16 @@ describe('ChessBoardEvaluationUtils', () => {
     const evalCacheByFen = new Map<string, string>([['fen-1', '+0.42']]);
     const pendingEvalByHistoryIndex = new Set<number>([2]);
     const evalErrorByHistoryIndex = new Set<number>([3]);
+    spyOn(ChessBoardEvaluationUtils, 'getFenForHistoryIndex').and.callFake((idx: number) => {
+      if (idx < 0) {
+        return '';
+      }
+      return `fen-${idx}`;
+    });
 
     const fromFenCache = ChessBoardEvaluationUtils.getEvaluationForMove({
       halfMoveIndex: 1,
-      getFenForHistoryIndex: () => 'fen-1',
+      moveSnapshots: [] as any,
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
@@ -34,7 +40,7 @@ describe('ChessBoardEvaluationUtils', () => {
 
     const pending = ChessBoardEvaluationUtils.getEvaluationForMove({
       halfMoveIndex: 2,
-      getFenForHistoryIndex: () => 'fen-2',
+      moveSnapshots: [] as any,
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
@@ -47,7 +53,7 @@ describe('ChessBoardEvaluationUtils', () => {
 
     const error = ChessBoardEvaluationUtils.getEvaluationForMove({
       halfMoveIndex: 3,
-      getFenForHistoryIndex: () => 'fen-3',
+      moveSnapshots: [] as any,
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
@@ -60,7 +66,7 @@ describe('ChessBoardEvaluationUtils', () => {
 
     const byIndex = ChessBoardEvaluationUtils.getEvaluationForMove({
       halfMoveIndex: 4,
-      getFenForHistoryIndex: () => 'fen-4',
+      moveSnapshots: [] as any,
       evalByHistoryIndex: new Map<number, string>([[4, '-0.33']]),
       evalCacheByFen: new Map<string, string>(),
       pendingEvalByHistoryIndex: new Set<number>(),
@@ -73,7 +79,7 @@ describe('ChessBoardEvaluationUtils', () => {
 
     const na = ChessBoardEvaluationUtils.getEvaluationForMove({
       halfMoveIndex: -1,
-      getFenForHistoryIndex: () => '',
+      moveSnapshots: [] as any,
       evalByHistoryIndex: new Map<number, string>(),
       evalCacheByFen: new Map<string, string>(),
       pendingEvalByHistoryIndex: new Set<number>(),

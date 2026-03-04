@@ -657,47 +657,71 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
         if (!(sourceCell && sourceCell[0] && sourceCell[0].color === ofColor)) {
           continue;
         }
-        const sourcePiece = sourceCell[0];
-        for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
-          for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
-            if (srcRow === targetRow && srcCol === targetCol) {
-              continue;
-            }
-            const legalMove = this.canPlayLegalMove(
-              board,
-              srcRow,
-              srcCol,
-              targetRow,
-              targetCol,
-              ofColor,
-              sourcePiece
-            );
-            if (!legalMove) {
-              continue;
-            }
-
-            ChessBoardStateService.addPossible({ row: targetRow, col: targetCol });
-            const targetCell = board[targetRow][targetCol];
-            const isCapture = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
-            if (isCapture) {
-              ChessBoardStateService.addHit({ row: targetRow, col: targetCol });
-            }
-            const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
-            if (this.isKingInCheck(afterMove, enemyColor)) {
-              ChessBoardStateService.addCheck({ row: targetRow, col: targetCol });
-              ChessBoardStateService.createArrowFromVisualization(
-                this.createVisualizationArrow(
-                  { row: 8 - srcRow, col: srcCol + 1 },
-                  { row: 8 - targetRow, col: targetCol + 1 },
-                  'red',
-                  0.25
-                )
-              );
-            }
-          }
-        }
+        this.collectPossibleMovesForPiece(board, ofColor, enemyColor, srcRow, srcCol, sourceCell[0]);
       }
     }
+  }
+
+  private collectPossibleMovesForPiece(
+    board: ChessPieceDto[][][],
+    ofColor: ChessColorsEnum,
+    enemyColor: ChessColorsEnum,
+    srcRow: number,
+    srcCol: number,
+    sourcePiece: ChessPieceDto
+  ): void {
+    for (let targetRow = ChessConstants.MIN_INDEX; targetRow <= ChessConstants.MAX_INDEX; targetRow++) {
+      for (let targetCol = ChessConstants.MIN_INDEX; targetCol <= ChessConstants.MAX_INDEX; targetCol++) {
+        if (srcRow === targetRow && srcCol === targetCol) {
+          continue;
+        }
+        const legalMove = this.canPlayLegalMove(
+          board,
+          srcRow,
+          srcCol,
+          targetRow,
+          targetCol,
+          ofColor,
+          sourcePiece
+        );
+        if (!legalMove) {
+          continue;
+        }
+        this.visualizePossibleMove(board, enemyColor, srcRow, srcCol, targetRow, targetCol);
+      }
+    }
+  }
+
+  private visualizePossibleMove(
+    board: ChessPieceDto[][][],
+    enemyColor: ChessColorsEnum,
+    srcRow: number,
+    srcCol: number,
+    targetRow: number,
+    targetCol: number
+  ): void {
+    ChessBoardStateService.addPossible({ row: targetRow, col: targetCol });
+
+    const targetCell = board[targetRow][targetCol];
+    const isCapture = !!(targetCell && targetCell[0] && targetCell[0].color === enemyColor);
+    if (isCapture) {
+      ChessBoardStateService.addHit({ row: targetRow, col: targetCol });
+    }
+
+    const afterMove = ChessBoardLogicUtils.simulateMove(board, srcRow, srcCol, targetRow, targetCol);
+    if (!this.isKingInCheck(afterMove, enemyColor)) {
+      return;
+    }
+
+    ChessBoardStateService.addCheck({ row: targetRow, col: targetCol });
+    ChessBoardStateService.createArrowFromVisualization(
+      this.createVisualizationArrow(
+        { row: ChessConstants.BOARD_SIZE - srcRow, col: srcCol + 1 },
+        { row: ChessConstants.BOARD_SIZE - targetRow, col: targetCol + 1 },
+        'red',
+        0.25
+      )
+    );
   }
 
   startNewGame(): void {
@@ -924,7 +948,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   getEvaluationForMove(halfMoveIndex: number): string {
     return ChessBoardEvaluationUtils.getEvaluationForMove({
       halfMoveIndex,
-      getFenForHistoryIndex: (idx) => this.getFenForHistoryIndex(idx),
+      moveSnapshots: this.moveSnapshots,
       evalByHistoryIndex: this.evalByHistoryIndex,
       evalCacheByFen: this.evalCacheByFen,
       pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
@@ -2060,7 +2084,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       runToken,
       getCurrentRunToken: () => this.evaluationRunToken,
       visibleHistoryLength: this.getVisibleHistory().length,
-      getFenForHistoryIndex: (idx) => this.getFenForHistoryIndex(idx),
+      getFenForHistoryIndex: (idx) => ChessBoardEvaluationUtils.getFenForHistoryIndex(idx, this.moveSnapshots),
       evaluateFen: (fen) => this.activeStockfishService!.evaluateFen(fen),
       evalByHistoryIndex: this.evalByHistoryIndex,
       evalCacheByFen: this.evalCacheByFen,
@@ -2174,10 +2198,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       board: this.chessBoardStateService.field,
       turnColor: this.chessBoardStateService.boardHelper.colorTurn
     });
-  }
-
-  private getFenForHistoryIndex(halfMoveIndex: number): string {
-    return ChessBoardEvaluationUtils.getFenForHistoryIndex(halfMoveIndex, this.moveSnapshots);
   }
 
   private getActiveSnapshotIndex(): number {

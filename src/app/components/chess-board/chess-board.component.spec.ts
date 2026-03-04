@@ -23,6 +23,7 @@ import { ChessBoardStorageService } from '../../services/chess-board-storage.ser
 import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 import { ChessConstants } from '../../constants/chess.constants';
 import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
+import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -2932,7 +2933,7 @@ describe('ChessBoardComponent stockfish evaluation thresholds', () => {
   });
 
   it('covers evaluation helpers and analysis meter branches', () => {
-    spyOn(component as any, 'getFenForHistoryIndex').and.returnValue('fen1');
+    spyOn(ChessBoardEvaluationUtils, 'getFenForHistoryIndex').and.returnValue('fen1');
     (component as any).evalByHistoryIndex.set(2, '+0.31');
     expect(component.getEvaluationForMove(2)).toBe('+0.31');
     expect(component.getEvaluationForMove(0)).toBe('...');
@@ -3016,7 +3017,7 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
 
     (component as any).evaluationRunToken = 10;
     spyOn(component as any, 'getVisibleHistory').and.returnValue(['e2-e4']);
-    spyOn(component as any, 'getFenForHistoryIndex').and.returnValue('fen-a');
+    spyOn(ChessBoardEvaluationUtils, 'getFenForHistoryIndex').and.returnValue('fen-a');
     stockfishServiceStub.evaluateFen.calls.reset();
     await (component as any).refreshVisibleHistoryEvaluations(9);
     expect(stockfishServiceStub.evaluateFen).not.toHaveBeenCalled();
@@ -3040,6 +3041,7 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
     (component as any).evaluationRunToken = 31;
     rejectEval(new Error('late failure'));
     await rejectRun;
+    (ChessBoardEvaluationUtils.getFenForHistoryIndex as jasmine.Spy).and.callThrough();
 
     const cleanComponent = new ChessBoardComponent(
       chessBoardStateService,
@@ -3049,7 +3051,7 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
       undefined,
       stockfishServiceStub as any
     );
-    expect((cleanComponent as any).getFenForHistoryIndex(-1)).toBe('');
+    expect(ChessBoardEvaluationUtils.getFenForHistoryIndex(-1, (cleanComponent as any).moveSnapshots)).toBe('');
   });
 
   it('returns current move eval text when engine exists and cursor is on a move', () => {
@@ -3246,7 +3248,7 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
 
     (component as any).chessBoardCctService = new ChessBoardCctService({} as any);
     const cctSvc = (component as any).chessBoardCctService as any;
-    const positionKeySpy = spyOn<any>(cctSvc, 'getPositionKey').and.returnValues('same-key', 'key-a', 'key-b');
+    const positionKeySpy = spyOn(ChessBoardLogicUtils, 'getPositionKey').and.returnValues('same-key', 'key-a', 'key-b');
     cctSvc.cctRecommendationsCacheKey = 'same-key';
     cctSvc.cctRecommendationsCache = {
       [CctCategoryEnum.Captures]: [],
@@ -3289,7 +3291,7 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
 
     (component as any).chessBoardCctService = new ChessBoardCctService({} as any);
     const cctSvc2 = (component as any).chessBoardCctService as any;
-    spyOn<any>(cctSvc2, 'getPositionKey').and.returnValue('check-only');
+    spyOn(ChessBoardLogicUtils, 'getPositionKey').and.returnValue('check-only');
     spyOn(ChessRulesService, 'canStepThere').and.callFake((targetRow, targetCol) => targetRow === 5 && targetCol === 4);
     spyOn(ChessBoardLogicUtils, 'simulateMove').and.callFake((b: any) => ChessBoardLogicUtils.cloneField(b));
     spyOn(ChessBoardLogicUtils, 'isKingInCheck').and.callFake((_b: any, color: ChessColorsEnum) => color === ChessColorsEnum.Black);
