@@ -136,6 +136,25 @@ describe('ChessBoardClockUtils tick behavior', () => {
     expect(nonProgress.shouldStop).toBeFalse();
   });
 
+  it('does not decrement white clock when infinite time is enabled', () => {
+    spyOn(Date, 'now').and.returnValue(2000);
+    const infiniteWhiteTick = ChessBoardClockUtils.tickClock(
+      true,
+      true,
+      false,
+      1000,
+      ChessColorsEnum.White,
+      60000,
+      60000,
+      true
+    );
+
+    expect(infiniteWhiteTick.whiteClockMs).toBe(60000);
+    expect(infiniteWhiteTick.blackClockMs).toBe(60000);
+    expect(infiniteWhiteTick.forfeitColor).toBeNull();
+    expect(infiniteWhiteTick.shouldRender).toBeFalse();
+  });
+
 });
 
 describe('ChessBoardClockUtils increment and forfeit behavior', () => {

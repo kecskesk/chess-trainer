@@ -1,6 +1,7 @@
 import { ChessConstants } from '../constants/chess.constants';
 import { ChessPositionDto } from '../model/chess-position.dto';
 import { ChessPieceDto } from '../model/chess-piece.dto';
+import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
@@ -330,14 +331,18 @@ export class ChessBoardLogicUtils {
     try {
       ChessBoardStateService.CHESS_FIELD = board;
       if (!ChessBoardStateService.BOARD_HELPER) {
-        ChessBoardStateService.BOARD_HELPER = {
-          history: {},
-          colorTurn: turn,
-          justDidCastle: null,
-          possibles: {},
-          hits: {},
-          checks: {}
-        } as any;
+        ChessBoardStateService.BOARD_HELPER = new ChessBoardHelperDto(
+          '',
+          {},
+          {},
+          {},
+          {},
+          {},
+          turn,
+          null,
+          null,
+          null
+        );
       } else {
         ChessBoardStateService.BOARD_HELPER.colorTurn = turn;
         ChessBoardStateService.BOARD_HELPER.justDidCastle = null;

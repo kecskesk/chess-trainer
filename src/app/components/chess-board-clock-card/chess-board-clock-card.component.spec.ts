@@ -1,4 +1,5 @@
 import { ChessBoardClockCardComponent } from './chess-board-clock-card.component';
+import { ChessHandicapEnum } from '../../model/enums/chess-handicap.enum';
 
 describe('ChessBoardClockCardComponent', () => {
   let component: ChessBoardClockCardComponent;
@@ -63,5 +64,15 @@ describe('ChessBoardClockCardComponent', () => {
 
     component.blackClockMs = Number.NaN;
     expect(component.isBlackClockLow).toBeTrue();
+  });
+
+  it('emits handicap changes and formats infinite white clock', () => {
+    const emitSpy = spyOn(component.handicapChange, 'emit');
+
+    component.onHandicapSelect(ChessHandicapEnum.InfiniteTime);
+    expect(emitSpy).toHaveBeenCalledWith(ChessHandicapEnum.InfiniteTime);
+
+    expect(component.formatPlayerClock(12345, true)).toBe('INF');
+    expect(component.formatPlayerClock(12345, false)).toBe('00:12.3');
   });
 });

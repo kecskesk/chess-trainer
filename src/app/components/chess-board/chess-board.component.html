@@ -61,7 +61,10 @@
       [currentAnalysisEvalText]="getCurrentAnalysisEvalText()"
       [turnColor]="chessBoardStateService.boardHelper.colorTurn"
       [isGameOver]="chessBoardStateService.boardHelper.gameOver"
+      [selectedHandicap]="selectedHandicap"
+      [whiteHasInfiniteTime]="whiteHasInfiniteTime"
       (timeControlChange)="applyTimeControl($event.baseMinutes, $event.incrementSeconds, $event.label)"
+      (handicapChange)="onHandicapChange($event)"
       (toggleClock)="startOrPauseClock()"
       (resetClock)="resetClock()"></app-chess-board-clock-card>
 

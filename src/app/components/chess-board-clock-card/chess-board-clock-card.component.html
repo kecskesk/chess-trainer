@@ -29,7 +29,7 @@
             <span class="clock-player">{{uiText.clock.black}}</span>
             <span class="clock-status" [class.clock-status--running]="isBlackClockActive"></span>
           </div>
-          <span class="clock-time">{{formatClock(blackClockMs)}}</span>
+          <span class="clock-time">{{formatPlayerClock(blackClockMs, false)}}</span>
         </div>
         <div class="clock-display"
              [class.clock-display--active]="isWhiteClockActive"
@@ -38,12 +38,21 @@
             <span class="clock-player">{{uiText.clock.white}}</span>
             <span class="clock-status" [class.clock-status--running]="isWhiteClockActive"></span>
           </div>
-          <span class="clock-time">{{formatClock(whiteClockMs)}}</span>
+          <span class="clock-time">{{formatPlayerClock(whiteClockMs, whiteHasInfiniteTime)}}</span>
         </div>
       </div>
     </div>
 
     <div class="clock-controls">
+      <div class="clock-controls-grid">
+        <button
+          *ngFor="let option of handicapOptions"
+          class="time-btn"
+          [class.time-btn--selected]="selectedHandicap === option.value"
+          (click)="onHandicapSelect(option.value)">
+          {{option.label}}
+        </button>
+      </div>
       <div class="clock-controls-grid">
         <button class="time-btn"
           [disabled]="clockStarted"

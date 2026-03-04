@@ -11,6 +11,7 @@ export class ChessBoardTimeControlService {
   incrementMs = 0;
   whiteClockMs = 0;
   blackClockMs = 0;
+  whiteInfiniteTime = false;
   clockStarted = false;
   clockRunning = false;
   lastClockTickAt = 0;
@@ -25,6 +26,7 @@ export class ChessBoardTimeControlService {
     this.incrementMs = Math.max(0, incrementSeconds) * 1000;
     this.whiteClockMs = baseMs;
     this.blackClockMs = baseMs;
+    this.whiteInfiniteTime = false;
     this.clockStarted = false;
     this.clockRunning = false;
     this.lastClockTickAt = 0;
@@ -66,7 +68,8 @@ export class ChessBoardTimeControlService {
       this.lastClockTickAt,
       activeColor,
       this.whiteClockMs,
-      this.blackClockMs
+      this.blackClockMs,
+      this.whiteInfiniteTime
     );
     if (tickResult.shouldStop) {
       return tickResult;

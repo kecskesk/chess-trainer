@@ -55,7 +55,8 @@ export class ChessBoardClockUtils {
     lastClockTickAt: number,
     activeColor: ChessColorsEnum,
     whiteClockMs: number,
-    blackClockMs: number
+    blackClockMs: number,
+    whiteInfiniteTime = false
   ): IClockTickResult {
     if (!clockRunning || !clockStarted || isGameOver) {
       return {
@@ -82,6 +83,16 @@ export class ChessBoardClockUtils {
     }
 
     if (activeColor === ChessColorsEnum.White) {
+      if (whiteInfiniteTime) {
+        return {
+          shouldStop: false,
+          shouldRender: false,
+          forfeitColor: null,
+          lastClockTickAt: now,
+          whiteClockMs,
+          blackClockMs
+        };
+      }
       const nextWhiteClockMs = Math.max(0, whiteClockMs - elapsedMs);
       return {
         shouldStop: false,

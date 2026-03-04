@@ -2,6 +2,7 @@ import { ChessBoardComponent } from './chess-board.component';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessHandicapEnum } from '../../model/enums/chess-handicap.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { Observable, of, throwError } from 'rxjs';
 import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
@@ -2031,10 +2032,13 @@ describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', 
   });
 
   it('runs startNewGame and startClock callback branches', () => {
-    const reloadSpy = jasmine.createSpy('reload');
-    (component as any).windowRef = { location: { reload: reloadSpy } };
+    const resetBoardStateSpy = spyOn(component, 'resetBoardState').and.callThrough();
+    const resetClockSpy = spyOn(component, 'resetClock').and.callThrough();
+    const initializeTimelineSpy = spyOn<any>(component, 'initializeSnapshotTimeline').and.callThrough();
     component.startNewGame();
-    expect(reloadSpy).toHaveBeenCalled();
+    expect(resetBoardStateSpy).toHaveBeenCalled();
+    expect(resetClockSpy).toHaveBeenCalled();
+    expect(initializeTimelineSpy).toHaveBeenCalled();
 
     const tickSpy = spyOn<any>(component, 'tickClock').and.callFake(() => undefined);
     const setIntervalSpy = spyOn(window, 'setInterval').and.callFake((callback: TimerHandler) => {
@@ -2051,6 +2055,31 @@ describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', 
 
     (component as any).stopClock();
     expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it('applies selected handicaps to board and clock state on new game', () => {
+    component.selectedHandicap = ChessHandicapEnum.DoubleTime;
+    component.startNewGame();
+    expect((component as any).timeControlService.whiteClockMs).toBe(10 * 60 * 1000);
+    expect((component as any).timeControlService.blackClockMs).toBe(5 * 60 * 1000);
+
+    component.selectedHandicap = ChessHandicapEnum.InfiniteTime;
+    component.startNewGame();
+    expect((component as any).timeControlService.whiteInfiniteTime).toBeTrue();
+    expect((component as any).timeControlService.whiteClockMs).toBe(Number.MAX_SAFE_INTEGER);
+
+    component.selectedHandicap = ChessHandicapEnum.MinusPawns;
+    component.startNewGame();
+    expect(chessBoardStateService.field[6][0].length).toBe(0);
+    expect(chessBoardStateService.field[6][1].length).toBe(0);
+
+    component.selectedHandicap = ChessHandicapEnum.NoRook;
+    component.startNewGame();
+    expect(chessBoardStateService.field[7][0].length).toBe(0);
+
+    component.selectedHandicap = ChessHandicapEnum.NoQueen;
+    component.startNewGame();
+    expect(chessBoardStateService.field[7][3].length).toBe(0);
   });
 
 });

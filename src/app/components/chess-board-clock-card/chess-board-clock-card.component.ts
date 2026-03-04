@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessHandicapEnum } from '../../model/enums/chess-handicap.enum';
 import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
 
 @Component({
@@ -25,10 +26,22 @@ export class ChessBoardClockCardComponent {
   @Input() currentAnalysisEvalText = 'n/a';
   @Input() turnColor: ChessColorsEnum = ChessColorsEnum.White;
   @Input() isGameOver = false;
+  @Input() selectedHandicap: ChessHandicapEnum = ChessHandicapEnum.None;
+  @Input() whiteHasInfiniteTime = false;
 
   @Output() timeControlChange = new EventEmitter<{ baseMinutes: number; incrementSeconds: number; label: string }>();
+  @Output() handicapChange = new EventEmitter<ChessHandicapEnum>();
   @Output() toggleClock = new EventEmitter<void>();
   @Output() resetClock = new EventEmitter<void>();
+
+  readonly handicapOptions: { value: ChessHandicapEnum; label: string }[] = [
+    { value: ChessHandicapEnum.None, label: 'No handicap' },
+    { value: ChessHandicapEnum.DoubleTime, label: '2x time for me' },
+    { value: ChessHandicapEnum.InfiniteTime, label: 'Infinite time for me' },
+    { value: ChessHandicapEnum.MinusPawns, label: 'I have minus pawns' },
+    { value: ChessHandicapEnum.NoRook, label: 'I have no rook' },
+    { value: ChessHandicapEnum.NoQueen, label: 'I have no queen' }
+  ];
 
   onPreset(baseMinutes: number, incrementSeconds: number, label: string): void {
     this.timeControlChange.emit({ baseMinutes, incrementSeconds, label });
@@ -40,6 +53,17 @@ export class ChessBoardClockCardComponent {
 
   formatClock(clockMs: number): string {
     return ChessBoardClockUtils.formatClock(clockMs);
+  }
+
+  onHandicapSelect(value: ChessHandicapEnum): void {
+    this.handicapChange.emit(value);
+  }
+
+  formatPlayerClock(clockMs: number, isInfinite: boolean): string {
+    if (isInfinite) {
+      return 'INF';
+    }
+    return this.formatClock(clockMs);
   }
 
   get isBlackClockActive(): boolean {

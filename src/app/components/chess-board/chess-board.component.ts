@@ -9,6 +9,7 @@ import { ChessBoardStateService } from '../../services/chess-board-state.service
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessPositionDto } from '../../model/chess-position.dto';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
+import { ChessHandicapEnum } from '../../model/enums/chess-handicap.enum';
 import { ChessPiecesEnum } from '../../model/enums/chess-pieces.enum';
 import { IVisualizationArrow } from '../../model/interfaces/visualization-arrow.interface';
 import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
@@ -94,6 +95,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private moveSnapshots: IGameplaySnapshot[] = [];
   private isFinalizingDropState = false;
   chessColors = ChessColorsEnum;
+  readonly handicapOptions = ChessHandicapEnum;
+  selectedHandicap: ChessHandicapEnum = ChessHandicapEnum.None;
   clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = ChessBoardUiConstants.CLOCK_PRESETS;
   private clockIntervalId: number | null = null;
   historyCursor: number | null = null;
@@ -112,7 +115,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   cctCategory = CctCategoryEnum;
   private readonly debugPanelStorageKey = ChessBoardUiConstants.DEBUG_PANEL_STORAGE_KEY;
-  private readonly windowRef: Pick<Window, 'location'> = window;
   private readonly evalByHistoryIndex = new Map<number, string>();
   private readonly evalCacheByFen = new Map<string, string>();
   private readonly suggestedMovesCacheByFen = new Map<string, string[]>();
@@ -207,6 +209,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.timeControlService.blackClockMs;
   }
 
+  get whiteHasInfiniteTime(): boolean {
+    return this.timeControlService.whiteInfiniteTime;
+  }
+
   private get previewRenderSize(): number {
     return Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
   }
@@ -276,8 +282,21 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     this.chessBoardStateService.boardHelper.history = {} as {[name: string]: string};
     this.chessBoardStateService.boardHelper.gameOver = false;
+    this.chessBoardStateService.boardHelper.checkmateColor = null;
+    this.chessBoardStateService.boardHelper.debugText = '';
+    this.chessBoardStateService.boardHelper.canPromote = null;
+    this.chessBoardStateService.boardHelper.justDidEnPassant = null;
+    this.chessBoardStateService.boardHelper.justDidCastle = null;
+    this.chessBoardStateService.boardHelper.possibles = {};
+    this.chessBoardStateService.boardHelper.hits = {};
+    this.chessBoardStateService.boardHelper.checks = {};
+    this.chessBoardStateService.boardHelper.arrows = {};
     this.chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     this.chessBoardStateService.field = ChessBoardInitializationUtils.createInitialField();
+    this.chessBoardStateService.repetitionCounts = {};
+    this.chessBoardStateService.trackedHistoryLength = -1;
+    ChessBoardStateService.CHESS_FIELD = this.chessBoardStateService.field;
+    ChessBoardStateService.BOARD_HELPER = this.chessBoardStateService.boardHelper;
   }
 
   canDrop(drag: CdkDrag<ChessPieceDto[]>, drop: CdkDropList<ChessPieceDto[]>): boolean {
@@ -700,7 +719,23 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   startNewGame(): void {
-    this.windowRef.location.reload();
+    this.stopClock();
+    this.resetTransientUiState();
+    this.resetBoardState();
+    this.applySelectedMaterialHandicap();
+    this.resetClock();
+    this.activeTool = null;
+    this.initializeSnapshotTimeline();
+    this.randomizeAmbientStyle();
+    this.requestClockRender();
+  }
+
+  onHandicapChange(handicap: ChessHandicapEnum): void {
+    if (this.selectedHandicap === handicap) {
+      return;
+    }
+    this.selectedHandicap = handicap;
+    this.startNewGame();
   }
 
   async switchLocale(locale: string): Promise<void> {
@@ -775,6 +810,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   applyTimeControl(baseMinutes: number, incrementSeconds: number, label: string): void {
     this.stopClock();
     this.timeControlService.applyTimeControl(baseMinutes, incrementSeconds, label);
+    this.applySelectedTimeHandicap();
   }
 
   startOrPauseClock(): void {
@@ -796,6 +832,44 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     this.stopClock();
     this.timeControlService.applyTimeControl(selectedPreset.baseMinutes, selectedPreset.incrementSeconds, selectedPreset.label);
+    this.applySelectedTimeHandicap();
+  }
+
+  private applySelectedTimeHandicap(): void {
+    this.timeControlService.whiteInfiniteTime = false;
+    if (this.selectedHandicap === ChessHandicapEnum.DoubleTime) {
+      this.timeControlService.whiteClockMs = this.timeControlService.whiteClockMs * 2;
+      return;
+    }
+    if (this.selectedHandicap === ChessHandicapEnum.InfiniteTime) {
+      this.timeControlService.whiteInfiniteTime = true;
+      this.timeControlService.whiteClockMs = Number.MAX_SAFE_INTEGER;
+    }
+  }
+
+  private applySelectedMaterialHandicap(): void {
+    if (this.selectedHandicap === ChessHandicapEnum.MinusPawns) {
+      this.removeWhitePieceAt(6, 0);
+      this.removeWhitePieceAt(6, 1);
+      return;
+    }
+    if (this.selectedHandicap === ChessHandicapEnum.NoRook) {
+      this.removeWhitePieceAt(7, 0);
+      return;
+    }
+    if (this.selectedHandicap === ChessHandicapEnum.NoQueen) {
+      this.removeWhitePieceAt(7, 3);
+    }
+  }
+
+  private removeWhitePieceAt(row: number, col: number): void {
+    if (!this.chessBoardStateService || !this.chessBoardStateService.field || !this.chessBoardStateService.field[row]) {
+      return;
+    }
+    const cell = this.chessBoardStateService.field[row][col];
+    if (cell && cell[0] && cell[0].color === ChessColorsEnum.White) {
+      this.chessBoardStateService.field[row][col] = [];
+    }
   }
 
   getResignConfirmTitle(): string {
