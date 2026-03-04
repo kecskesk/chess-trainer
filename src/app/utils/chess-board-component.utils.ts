@@ -104,6 +104,9 @@ export class ChessBoardComponentUtils {
     if (improvement >= 0.5) {
       return { label: 'good', className: 'history-quality--good' };
     }
+    if (improvement >= 0) {
+      return { label: 'best', className: 'history-quality--best' };
+    }
     if (improvement <= -3) {
       return { label: 'blunder', className: 'history-quality--blunder' };
     }

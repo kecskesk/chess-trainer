@@ -41,7 +41,13 @@ export class ChessBoardHistoryCardComponent {
 
   getMoveQualityLabel(halfMoveIndex: number): string {
     const quality = this.getMoveQuality(halfMoveIndex);
-    return quality ? quality.label : '';
+    if (!quality) {
+      return '';
+    }
+    if (quality.label === 'best' || quality.label === 'great' || quality.label === 'genius') {
+      return `${quality.label} move`;
+    }
+    return quality.label;
   }
 
   getMoveQualityClass(halfMoveIndex: number): string {

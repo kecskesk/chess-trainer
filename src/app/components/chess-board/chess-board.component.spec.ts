@@ -2957,13 +2957,13 @@ describe('ChessBoardComponent stockfish evaluation thresholds', () => {
     });
 
     expect(getMoveQualityLabelLocal(0)).toBe('');
-    expect(getMoveQualityLabelLocal(1)).toBe('');
+    expect(getMoveQualityLabelLocal(1)).toBe('best');
     expect(getMoveQualityLabelLocal(2)).toBe('good');
     expect(getMoveQualityLabelLocal(3)).toBe('mistake');
     expect(getMoveQualityLabelLocal(4)).toBe('mistake');
-    expect(getMoveQualityLabelLocal(5)).toBe('');
+    expect(getMoveQualityLabelLocal(5)).toBe('best');
     expect(getMoveQualityLabelLocal(6)).toBe('small error');
-    expect(getMoveQualityLabelLocal(7)).toBe('');
+    expect(getMoveQualityLabelLocal(7)).toBe('best');
     expect(getMoveQualityLabelLocal(8)).toBe('');
   });
 

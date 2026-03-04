@@ -125,7 +125,7 @@ describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
       10
     );
 
-    expect(quality).toBeNull();
+    expect(quality).toEqual({ label: 'best', className: 'history-quality--best' });
   });
 
   it('propagates sign from previous #0 to current eval when needed', () => {

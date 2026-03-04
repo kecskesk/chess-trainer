@@ -23,10 +23,16 @@ describe('ChessBoardHistoryCardComponent', () => {
 
   it('returns quality label/class for valid and invalid history indexes', () => {
     component.evaluations = ['+1.00', '+0.00'];
-    expect(component.getMoveQualityLabel(1)).toBe('great');
+    expect(component.getMoveQualityLabel(1)).toBe('great move');
     expect(component.getMoveQualityClass(1)).toBe('history-quality--great');
     expect(component.getMoveQualityLabel(10)).toBe('');
     expect(component.getMoveQualityClass(10)).toBe('');
+  });
+
+  it('returns best-move marker for slight improvements', () => {
+    component.evaluations = ['+1.00', '+1.00', '+1.10'];
+    expect(component.getMoveQualityLabel(2)).toBe('best move');
+    expect(component.getMoveQualityClass(2)).toBe('history-quality--best');
   });
 
   it('falls back to na placeholder for empty-string evaluation entry', () => {

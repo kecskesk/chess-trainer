@@ -104,10 +104,10 @@ export class ChessBoardExportFacade {
   }
 
   private static getDocument(): Document | null {
-    return typeof document === 'undefined' ? null : document;
+    return document;
   }
 
   private static getWindow(): Window | null {
-    return typeof window === 'undefined' ? null : window;
+    return window;
   }
 }
