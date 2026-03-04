@@ -140,6 +140,12 @@ const createCctServiceMock = (overrides: Partial<ChessBoardCctService> = {}) => 
   ...overrides
 }) as any;
 
+const createUiTextLoaderMock = (overrides: Partial<UiTextLoaderService> = {}) => ({
+  setActiveLocale: jasmine.createSpy('setActiveLocale').and.resolveTo(),
+  getCurrentLocale: jasmine.createSpy('getCurrentLocale').and.returnValue(UiTextLoaderService.DEFAULT_LOCALE),
+  ...overrides
+}) as any;
+
 beforeEach(() => {
   stockfishServiceStub = {
     evaluateFen: jasmine.createSpy('evaluateFen').and.returnValue(Promise.resolve('+0.18')),
@@ -148,7 +154,7 @@ beforeEach(() => {
   chessBoardStateService = new ChessBoardStateService();
   component = new ChessBoardComponent(chessBoardStateService, {
     get: () => of([])
-  } as any, createCctServiceMock(), undefined, undefined, undefined, stockfishServiceStub as any);
+  } as any, createCctServiceMock(), createUiTextLoaderMock(), stockfishServiceStub as any, undefined, undefined);
   chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
 });
 
@@ -1374,7 +1380,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
 describe('ChessBoardComponent gameplay moves and rules (clock and controls promotion)', () => {
   beforeEach(() => {
     chessBoardStateService = new ChessBoardStateService();
-    component = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    component = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
@@ -1407,7 +1413,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls promo
 describe('ChessBoardComponent gameplay moves and rules (clock and controls continued)', () => {
   beforeEach(() => {
     chessBoardStateService = new ChessBoardStateService();
-    component = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    component = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
@@ -1485,7 +1491,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls conti
 describe('ChessBoardComponent gameplay moves and rules (clock and controls export state)', () => {
   beforeEach(() => {
     chessBoardStateService = new ChessBoardStateService();
-    component = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    component = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
   });
 
@@ -2057,14 +2063,14 @@ describe('ChessBoardComponent gameplay moves and rules (startup and loading)', (
         { name: 'Valid Opening', long_algebraic_notation: '1. e2-e4 e7-e5' },
         { name: 'Invalid Opening', long_algebraic_notation: '' } as any
       ])
-    } as any, createCctServiceMock() as any);
+    } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
 
     expect((openingAwareComponent as any).openingsLoaded).toBeTrue();
     expect((openingAwareComponent as any).openings.length).toBeGreaterThan(0);
 
     const errorComponent = new ChessBoardComponent(chessBoardStateService, {
       get: () => throwError(() => new Error('failed to load'))
-    } as any, createCctServiceMock() as any);
+    } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
 
     expect((errorComponent as any).openingsLoaded).toBeTrue();
   });
@@ -2648,7 +2654,10 @@ describe('ChessBoardComponent branch coverage helpers (simulation and clock bran
       chessBoardStateService,
       { get: () => of([]) } as any,
       createCctServiceMock() as any,
-      { run: (fn: Function) => fn() } as any
+      createUiTextLoaderMock() as any,
+      stockfishServiceStub as any,
+      { run: (fn: Function) => fn() } as any,
+      undefined
     );
     const setIntervalSpy = spyOn(window, 'setInterval').and.callFake((callback: TimerHandler) => {
       (callback as Function)();
@@ -2931,8 +2940,8 @@ describe('ChessBoardComponent stockfish evaluation thresholds', () => {
     expect(component.getEvaluationForMove(2)).toBe('+0.31');
     expect(component.getEvaluationForMove(0)).toBe('...');
 
-    const noEngineComponent = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
-    expect(noEngineComponent.getCurrentAnalysisEvalText()).toBe('n/a');
+    const noEngineComponent = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
+    expect(noEngineComponent.getCurrentAnalysisEvalText()).toBe('...');
 
     spyOn(component, 'getCurrentAnalysisEvalText').and.returnValues('#+2', '#-4', 'bad');
     expect(component.getAnalysisMeterOffsetPercent()).toBe(100);
@@ -3005,7 +3014,7 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
   });
 
   it('covers refreshVisibleHistoryEvaluations cancellation branches', async () => {
-    const neverEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    const neverEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     await (neverEngine as any).refreshVisibleHistoryEvaluations(1);
 
     (component as any).evaluationRunToken = 10;
@@ -3040,9 +3049,10 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
       chessBoardStateService,
       { get: () => of([]) } as any,
       createCctServiceMock() as any,
+      createUiTextLoaderMock() as any,
+      stockfishServiceStub as any,
       undefined,
-      undefined,
-      stockfishServiceStub as any
+      undefined
     );
     expect(ChessBoardEvaluationUtils.getFenForHistoryIndex(-1, (cleanComponent as any).moveSnapshots)).toBe('');
   });
@@ -3068,8 +3078,10 @@ describe('ChessBoardComponent branch coverage helpers (locale switching and open
       chessBoardStateService,
       { get: () => of([]) } as any,
       createCctServiceMock() as any,
+      loader as any,
+      stockfishServiceStub as any,
       undefined,
-      loader as any
+      undefined
     );
     const loadOpeningsSpy = spyOn<any>(localComponent, 'loadOpeningsFromAssets').and.stub();
     const requestClockRenderSpy = spyOn<any>(localComponent, 'requestClockRender').and.stub();
@@ -3102,7 +3114,7 @@ describe('ChessBoardComponent branch coverage helpers (locale switching and open
         deferredSubscribers.push(subscriber);
       }))
     };
-    const localComponent = new ChessBoardComponent(chessBoardStateService, httpMock as any, createCctServiceMock() as any);
+    const localComponent = new ChessBoardComponent(chessBoardStateService, httpMock as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     (localComponent as any).loadOpeningsFromAssets('');
 
     const firstPath = String(httpMock.get.calls.argsFor(0)[0]);
@@ -3126,7 +3138,7 @@ describe('ChessBoardComponent branch coverage helpers (locale switching and open
       }
       return throwError(() => new Error('missing fallback'));
     });
-    const _ = new ChessBoardComponent(chessBoardStateService, { get: fallbackGet } as any, createCctServiceMock() as any);
+    const _ = new ChessBoardComponent(chessBoardStateService, { get: fallbackGet } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
 
     let successItems: any[] | null = null;
     ChessBoardOpeningUtils.getOpeningAsset$({ get: fallbackGet } as any, 'openings1.json', 'hu_HU', UiTextLoaderService.DEFAULT_LOCALE).subscribe((items: any[]) => {
@@ -3199,7 +3211,7 @@ describe('ChessBoardComponent branch coverage helpers (history element resolutio
 });
 
 describe('ChessBoardComponent branch coverage helpers (cct access and private wrappers)', () => {
-  it('covers active stockfish legacy-from-cdr getter path', () => {
+  it('covers direct stockfish service injection path', () => {
     const legacyEngine = {
       evaluateFen: jasmine.createSpy('evaluateFen').and.returnValue(Promise.resolve('0.00')),
       terminate: jasmine.createSpy('terminate')
@@ -3208,10 +3220,12 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
       chessBoardStateService,
       { get: () => of([]) } as any,
       createCctServiceMock() as any,
+      createUiTextLoaderMock() as any,
+      legacyEngine as any,
       undefined,
-      legacyEngine as any
+      undefined
     );
-    expect((local as any).activeStockfishService).toBe(legacyEngine as any);
+    expect((local as any).stockfishService).toBe(legacyEngine as any);
   });
 
   it('covers getCctRecommendations service-backed branch', () => {
@@ -3225,7 +3239,11 @@ describe('ChessBoardComponent branch coverage helpers (cct access and private wr
     const localWithCct = new ChessBoardComponent(
       chessBoardStateService,
       { get: () => of([]) } as any,
-      cctService as any
+      cctService as any,
+      createUiTextLoaderMock() as any,
+      stockfishServiceStub as any,
+      undefined,
+      undefined
     );
     expect(localWithCct.getCctRecommendations(CctCategoryEnum.Captures).length).toBe(1);
     expect(cctService.ensureCctRecommendations).toHaveBeenCalled();
@@ -3337,7 +3355,7 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, engine as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, engine as any, undefined, undefined);
     spyOn<any>(local, 'getCurrentFen').and.returnValue(fen);
     (local as any).evaluationRunToken = 2;
     const qualitySpy = spyOn<any>(local, 'refreshSuggestionQualities').and.resolveTo();
@@ -3354,7 +3372,7 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
   });
 
   it('covers refreshSuggestionQualities early returns and empty-uci mapping branch', async () => {
-    const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     await (localNoEngine as any).refreshSuggestionQualities(1, 'fen');
 
     const engine = {
@@ -3362,7 +3380,7 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, engine as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, engine as any, undefined, undefined);
     (local as any).evaluationRunToken = 5;
     await (local as any).refreshSuggestionQualities(5, 'fen-empty', [], []);
     expect((local as any).suggestionQualityByFen.get('fen-empty')).toEqual({});
@@ -3444,7 +3462,7 @@ describe('ChessBoardComponent suggestion scoring helpers mapping', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, withAfterMoves as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, withAfterMoves as any, undefined, undefined);
     (local as any).evaluationRunToken = 8;
     const withAfterResult = await (local as any).evaluateUciMovesForQuality(8, 'fen', ['e2e4']);
     expect(withAfterResult.pawnsByUci.get('e2e4')).toBe(0.3);
@@ -3455,7 +3473,7 @@ describe('ChessBoardComponent suggestion scoring helpers mapping', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
       terminate: jasmine.createSpy('terminate')
     };
-    const fallback = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, withoutAfterMoves as any);
+    const fallback = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, withoutAfterMoves as any, undefined, undefined);
     (fallback as any).evaluationRunToken = 3;
     const fallbackResult = await (fallback as any).evaluateUciMovesForQuality(3, 'fen', ['e2e4']);
     expect(fallbackResult.pawnsByUci.get('e2e4')).toBe(0.5);
@@ -3475,7 +3493,7 @@ describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, engine as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, engine as any, undefined, undefined);
     engine.getTopMoves.and.callFake(async () => {
       (local as any).evaluationRunToken = 2;
       return ['g1f3'];
@@ -3499,7 +3517,7 @@ describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, engine as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, engine as any, undefined, undefined);
     (local as any).evaluationRunToken = 7;
     (local as any).suggestionQualityByFen.set('cached', { Nf3: 'history-quality--great' });
     (local as any).suggestionEvalTextByFen.set('cached', { Nf3: '+0.20' });
@@ -3527,7 +3545,7 @@ describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, engine as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, engine as any, undefined, undefined);
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
     (local as any).evaluationRunToken = 5;
     spyOn<any>(local, 'buildDisplayToUciMap').and.returnValue(new Map<string, string>([
@@ -3553,7 +3571,7 @@ describe('ChessBoardComponent suggestion scoring edge mapping branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['xxxx']),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, engine as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, engine as any, undefined, undefined);
     spyOn<any>(local, 'getCurrentFen').and.returnValue(fen);
     (local as any).evaluationRunToken = 4;
     await (local as any).refreshSuggestedMoves(4);
@@ -3568,7 +3586,7 @@ describe('ChessBoardComponent suggestion scoring edge mapping branches', () => {
   });
 
   it('covers no-engine evaluation, parseSquare bounds and format parsing guards', async () => {
-    const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     const direct = await (localNoEngine as any).evaluateUciMovesForQuality(1, 'fen', ['e2e4']);
     expect(direct.pawnsByUci.size).toBe(0);
 
@@ -3639,7 +3657,7 @@ describe('ChessBoardComponent suggestion scoring edge mapping branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, engine as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, engine as any, undefined, undefined);
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     (local as any).evaluationRunToken = 12;
     spyOn<any>(local, 'buildDisplayToUciMap').and.returnValue(new Map<string, string>([
@@ -3670,11 +3688,11 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
   });
 
   it('covers refreshSuggestedMoves callback branch with explicit move arrays', async () => {
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, {
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, {
       evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.10'),
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
       terminate: jasmine.createSpy('terminate')
-    } as any);
+    } as any, undefined, undefined);
     (local as any).evaluationRunToken = 4;
 
     const refreshSpy = spyOn<any>(local, 'refreshSuggestionQualities').and.resolveTo();
@@ -3695,11 +3713,11 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
   });
 
   it('covers refreshSuggestedMoves callback branch null array fallback', async () => {
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, undefined, undefined, undefined, {
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, {
       evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.10'),
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
       terminate: jasmine.createSpy('terminate')
-    } as any);
+    } as any, undefined, undefined);
     (local as any).evaluationRunToken = 6;
 
     const refreshSpy = spyOn<any>(local, 'refreshSuggestionQualities').and.resolveTo();
@@ -3720,7 +3738,7 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
 
 describe('ChessBoardComponent additional suggestion coverage (preview helpers)', () => {
   it('covers king-context preview helper early-return and dedupe branches', () => {
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     (local as any).chessBoardStateService.field = null;
     const early = (local as any).buildKingContextPreviewArrows(
       { piece: ChessPiecesEnum.King, targetRow: 7, targetCol: 4 },
@@ -3761,13 +3779,13 @@ describe('ChessBoardComponent additional suggestion coverage (preview helpers)',
   });
 
   it('covers residual board component branches for coverage', () => {
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any);
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
 
     spyOnProperty((local as any).chessBoardStateService, 'history', 'get').and.returnValue(['e2-e4']);
     spyOn<any>(local, 'getEvaluationForMove').and.returnValue('+0.20');
     expect(local.allHistoryEvaluations).toEqual(['+0.20']);
 
-    const localWithNoHistory = new ChessBoardComponent(new ChessBoardStateService(), { get: () => of([]) } as any, createCctServiceMock() as any);
+    const localWithNoHistory = new ChessBoardComponent(new ChessBoardStateService(), { get: () => of([]) } as any, createCctServiceMock() as any, createUiTextLoaderMock() as any, stockfishServiceStub as any, undefined, undefined);
     spyOnProperty((localWithNoHistory as any).chessBoardStateService, 'history', 'get').and.returnValue(null as any);
     spyOn<any>(localWithNoHistory, 'getEvaluationForMove').and.returnValue('+0.10');
     expect(localWithNoHistory.allHistoryEvaluations).toEqual([]);
@@ -3792,6 +3810,9 @@ describe('ChessBoardComponent additional suggestion coverage (preview helpers)',
     expect(local.isMateInOneBlunderTarget(0, 0)).toBeFalse();
   });
 });
+
+
+
 
 
 

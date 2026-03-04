@@ -39,7 +39,6 @@ import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.ut
 import { ChessBoardCctService } from '../../services/chess-board-cct.service';
 import {
   ChessBoardSuggestionFacade,
-  IChessBoardSuggestionEngineService,
   ISuggestionEvaluationResult
 } from '../../utils/chess-board-suggestion.facade';
 import { ChessBoardOpeningFacade, IChessBoardOpeningStateAccessors } from '../../utils/chess-board-opening.facade';
@@ -201,32 +200,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
   }
 
-  private get activeUiTextLoaderService(): UiTextLoaderService | undefined {
-    if (this.uiTextLoaderService && typeof this.uiTextLoaderService.getCurrentLocale === 'function') {
-      return this.uiTextLoaderService;
-    }
-    const legacyInjected = this.cdr as unknown as UiTextLoaderService | undefined;
-    if (legacyInjected && typeof legacyInjected.getCurrentLocale === 'function') {
-      return legacyInjected;
-    }
-    return undefined;
-  }
-
-  private get activeStockfishService(): StockfishService | undefined {
-    if (this.stockfishService && typeof this.stockfishService.evaluateFen === 'function') {
-      return this.stockfishService;
-    }
-    const legacyFromUiLoader = this.uiTextLoaderService as unknown as StockfishService | undefined;
-    if (legacyFromUiLoader && typeof legacyFromUiLoader.evaluateFen === 'function') {
-      return legacyFromUiLoader;
-    }
-    const legacyFromCdr = this.cdr as unknown as StockfishService | undefined;
-    if (legacyFromCdr && typeof legacyFromCdr.evaluateFen === 'function') {
-      return legacyFromCdr;
-    }
-    return undefined;
-  }
-
   get renderedBoardRows(): number[] {
     if (!this.previewMode) {
       return this.boardIndices;
@@ -246,17 +219,15 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     public chessBoardStateService: ChessBoardStateService,
     private readonly http: HttpClient,
     private readonly chessBoardCctService: ChessBoardCctService,
+    private readonly uiTextLoaderService: UiTextLoaderService,
+    private readonly stockfishService: StockfishService,
     private readonly ngZone?: NgZone,
-    private readonly cdr?: ChangeDetectorRef,
-    private readonly uiTextLoaderService?: UiTextLoaderService,
-    private readonly stockfishService?: StockfishService
+    private readonly cdr?: ChangeDetectorRef
   ) {
     this.randomizeAmbientStyle();
     this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
     this.isDebugPanelOpen = ChessBoardStorageService.readDebugPanelOpenState(this.debugPanelStorageKey);
-    if (this.activeUiTextLoaderService) {
-      this.selectedLocale = this.activeUiTextLoaderService.getCurrentLocale();
-    }
+    this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
     this.initializeSnapshotTimeline();
     void this.loadOpeningsFromAssets(this.selectedLocale);
   }
@@ -270,7 +241,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.evaluationRunToken += 1;
     this.stopClock();
     this.syncFlippedDragClass();
-    this.activeStockfishService?.terminate();
+    this.stockfishService.terminate();
   }
 
   ngAfterViewInit(): void {
@@ -728,14 +699,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   async switchLocale(locale: string): Promise<void> {
-    if (!this.activeUiTextLoaderService || locale === this.selectedLocale) {
+    if (locale === this.selectedLocale) {
       return;
     }
 
     this.isLanguageSwitching = true;
     try {
-      await this.activeUiTextLoaderService.setActiveLocale(locale);
-      this.selectedLocale = this.activeUiTextLoaderService.getCurrentLocale();
+      await this.uiTextLoaderService.setActiveLocale(locale);
+      this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
       void this.loadOpeningsFromAssets(this.selectedLocale);
       this.requestClockRender();
     } finally {
@@ -959,9 +930,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getCurrentAnalysisEvalText(): string {
-    if (!this.activeStockfishService) {
-      return ChessBoardComponent.NA_PLACEHOLDER;
-    }
     const currentMoveIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.mockHistoryCursor);
     if (currentMoveIndex < 0) {
       return this.pendingEvaluationPlaceholder;
@@ -1890,7 +1858,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private scheduleEvaluationRefresh(): void {
     const scheduleResult = ChessBoardEvaluationFacade.scheduleEvaluationRefresh({
-      hasEngine: !!this.activeStockfishService,
+      hasEngine: true,
       previewMode: this.previewMode,
       evaluationRefreshTimer: this.evaluationRefreshTimer,
       evaluationRunToken: this.evaluationRunToken,
@@ -1905,15 +1873,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private async refreshVisibleHistoryEvaluations(runToken: number): Promise<void> {
-    if (!this.activeStockfishService) {
-      return;
-    }
     await ChessBoardEvaluationFacade.refreshVisibleHistoryEvaluations({
       runToken,
       getCurrentRunToken: () => this.evaluationRunToken,
       visibleHistoryLength: this.getVisibleHistory().length,
       moveSnapshots: this.moveSnapshots,
-      evaluateFen: (fen) => this.activeStockfishService!.evaluateFen(fen),
+      evaluateFen: (fen) => this.stockfishService.evaluateFen(fen),
       evalByHistoryIndex: this.evalByHistoryIndex,
       evalCacheByFen: this.evalCacheByFen,
       pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
@@ -1925,14 +1890,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private async refreshSuggestedMoves(runToken: number): Promise<void> {
-    if (!this.activeStockfishService || runToken !== this.evaluationRunToken) {
+    if (runToken !== this.evaluationRunToken) {
       return;
     }
     const result = await ChessBoardEvaluationFacade.refreshSuggestedMoves({
       runToken,
       getCurrentRunToken: () => this.evaluationRunToken,
       fen: this.getCurrentFen(),
-      getTopMoves: (fen, options) => this.activeStockfishService!.getTopMoves(fen, options),
+      getTopMoves: (fen, options) => this.stockfishService.getTopMoves(fen, options),
       suggestedMovesDepth: this.suggestedMovesDepth,
       suggestedMovesCount: this.suggestedMovesCount,
       suggestedMovesCacheByFen: this.suggestedMovesCacheByFen,
@@ -1958,7 +1923,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     engineTopMoves: string[] = [],
     formattedEngineSuggestions: string[] = []
   ): Promise<void> {
-    if (!this.activeStockfishService || runToken !== this.evaluationRunToken) {
+    if (runToken !== this.evaluationRunToken) {
       return;
     }
     const result = await ChessBoardEvaluationFacade.refreshSuggestionQualities({
@@ -1967,7 +1932,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       fen,
       engineTopMoves,
       formattedEngineSuggestions,
-      getTopMoves: (fenArg, options) => this.activeStockfishService!.getTopMoves(fenArg, options),
+      getTopMoves: (fenArg, options) => this.stockfishService.getTopMoves(fenArg, options),
       suggestedMovesDepth: this.suggestedMovesDepth,
       suggestedMovesCount: this.suggestedMovesCount,
       suggestionQualityByFen: this.suggestionQualityByFen,
@@ -2003,7 +1968,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       getCurrentRunToken: () => this.evaluationRunToken,
       fen,
       uniqueUciMoves,
-      engineService: this.activeStockfishService as IChessBoardSuggestionEngineService | undefined,
+      engineService: this.stockfishService,
       suggestedMovesDepth: this.suggestedMovesDepth,
       pendingEvaluationPlaceholder: this.pendingEvaluationPlaceholder,
       evaluationErrorPlaceholder: this.evaluationErrorPlaceholder,
