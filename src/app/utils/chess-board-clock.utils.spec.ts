@@ -28,7 +28,6 @@ describe('ChessBoardClockUtils interval lifecycle', () => {
     const startResult = ChessBoardClockUtils.startClock(
       null,
       0,
-      100,
       tick
     );
     expect(startResult.started).toBeTrue();
@@ -46,7 +45,7 @@ describe('ChessBoardClockUtils interval lifecycle', () => {
   });
 
   it('covers start/stop guard branches and ngZone scheduling', () => {
-    const alreadyRunning = ChessBoardClockUtils.startClock(5, 100, 100, () => undefined);
+    const alreadyRunning = ChessBoardClockUtils.startClock(5, 100, () => undefined);
     expect(alreadyRunning.started).toBeFalse();
     expect(alreadyRunning.clockIntervalId).toBe(5);
 
