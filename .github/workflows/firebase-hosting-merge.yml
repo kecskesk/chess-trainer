@@ -17,6 +17,8 @@ jobs:
           node-version: 20
           cache: npm
 
+      - run: npm ci --include=dev
+
       - run: npm run build:prod
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
