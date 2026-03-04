@@ -1,6 +1,52 @@
 import { ChessBoardEvaluationFacade } from './chess-board-evaluation.facade';
 
 describe('ChessBoardEvaluationFacade', () => {
+  it('returns existing schedule state when engine is unavailable or preview mode is on', () => {
+    const existingTimer = setTimeout(() => undefined, 1000);
+
+    const noEngine = ChessBoardEvaluationFacade.scheduleEvaluationRefresh({
+      hasEngine: false,
+      previewMode: false,
+      evaluationRefreshTimer: existingTimer,
+      evaluationRunToken: 5,
+      evaluationDebounceMs: 10,
+      runRefresh: () => undefined
+    });
+    expect(noEngine.evaluationRefreshTimer).toBe(existingTimer);
+    expect(noEngine.evaluationRunToken).toBe(5);
+
+    const previewMode = ChessBoardEvaluationFacade.scheduleEvaluationRefresh({
+      hasEngine: true,
+      previewMode: true,
+      evaluationRefreshTimer: existingTimer,
+      evaluationRunToken: 8,
+      evaluationDebounceMs: 10,
+      runRefresh: () => undefined
+    });
+    expect(previewMode.evaluationRefreshTimer).toBe(existingTimer);
+    expect(previewMode.evaluationRunToken).toBe(8);
+
+    clearTimeout(existingTimer);
+  });
+
+  it('schedules a new refresh run and increments token when active', () => {
+    const runRefresh = jasmine.createSpy('runRefresh');
+    const oldTimer = setTimeout(() => undefined, 1000);
+
+    const result = ChessBoardEvaluationFacade.scheduleEvaluationRefresh({
+      hasEngine: true,
+      previewMode: false,
+      evaluationRefreshTimer: oldTimer,
+      evaluationRunToken: 2,
+      evaluationDebounceMs: 1,
+      runRefresh
+    });
+
+    expect(result.evaluationRunToken).toBe(3);
+    expect(result.evaluationRefreshTimer).not.toBeNull();
+    clearTimeout(result.evaluationRefreshTimer as any);
+  });
+
   it('returns empty result on run-token mismatch in refreshSuggestedMoves', async () => {
     const result = await ChessBoardEvaluationFacade.refreshSuggestedMoves({
       runToken: 1,

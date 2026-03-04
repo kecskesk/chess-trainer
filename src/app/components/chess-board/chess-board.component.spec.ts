@@ -1,4 +1,4 @@
-﻿import { ChessBoardComponent } from './chess-board.component';
+import { ChessBoardComponent } from './chess-board.component';
 import { ChessBoardStateService } from '../../services/chess-board-state.service';
 import { ChessRulesService } from '../../services/chess-rules.service';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
@@ -872,7 +872,7 @@ describe('ChessBoardComponent gameplay moves and rules (draw interactions)', () 
     component.offerDraw();
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
-    expect(component.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
     expect(component.canRespondToDrawOffer()).toBeTrue();
   });
 
@@ -886,7 +886,7 @@ describe('ChessBoardComponent gameplay moves and rules (draw interactions)', () 
     expect(chessBoardStateService.boardHelper.checkmateColor).toBeNull();
     expect(chessBoardStateService.boardHelper.debugText).toBe('Draw by agreement.');
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('1/2-1/2 {Draw agreed}');
-    expect(component.pendingDrawOfferBy).toBeNull();
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBeNull();
   });
 
   it('declines a pending draw offer without ending the game', () => {
@@ -896,7 +896,7 @@ describe('ChessBoardComponent gameplay moves and rules (draw interactions)', () 
     component.declineDrawOffer();
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
-    expect(component.pendingDrawOfferBy).toBeNull();
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBeNull();
   });
 
 });
@@ -922,12 +922,12 @@ describe('ChessBoardComponent gameplay moves and rules (result and turn state)',
 
   it('auto-declines pending draw offer when responder makes a move', () => {
     component.offerDraw();
-    expect(component.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
 
         movePiece(6, 4, 4, 4);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
-    expect(component.pendingDrawOfferBy).toBeNull();
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBeNull();
   });
 
   it('returns ambient background theme by turn and pending draw state', () => {
@@ -1270,10 +1270,10 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     const resignSpy = spyOn(component, 'resign').and.callFake(() => undefined);
 
     component.openResignConfirm(ChessColorsEnum.White);
-    expect(component.resignConfirmColor).toBe(ChessColorsEnum.White);
+    expect((component as any).snapshotService.resignConfirmColor).toBe(ChessColorsEnum.White);
 
     component.cancelResignConfirm();
-    expect(component.resignConfirmColor).toBeNull();
+    expect((component as any).snapshotService.resignConfirmColor).toBeNull();
 
     component.confirmResign();
     expect(resignSpy).not.toHaveBeenCalled();
@@ -1281,7 +1281,7 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
     component.openResignConfirm(ChessColorsEnum.Black);
     component.confirmResign();
     expect(resignSpy).toHaveBeenCalledWith(ChessColorsEnum.Black);
-    expect(component.resignConfirmColor).toBeNull();
+    expect((component as any).snapshotService.resignConfirmColor).toBeNull();
   });
 
   it('supports undo and redo after resign', () => {
@@ -1875,16 +1875,16 @@ describe('ChessBoardComponent gameplay moves and rules (position and analysis)',
   });
 
   it('resets transient and board state through internal helpers', () => {
-    component.pendingDrawOfferBy = ChessColorsEnum.Black;
-    component.resignConfirmColor = ChessColorsEnum.White;
+    (component as any).snapshotService.pendingDrawOfferBy = ChessColorsEnum.Black;
+    (component as any).snapshotService.resignConfirmColor = ChessColorsEnum.White;
     component.historyCursor = 3;
     component.mateInOneTargets = { '11': true };
     component.mateInOneBlunderTargets = { '22': true };
     (component as any).lastMatePreviewKey = 'x';
 
     (component as any).resetTransientUiState();
-    expect(component.pendingDrawOfferBy).toBeNull();
-    expect(component.resignConfirmColor).toBeNull();
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBeNull();
+    expect((component as any).snapshotService.resignConfirmColor).toBeNull();
     expect(component.historyCursor).toBeNull();
     expect(component.mateInOneTargets).toEqual({});
     expect(component.mateInOneBlunderTargets).toEqual({});
@@ -1917,13 +1917,13 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
   it('covers white time-forfeit winner branch and clears pending draw', () => {
     chessBoardStateService.boardHelper.gameOver = false;
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
-    component.pendingDrawOfferBy = ChessColorsEnum.Black;
+    (component as any).snapshotService.pendingDrawOfferBy = ChessColorsEnum.Black;
     (component as any).timeControlService.clockRunning = true;
 
     (component as any).handleTimeForfeit(ChessColorsEnum.White);
 
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
-    expect(component.pendingDrawOfferBy).toBeNull();
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBeNull();
     expect(chessBoardStateService.boardHelper.debugText).toContain('White forfeits on time');
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('0-1 {White forfeits on time}');
   });
@@ -2129,10 +2129,10 @@ describe('ChessBoardComponent branch coverage helpers (guard and fallback paths)
     component.offerDraw();
     chessBoardStateService.boardHelper.gameOver = false;
 
-    component.pendingDrawOfferBy = null;
+    (component as any).snapshotService.pendingDrawOfferBy = null;
     component.acceptDrawOffer();
     component.declineDrawOffer();
-    expect(component.pendingDrawOfferBy).toBeNull();
+    expect((component as any).snapshotService.pendingDrawOfferBy).toBeNull();
   });
 
   it('covers claim-draw and resign guard paths', () => {
@@ -2436,7 +2436,7 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     component.redoMove();
     expect(component.historyCursor).toBeNull();
 
-    component.pendingDrawOfferBy = ChessColorsEnum.White;
+    (component as any).snapshotService.pendingDrawOfferBy = ChessColorsEnum.White;
     component.offerDraw();
   });
 
@@ -2458,28 +2458,28 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     expect(component.historyCursor).toBe(-1);
 
     const anyComponent = component as any;
-    const baseSnapshot = anyComponent.captureCurrentSnapshot();
-    anyComponent.moveSnapshots = [baseSnapshot, anyComponent.captureCurrentSnapshot(), anyComponent.captureCurrentSnapshot()];
+    const baseSnapshot = anyComponent.snapshotService.captureCurrentSnapshot(anyComponent.chessBoardStateService, anyComponent.timeControlService);
+    anyComponent.moveSnapshots = [baseSnapshot, anyComponent.snapshotService.captureCurrentSnapshot(anyComponent.chessBoardStateService, anyComponent.timeControlService), anyComponent.snapshotService.captureCurrentSnapshot(anyComponent.chessBoardStateService, anyComponent.timeControlService)];
     component.historyCursor = 0;
     anyComponent.pushSnapshotForCurrentState();
     expect(anyComponent.moveSnapshots.length).toBe(3);
-    expect(anyComponent.getActiveSnapshotIndex()).toBeGreaterThanOrEqual(0);
+    expect(anyComponent.snapshotService.getActiveSnapshotIndex(anyComponent.moveSnapshots.length, anyComponent.historyCursor, anyComponent.getMaxMoveIndex())).toBeGreaterThanOrEqual(0);
 
     anyComponent.moveSnapshots = [];
-    expect(anyComponent.getActiveSnapshotIndex()).toBe(-1);
+    expect(anyComponent.snapshotService.getActiveSnapshotIndex(anyComponent.moveSnapshots.length, anyComponent.historyCursor, anyComponent.getMaxMoveIndex())).toBe(-1);
     anyComponent.replaceActiveSnapshot();
     expect(anyComponent.moveSnapshots.length).toBe(1);
 
     const savedBoardHelper = chessBoardStateService.boardHelper;
     chessBoardStateService.boardHelper = null as any;
-    const fallbackSnapshot = anyComponent.captureCurrentSnapshot();
+    const fallbackSnapshot = anyComponent.snapshotService.captureCurrentSnapshot(anyComponent.chessBoardStateService, anyComponent.timeControlService);
     expect(fallbackSnapshot.boardHelper.colorTurn).toBe(ChessColorsEnum.White);
     chessBoardStateService.boardHelper = savedBoardHelper;
 
-    anyComponent.restoreSnapshot(null);
+    anyComponent.snapshotService.restoreSnapshot(null, anyComponent.chessBoardStateService, anyComponent.timeControlService, () => anyComponent.startClock(), () => anyComponent.stopClock());
     const savedService = anyComponent.chessBoardStateService;
     anyComponent.chessBoardStateService = null;
-    anyComponent.restoreSnapshot(baseSnapshot);
+    anyComponent.snapshotService.restoreSnapshot(baseSnapshot, anyComponent.chessBoardStateService, anyComponent.timeControlService, () => anyComponent.startClock(), () => anyComponent.stopClock());
     anyComponent.chessBoardStateService = savedService;
 
     expect(ChessBoardLogicUtils.cloneField(null as any)).toEqual([]);
@@ -2928,7 +2928,7 @@ describe('ChessBoardComponent stockfish evaluation thresholds', () => {
   it('covers fen generation fallback branches from snapshots', () => {
     expect(ChessBoardLogicUtils.generateFenFromSnapshot(null as any)).toBe('8/8/8/8/8/8/8/8 w - - 0 1');
 
-    const snapshot = (component as any).captureCurrentSnapshot();
+    const snapshot = (component as any).snapshotService.captureCurrentSnapshot((component as any).chessBoardStateService, (component as any).timeControlService);
     delete snapshot.boardHelper.history;
     const generatedFen = ChessBoardLogicUtils.generateFenFromSnapshot(snapshot);
     expect(generatedFen).toContain(' w ');
@@ -3101,9 +3101,9 @@ describe('ChessBoardComponent branch coverage helpers (locale switching and open
     localComponent.uiText.status.white = 'White';
     localComponent.uiText.status.black = 'Black';
     localComponent.uiText.resignConfirm.titleTemplate = 'Resign as {color}?';
-    localComponent.resignConfirmColor = ChessColorsEnum.White;
+    (localComponent as any).snapshotService.resignConfirmColor = ChessColorsEnum.White;
     expect(localComponent.getResignConfirmTitle()).toBe('Resign as White?');
-    localComponent.resignConfirmColor = ChessColorsEnum.Black;
+    (localComponent as any).snapshotService.resignConfirmColor = ChessColorsEnum.Black;
     expect(localComponent.getResignConfirmTitle()).toBe('Resign as Black?');
   });
 
@@ -3810,6 +3810,7 @@ describe('ChessBoardComponent additional suggestion coverage (preview helpers)',
     expect(local.isMateInOneBlunderTarget(0, 0)).toBeFalse();
   });
 });
+
 
 
 

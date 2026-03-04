@@ -1,5 +1,6 @@
 import { ChessBoardSnapshotService } from './chess-board-snapshot.service';
 import { ChessBoardStateService } from './chess-board-state.service';
+import { ChessBoardTimeControlService } from './chess-board-time-control.service';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 
 const setupStateServiceTestContext = () => {
@@ -16,11 +17,15 @@ const setupStateServiceTestContext = () => {
   };
 };
 
-describe('ChessBoardSnapshotService', () => {
+describe('ChessBoardSnapshotService capture helpers', () => {
+  let service: ChessBoardSnapshotService;
   let chessBoardStateService: ChessBoardStateService;
+  let timeControlService: ChessBoardTimeControlService;
   let restoreContext: () => void;
 
   beforeEach(() => {
+    service = new ChessBoardSnapshotService();
+    timeControlService = new ChessBoardTimeControlService();
     const ctx = setupStateServiceTestContext();
     chessBoardStateService = ctx.chessBoardStateService;
     restoreContext = ctx.restore;
@@ -30,18 +35,23 @@ describe('ChessBoardSnapshotService', () => {
     restoreContext();
   });
 
-  it('captures a snapshot and clones mutable pieces', () => {
+  it('computes active snapshot index via history service', () => {
+    expect(service.getActiveSnapshotIndex(0, null, 5)).toBe(-1);
+    expect(service.getActiveSnapshotIndex(4, null, 5)).toBe(3);
+    expect(service.getActiveSnapshotIndex(4, 1, 5)).toBe(2);
+  });
+
+  it('captures current snapshot and clones mutable pieces', () => {
     chessBoardStateService.boardHelper.debugText = 'debug';
     chessBoardStateService.repetitionCounts = { abc: 2 };
-    const snapshot = ChessBoardSnapshotService.captureSnapshot(
-      chessBoardStateService,
-      7,
-      ChessColorsEnum.Black,
-      true,
-      true,
-      111,
-      222
-    );
+    chessBoardStateService.trackedHistoryLength = 7;
+    service.pendingDrawOfferBy = ChessColorsEnum.Black;
+    timeControlService.clockStarted = true;
+    timeControlService.clockRunning = true;
+    timeControlService.whiteClockMs = 111;
+    timeControlService.blackClockMs = 222;
+
+    const snapshot = service.captureCurrentSnapshot(chessBoardStateService, timeControlService);
 
     expect(snapshot.trackedHistoryLength).toBe(7);
     expect(snapshot.pendingDrawOfferBy).toBe(ChessColorsEnum.Black);
@@ -52,68 +62,64 @@ describe('ChessBoardSnapshotService', () => {
     expect(snapshot.boardHelper.debugText).toBe('debug');
     expect(snapshot.repetitionCounts).toEqual({ abc: 2 });
 
-    // Mutate original and ensure snapshot is unaffected (clone)
     chessBoardStateService.field[0][0] = [] as any;
     expect(snapshot.field[0][0].length).toBeGreaterThanOrEqual(1);
   });
 
-  it('handles missing repetitionCounts by falling back to empty object', () => {
+  it('falls back to empty repetition map when source repetitionCounts is null', () => {
     (chessBoardStateService as any).repetitionCounts = null;
-    const snapshot = ChessBoardSnapshotService.captureSnapshot(
-      chessBoardStateService,
-      0,
-      null,
-      false,
-      false,
-      0,
-      0
-    );
+    const snapshot = service.captureSnapshot(chessBoardStateService, 0, null, false, false, 0, 0);
     expect(snapshot.repetitionCounts).toEqual({});
   });
+});
 
-  it('restores a snapshot into state and returns restore metadata', () => {
-    const snapshot = ChessBoardSnapshotService.captureSnapshot(
-      chessBoardStateService,
-      3,
-      ChessColorsEnum.White,
-      false,
-      false,
-      10,
-      20
-    );
+describe('ChessBoardSnapshotService restore helpers', () => {
+  let service: ChessBoardSnapshotService;
+  let chessBoardStateService: ChessBoardStateService;
+  let timeControlService: ChessBoardTimeControlService;
+  let restoreContext: () => void;
 
-    // change state to ensure restore actually applies
-    chessBoardStateService.field[0][0] = [] as any;
-    chessBoardStateService.boardHelper.debugText = 'changed';
-
-    const result = ChessBoardSnapshotService.restoreSnapshot(snapshot, chessBoardStateService) as any;
-
-    expect(result).not.toBeNull();
-    expect(result.pendingDrawOfferBy).toBe(ChessColorsEnum.White);
-    expect(result.trackedHistoryLength).toBe(3);
-    expect(result.whiteClockMs).toBe(10);
-    expect(result.blackClockMs).toBe(20);
-    expect((ChessBoardStateService as any).BOARD_HELPER).toBe(chessBoardStateService.boardHelper);
-    expect((ChessBoardStateService as any).CHESS_FIELD).toBe(chessBoardStateService.field);
-    expect(chessBoardStateService.repetitionCounts).toEqual(snapshot.repetitionCounts);
+  beforeEach(() => {
+    service = new ChessBoardSnapshotService();
+    timeControlService = new ChessBoardTimeControlService();
+    const ctx = setupStateServiceTestContext();
+    chessBoardStateService = ctx.chessBoardStateService;
+    restoreContext = ctx.restore;
   });
 
-  it('restoreSnapshot returns null for invalid inputs', () => {
-    const snapshot = ChessBoardSnapshotService.captureSnapshot(
-      chessBoardStateService,
-      1,
-      null,
-      false,
-      false,
-      0,
-      0
-    );
+  afterEach(() => {
+    restoreContext();
+  });
 
-    expect(ChessBoardSnapshotService.restoreSnapshot(null as any, chessBoardStateService)).toBeNull();
-    expect(ChessBoardSnapshotService.restoreSnapshot(snapshot, null as any)).toBeNull();
+  it('restoreSnapshot updates service variables and starts/stops clock', () => {
+    const snapshot = service.captureSnapshot(chessBoardStateService, 3, ChessColorsEnum.White, false, true, 10, 20);
+    service.resignConfirmColor = ChessColorsEnum.Black;
+    const startClock = jasmine.createSpy('startClock');
+    const stopClock = jasmine.createSpy('stopClock');
 
-    // make boardHelper missing on the provided state service
+    service.restoreSnapshot(snapshot, chessBoardStateService, timeControlService, startClock, stopClock);
+
+    expect(service.pendingDrawOfferBy).toBe(ChessColorsEnum.White);
+    expect(service.resignConfirmColor).toBeNull();
+    expect(chessBoardStateService.trackedHistoryLength).toBe(3);
+    expect(timeControlService.clockStarted).toBeFalse();
+    expect(timeControlService.whiteClockMs).toBe(10);
+    expect(timeControlService.blackClockMs).toBe(20);
+    expect(startClock).toHaveBeenCalled();
+    expect(stopClock).not.toHaveBeenCalled();
+
+    const pausedSnapshot = service.captureSnapshot(chessBoardStateService, 4, null, true, false, 15, 25);
+    service.restoreSnapshot(pausedSnapshot, chessBoardStateService, timeControlService, startClock, stopClock);
+    expect(stopClock).toHaveBeenCalled();
+  });
+
+  it('restoreSnapshotToState returns null for invalid inputs', () => {
+    const snapshot = service.captureSnapshot(chessBoardStateService, 1, null, false, false, 0, 0);
+
+    expect(service.restoreSnapshotToState(null as any, chessBoardStateService)).toBeNull();
+    expect(service.restoreSnapshotToState(snapshot, null as any)).toBeNull();
+
     chessBoardStateService.boardHelper = null as any;
-    expect(ChessBoardSnapshotService.restoreSnapshot(snapshot, chessBoardStateService)).toBeNull();
+    expect(service.restoreSnapshotToState(snapshot, chessBoardStateService)).toBeNull();
   });
 });

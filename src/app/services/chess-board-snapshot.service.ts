@@ -1,7 +1,10 @@
+import { Injectable } from '@angular/core';
 import { ChessBoardStateService } from './chess-board-state.service';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
 import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
+import { ChessBoardHistoryService } from './chess-board-history.service';
+import { ChessBoardTimeControlService } from './chess-board-time-control.service';
 
 export interface IRestoreSnapshotResult {
   pendingDrawOfferBy: ChessColorsEnum | null;
@@ -13,8 +16,58 @@ export interface IRestoreSnapshotResult {
   shouldRunClock: boolean;
 }
 
+@Injectable({
+  providedIn: 'root'
+})
 export class ChessBoardSnapshotService {
-  static captureSnapshot(
+  pendingDrawOfferBy: ChessColorsEnum | null = null;
+  resignConfirmColor: ChessColorsEnum | null = null;
+
+  getActiveSnapshotIndex(moveSnapshotsLength: number, historyCursor: number | null, maxHistoryIndex: number): number {
+    return ChessBoardHistoryService.getActiveSnapshotIndex(moveSnapshotsLength, historyCursor, maxHistoryIndex);
+  }
+
+  captureCurrentSnapshot(
+    chessBoardStateService: ChessBoardStateService,
+    timeControlService: ChessBoardTimeControlService
+  ): IGameplaySnapshot {
+    return this.captureSnapshot(
+      chessBoardStateService,
+      chessBoardStateService.trackedHistoryLength,
+      this.pendingDrawOfferBy,
+      timeControlService.clockStarted,
+      timeControlService.clockRunning,
+      timeControlService.whiteClockMs,
+      timeControlService.blackClockMs
+    );
+  }
+
+  restoreSnapshot(
+    snapshot: IGameplaySnapshot,
+    chessBoardStateService: ChessBoardStateService,
+    timeControlService: ChessBoardTimeControlService,
+    startClock: () => void,
+    stopClock: () => void
+  ): void {
+    const restoredState = this.restoreSnapshotToState(snapshot, chessBoardStateService);
+    if (!restoredState) {
+      return;
+    }
+    this.pendingDrawOfferBy = restoredState.pendingDrawOfferBy;
+    this.resignConfirmColor = null;
+    chessBoardStateService.repetitionCounts = restoredState.repetitionCounts;
+    chessBoardStateService.trackedHistoryLength = restoredState.trackedHistoryLength;
+    timeControlService.clockStarted = restoredState.clockStarted;
+    timeControlService.whiteClockMs = restoredState.whiteClockMs;
+    timeControlService.blackClockMs = restoredState.blackClockMs;
+    if (restoredState.shouldRunClock) {
+      startClock();
+      return;
+    }
+    stopClock();
+  }
+
+  captureSnapshot(
     chessBoardStateService: ChessBoardStateService,
     trackedHistoryLength: number,
     pendingDrawOfferBy: ChessColorsEnum | null,
@@ -46,7 +99,7 @@ export class ChessBoardSnapshotService {
     };
   }
 
-  static restoreSnapshot(snapshot: IGameplaySnapshot, chessBoardStateService: ChessBoardStateService): IRestoreSnapshotResult | null {
+  restoreSnapshotToState(snapshot: IGameplaySnapshot, chessBoardStateService: ChessBoardStateService): IRestoreSnapshotResult | null {
     if (!snapshot || !chessBoardStateService || !chessBoardStateService.boardHelper) {
       return null;
     }

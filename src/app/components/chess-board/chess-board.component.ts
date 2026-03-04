@@ -98,8 +98,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = ChessBoardUiConstants.CLOCK_PRESETS;
   private clockIntervalId: number | null = null;
   private readonly clockTickIntervalMs = ChessBoardUiConstants.CLOCK_TICK_INTERVAL_MS;
-  pendingDrawOfferBy: ChessColorsEnum | null = null;
-  resignConfirmColor: ChessColorsEnum | null = null;
   historyCursor: number | null = null;
   isBoardFlipped = false;
   areControlsDisabled = true;
@@ -217,7 +215,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     private readonly stockfishService: StockfishService,
     private readonly ngZone?: NgZone,
     private readonly cdr?: ChangeDetectorRef,
-    private readonly timeControlService: ChessBoardTimeControlService = new ChessBoardTimeControlService()
+    private readonly timeControlService: ChessBoardTimeControlService = new ChessBoardTimeControlService(),
+    public readonly snapshotService: ChessBoardSnapshotService = new ChessBoardSnapshotService()
   ) {
     this.randomizeAmbientStyle();
     this.timeControlService.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
@@ -244,8 +243,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   resetTransientUiState(): void {
-    this.pendingDrawOfferBy = null;
-    this.resignConfirmColor = null;
+    this.snapshotService.pendingDrawOfferBy = null;
+    this.snapshotService.resignConfirmColor = null;
     this.historyCursor = null;
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
@@ -427,9 +426,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private prepareUiForDrop(moveContext: { srcColor: ChessColorsEnum }): void {
     const wasClockStarted = this.timeControlService.clockStarted;
-    this.pendingDrawOfferBy = ChessBoardMoveFacade.prepareUiForDrop({
+    this.snapshotService.pendingDrawOfferBy = ChessBoardMoveFacade.prepareUiForDrop({
       clockStarted: this.timeControlService.clockStarted,
-      pendingDrawOfferBy: this.pendingDrawOfferBy,
+      pendingDrawOfferBy: this.snapshotService.pendingDrawOfferBy,
       srcColor: moveContext.srcColor,
       startClock: () => this.startClock(),
       randomizeAmbientStyle: () => this.randomizeAmbientStyle(),
@@ -562,7 +561,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getAmbientThemeClass(): string {
-    if (this.pendingDrawOfferBy !== null) {
+    if (this.snapshotService.pendingDrawOfferBy !== null) {
       return 'ambient-math--draw-pending';
     }
     return this.chessBoardStateService.boardHelper.colorTurn === ChessColorsEnum.White
@@ -715,13 +714,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     const offerResult = ChessBoardUiStateFacade.tryOfferDraw(
       this.chessBoardStateService.boardHelper.gameOver,
-      this.pendingDrawOfferBy,
+      this.snapshotService.pendingDrawOfferBy,
       this.chessBoardStateService.boardHelper.colorTurn
     );
     if (!offerResult.offered) {
       return;
     }
-    this.pendingDrawOfferBy = offerResult.pendingDrawOfferBy;
+    this.snapshotService.pendingDrawOfferBy = offerResult.pendingDrawOfferBy;
     this.randomizeAmbientStyle();
   }
 
@@ -731,7 +730,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     return ChessBoardClockGameStateFacade.canOfferDraw(
       this.chessBoardStateService.boardHelper.gameOver,
-      this.pendingDrawOfferBy
+      this.snapshotService.pendingDrawOfferBy
     );
   }
 
@@ -741,7 +740,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
     return ChessBoardClockGameStateFacade.canRespondToDrawOffer(
       this.chessBoardStateService.boardHelper.gameOver,
-      this.pendingDrawOfferBy,
+      this.snapshotService.pendingDrawOfferBy,
       this.chessBoardStateService.boardHelper.colorTurn
     );
   }
@@ -758,7 +757,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.canRespondToDrawOffer()) {
       return;
     }
-    this.pendingDrawOfferBy = null;
+    this.snapshotService.pendingDrawOfferBy = null;
     this.randomizeAmbientStyle();
   }
 
@@ -789,7 +788,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getResignConfirmTitle(): string {
-    const colorName = this.resignConfirmColor === ChessColorsEnum.White
+    const colorName = this.snapshotService.resignConfirmColor === ChessColorsEnum.White
       ? this.uiText.status.white
       : this.uiText.status.black;
     return this.uiText.resignConfirm.titleTemplate.replace('{color}', colorName);
@@ -851,19 +850,19 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (!this.canResign(color)) {
       return;
     }
-    this.resignConfirmColor = color;
+    this.snapshotService.resignConfirmColor = color;
   }
 
   cancelResignConfirm(): void {
-    this.resignConfirmColor = null;
+    this.snapshotService.resignConfirmColor = null;
   }
 
   confirmResign(): void {
-    if (this.resignConfirmColor === null) {
+    if (this.snapshotService.resignConfirmColor === null) {
       return;
     }
-    const color = this.resignConfirmColor;
-    this.resignConfirmColor = null;
+    const color = this.snapshotService.resignConfirmColor;
+    this.snapshotService.resignConfirmColor = null;
     this.resign(color);
   }
 
@@ -1321,9 +1320,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.uiText.message.resignsNoPeriod
     );
 
-    this.resignConfirmColor = resignState.resignConfirmColor;
+    this.snapshotService.resignConfirmColor = resignState.resignConfirmColor;
     this.stopClock();
-    this.pendingDrawOfferBy = resignState.pendingDrawOfferBy;
+    this.snapshotService.pendingDrawOfferBy = resignState.pendingDrawOfferBy;
     this.chessBoardStateService.boardHelper.gameOver = resignState.gameOver;
     this.chessBoardStateService.boardHelper.checkmateColor = resignState.checkmateColor;
     this.chessBoardStateService.boardHelper.debugText = resignState.debugText;
@@ -1617,7 +1616,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.chessBoardStateService.boardHelper.gameOver = drawState.gameOver;
     this.chessBoardStateService.boardHelper.checkmateColor = drawState.checkmateColor;
     this.chessBoardStateService.boardHelper.debugText = drawState.debugText;
-    this.pendingDrawOfferBy = drawState.pendingDrawOfferBy;
+    this.snapshotService.pendingDrawOfferBy = drawState.pendingDrawOfferBy;
     this.appendGameResultToLastMove(drawState.result, drawState.historyReason);
   }
 
@@ -1713,7 +1712,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     this.stopClock();
-    this.pendingDrawOfferBy = null;
+    this.snapshotService.pendingDrawOfferBy = null;
     this.chessBoardStateService.boardHelper.gameOver = true;
     this.chessBoardStateService.boardHelper.checkmateColor = null;
     this.chessBoardStateService.boardHelper.debugText = forfeitResult.debugText;
@@ -1728,7 +1727,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private initializeSnapshotTimeline(): void {
-    this.moveSnapshots = ChessBoardTimelineFacade.getInitializedSnapshots(() => this.captureCurrentSnapshot());
+    this.moveSnapshots = ChessBoardTimelineFacade.getInitializedSnapshots(() =>
+      this.snapshotService.captureCurrentSnapshot(this.chessBoardStateService, this.timeControlService)
+    );
     this.historyCursor = null;
     this.resetEvaluationState();
     this.scheduleEvaluationRefresh();
@@ -1738,8 +1739,12 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private pushSnapshotForCurrentState(): void {
     this.moveSnapshots = ChessBoardTimelineFacade.appendSnapshotForCurrentState(
       this.moveSnapshots,
-      this.getActiveSnapshotIndex(),
-      () => this.captureCurrentSnapshot()
+      this.snapshotService.getActiveSnapshotIndex(
+        this.moveSnapshots.length,
+        this.historyCursor,
+        this.getMaxMoveIndex()
+      ),
+      () => this.snapshotService.captureCurrentSnapshot(this.chessBoardStateService, this.timeControlService)
     );
     this.historyCursor = null;
     this.scheduleEvaluationRefresh();
@@ -1774,7 +1779,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private replaceActiveSnapshot(): void {
-    const activeSnapshotIndex = this.getActiveSnapshotIndex();
+    const activeSnapshotIndex = this.snapshotService.getActiveSnapshotIndex(
+      this.moveSnapshots.length,
+      this.historyCursor,
+      this.getMaxMoveIndex()
+    );
     if (activeSnapshotIndex < 0 || activeSnapshotIndex >= this.moveSnapshots.length) {
       this.initializeSnapshotTimeline();
       return;
@@ -1782,7 +1791,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.moveSnapshots = ChessBoardTimelineFacade.replaceActiveSnapshot(
       this.moveSnapshots,
       activeSnapshotIndex,
-      () => this.captureCurrentSnapshot()
+      () => this.snapshotService.captureCurrentSnapshot(this.chessBoardStateService, this.timeControlService)
     );
     this.scheduleEvaluationRefresh();
   }
@@ -1796,7 +1805,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (targetSnapshotIndex < 0) {
       return;
     }
-    this.restoreSnapshot(this.moveSnapshots[targetSnapshotIndex]);
+    this.snapshotService.restoreSnapshot(
+      this.moveSnapshots[targetSnapshotIndex],
+      this.chessBoardStateService,
+      this.timeControlService,
+      () => this.startClock(),
+      () => this.stopClock()
+    );
     this.scheduleEvaluationRefresh();
   }
 
@@ -1957,44 +1972,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private getActiveSnapshotIndex(): number {
-    return ChessBoardHistoryService.getActiveSnapshotIndex(
-      this.moveSnapshots.length,
-      this.historyCursor,
-      this.getMaxMoveIndex()
-    );
-  }
-
-  private captureCurrentSnapshot(): IGameplaySnapshot {
-    return ChessBoardSnapshotService.captureSnapshot(
-      this.chessBoardStateService,
-      this.chessBoardStateService.trackedHistoryLength,
-      this.pendingDrawOfferBy,
-      this.timeControlService.clockStarted,
-      this.timeControlService.clockRunning,
-      this.timeControlService.whiteClockMs,
-      this.timeControlService.blackClockMs
-    );
-  }
-
-  private restoreSnapshot(snapshot: IGameplaySnapshot): void {
-    const restoredState = ChessBoardSnapshotService.restoreSnapshot(snapshot, this.chessBoardStateService);
-    if (!restoredState) {
-      return;
-    }
-    this.pendingDrawOfferBy = restoredState.pendingDrawOfferBy;
-    this.resignConfirmColor = null;
-    this.chessBoardStateService.repetitionCounts = restoredState.repetitionCounts;
-    this.chessBoardStateService.trackedHistoryLength = restoredState.trackedHistoryLength;
-    this.timeControlService.clockStarted = restoredState.clockStarted;
-    this.timeControlService.whiteClockMs = restoredState.whiteClockMs;
-    this.timeControlService.blackClockMs = restoredState.blackClockMs;
-    if (restoredState.shouldRunClock) {
-      this.startClock();
-    } else {
-      this.stopClock();
-    }
-  }
-
 }
+
 

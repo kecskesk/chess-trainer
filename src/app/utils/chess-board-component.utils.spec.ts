@@ -56,5 +56,6 @@ describe('ChessBoardComponentUtils', () => {
     expect(ChessBoardComponentUtils.getMoveQuality(2, 2, 0.5)?.label).toBe('mistake');
     expect(ChessBoardComponentUtils.getMoveQuality(2, 1, 0.25)?.label).toBe('small error');
     expect(ChessBoardComponentUtils.getMoveQuality(2, 1, 1.1)?.label).toBe('best');
+    expect(ChessBoardComponentUtils.getMoveQuality(2, 1, 0.8)).toBeNull();
   });
 });
