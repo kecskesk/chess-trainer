@@ -19,7 +19,7 @@ interface IStatusBoardState {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChessBoardStatusCardComponent {
-  @Input() uiText: typeof UiText = UiText;
+  readonly uiText = UiText;
   @Input() selectedLocale = '';
   @Input() boardState: IStatusBoardState | null = null;
   @Input() pendingDrawOfferBy: ChessColorsEnum | null = null;

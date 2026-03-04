@@ -13,7 +13,7 @@ import { ChessBoardClockUtils } from '../../utils/chess-board-clock.utils';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChessBoardClockCardComponent {
-  @Input() uiText: typeof UiText = UiText;
+  readonly uiText = UiText;
   @Input() selectedLocale = '';
   @Input() chessColors: typeof ChessColorsEnum = ChessColorsEnum;
   @Input() selectedClockPresetLabel = '';

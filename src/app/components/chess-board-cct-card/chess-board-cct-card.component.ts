@@ -12,7 +12,7 @@ import { ChessMoveBadgeUtils } from '../../utils/chess-move-badge.utils';
   styleUrls: ['./chess-board-cct-card.component.less']
 })
 export class ChessBoardCctCardComponent {
-  @Input() uiText: typeof UiText = UiText;
+  readonly uiText = UiText;
   @Input() captures: ICctRecommendation[] = [];
   @Input() checks: ICctRecommendation[] = [];
   @Input() threats: ICctRecommendation[] = [];

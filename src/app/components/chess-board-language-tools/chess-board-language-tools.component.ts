@@ -10,7 +10,7 @@ import { UiText } from '../../constants/ui-text.constants';
   styleUrls: ['./chess-board-language-tools.component.less']
 })
 export class ChessBoardLanguageToolsComponent {
-  @Input() uiText: typeof UiText = UiText;
+  readonly uiText = UiText;
   @Input() selectedLocale = 'en_US';
   @Input() isLanguageSwitching = false;
   @Output() localeChange = new EventEmitter<string>();

@@ -8,7 +8,6 @@
      [style.--board-border-width]="borderWidthPx + 'px'">
   <app-chess-board-language-tools
     *ngIf="!previewMode"
-    [uiText]="uiText"
     [selectedLocale]="selectedLocale"
     [isLanguageSwitching]="isLanguageSwitching"
     (localeChange)="switchLocale($event)"></app-chess-board-language-tools>
@@ -42,7 +41,6 @@
 
       <app-chess-board-position-key
         *ngIf="!previewMode"
-        [uiText]="uiText"
         [boardHelper]="chessBoardStateService.boardHelper"
         [isDebugPanelOpen]="isDebugPanelOpen"
         [debugPositionKey]="chessBoardStateService.getDebugPositionKey()"
@@ -52,7 +50,6 @@
 
   <section class="sidebar-panel" *ngIf="!previewMode">
     <app-chess-board-clock-card
-      [uiText]="uiText"
       [selectedLocale]="selectedLocale"
       [chessColors]="chessColors"
       [selectedClockPresetLabel]="selectedClockPresetLabel"
@@ -69,7 +66,6 @@
       (resetClock)="resetClock()"></app-chess-board-clock-card>
 
     <app-chess-board-status-card
-      [uiText]="uiText"
       [selectedLocale]="selectedLocale"
       [boardState]="chessBoardStateService.boardHelper"
       [pendingDrawOfferBy]="snapshotService.pendingDrawOfferBy"
@@ -88,7 +84,6 @@
       (confirmResign)="confirmResign()"></app-chess-board-status-card>
 
     <app-chess-board-tools-card
-      [uiText]="uiText"
       [activeTool]="activeTool"
       [isBoardFlipped]="isBoardFlipped"
       [canPromote]="chessBoardStateService.boardHelper.canPromote !== null"
@@ -112,7 +107,6 @@
 
     <app-chess-board-history-card
       #historyLog
-      [uiText]="uiText"
       [history]="chessBoardStateService.history"
       [historyCursor]="historyCursor"
       [maxMoveIndex]="getHistoryMaxMoveIndex()"
@@ -122,7 +116,6 @@
       (redo)="redoMove()"></app-chess-board-history-card>
 
     <app-chess-board-cct-card
-      [uiText]="uiText"
       [captures]="getCctRecommendations(cctCategory.Captures)"
       [checks]="getCctRecommendations(cctCategory.Checks)"
       [threats]="getCctRecommendations(cctCategory.Threats)"

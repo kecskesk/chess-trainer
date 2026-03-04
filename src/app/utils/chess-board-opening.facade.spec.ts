@@ -35,7 +35,7 @@ describe('ChessBoardOpeningFacade', () => {
       activeOpening: null,
       activeOpeningHistoryKey: ''
     };
-    expect(ChessBoardOpeningFacade.getRecognitionLabel(buildAccessors(state), [], UiText))
+    expect(ChessBoardOpeningFacade.getRecognitionLabel(buildAccessors(state), []))
       .toBe(UiText.recognition.waitingForOpening);
   });
 });

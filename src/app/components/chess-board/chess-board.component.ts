@@ -946,8 +946,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.updateRecognizedOpeningForCurrentHistory(historySteps);
     return ChessBoardOpeningFacade.getRecognitionLabel(
       this.getOpeningStateAccessors(),
-      historySteps,
-      this.uiText
+      historySteps
     );
   }
 
@@ -973,7 +972,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     ChessBoardOpeningFacade.updateRecognizedOpeningForHistory(
       this.getOpeningStateAccessors(),
       historySteps,
-      this.uiText,
       (debugText) => {
         this.chessBoardStateService.boardHelper.debugText = debugText;
       }

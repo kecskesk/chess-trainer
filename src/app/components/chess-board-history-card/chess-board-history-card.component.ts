@@ -13,7 +13,7 @@ import { ChessBoardEvalConstants } from '../../constants/chess.constants';
   styleUrls: ['./chess-board-history-card.component.less']
 })
 export class ChessBoardHistoryCardComponent {
-  @Input() uiText: typeof UiText = UiText;
+  readonly uiText = UiText;
   @Input() history: string[] = [];
   @Input() historyCursor: number | null = null;
   @Input() maxMoveIndex = -1;

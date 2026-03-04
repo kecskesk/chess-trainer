@@ -40,21 +40,20 @@ export class ChessBoardOpeningFacade {
 
   static getRecognitionLabel(
     state: IChessBoardOpeningStateAccessors,
-    historySteps: string[],
-    uiText: typeof UiText
+    historySteps: string[]
   ): string {
     const moveCount = historySteps.length;
     if (moveCount < 1) {
-      return uiText.recognition.waitingForOpening;
+      return UiText.recognition.waitingForOpening;
     }
     if (!state.getOpeningsLoaded()) {
-      return uiText.recognition.loadingOpenings;
+      return UiText.recognition.loadingOpenings;
     }
     const activeOpening = state.getActiveOpening();
     if (activeOpening) {
       return ChessBoardOpeningUtils.getDisplayedOpeningName(activeOpening, historySteps);
     }
-    return uiText.recognition.noOpeningMatch;
+    return UiText.recognition.noOpeningMatch;
   }
 
   static resetOpeningState(state: IChessBoardOpeningStateAccessors): void {
@@ -109,7 +108,6 @@ export class ChessBoardOpeningFacade {
   static updateRecognizedOpeningForHistory(
     state: IChessBoardOpeningStateAccessors,
     historySteps: string[],
-    uiText: typeof UiText,
     onDebugText: (debugText: string) => void
   ): void {
     const openings = state.getOpenings();
@@ -131,7 +129,7 @@ export class ChessBoardOpeningFacade {
           bestMatchResult.baseMatchedDepth,
           historySteps.length,
           historySteps,
-          uiText
+          UiText
         )
       );
     }

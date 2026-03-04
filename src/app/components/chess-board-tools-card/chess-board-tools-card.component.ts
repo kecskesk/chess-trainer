@@ -11,7 +11,7 @@ import { ChessMoveBadgeUtils } from '../../utils/chess-move-badge.utils';
   styleUrls: ['./chess-board-tools-card.component.less']
 })
 export class ChessBoardToolsCardComponent {
-  @Input() uiText: typeof UiText = UiText;
+  readonly uiText = UiText;
   @Input() activeTool: string | null = null;
   @Input() isBoardFlipped = false;
   @Input() canPromote = false;

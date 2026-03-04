@@ -10,7 +10,7 @@ import { UiText } from '../../constants/ui-text.constants';
   styleUrls: ['./chess-board-position-key.component.less']
 })
 export class ChessBoardPositionKeyComponent {
-  @Input() uiText: typeof UiText = UiText;
+  readonly uiText = UiText;
   @Input() boardHelper: { debugText?: string } | null = null;
   @Input() isDebugPanelOpen = false;
   @Input() debugPositionKey = '';
