@@ -5,22 +5,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ChessBoardEvalConstants } from '../constants/chess.constants';
-
-export interface IOpeningDebugTextDictionary {
-  message: {
-    openingPrefix: string;
-    matchedStepsPrefix: string;
-    linePrefix: string;
-    bookRecommendationPrefix: string;
-    bookRecommendationNowSuffix: string;
-    bookRecommendationAfterSuffix: string;
-    notesPrefix: string;
-  };
-  status: {
-    white: string;
-    black: string;
-  };
-}
+import { UiText } from '../constants/ui-text.constants';
+import { UiTextLoaderService } from '../services/ui-text-loader.service';
 
 export interface IOpeningMatchResult {
   opening: IParsedOpening | null;
@@ -31,7 +17,6 @@ export class ChessBoardOpeningUtils {
   static loadOpeningsFromAssets(
     http: HttpClient,
     locale: string,
-    defaultLocale: string,
     onItemsLoaded: (items: IParsedOpening[]) => void,
     onCompleted: () => void,
     openingFiles: string[] = ['openings1.json', 'openings2.json', 'openings3.json']
@@ -42,8 +27,9 @@ export class ChessBoardOpeningUtils {
     }
 
     let remainingFiles = openingFiles.length;
+    const effectiveLocale = locale || UiTextLoaderService.DEFAULT_LOCALE;
     openingFiles.forEach((fileName) => {
-      ChessBoardOpeningUtils.getOpeningAsset$(http, fileName, locale, defaultLocale).subscribe({
+      ChessBoardOpeningUtils.getOpeningAsset$(http, fileName, effectiveLocale).subscribe({
         next: (items) => {
           const parsedItems = ChessBoardOpeningUtils.parseOpeningsPayload(items);
           if (parsedItems.length > 0) {
@@ -64,11 +50,10 @@ export class ChessBoardOpeningUtils {
   static getOpeningAsset$(
     http: HttpClient,
     fileName: string,
-    locale: string,
-    defaultLocale: string
+    locale: string
   ): Observable<IOpeningAssetItem[]> {
     const fallbackPath = `assets/openings/${fileName}`;
-    if (locale === defaultLocale) {
+    if (locale === UiTextLoaderService.DEFAULT_LOCALE) {
       return http.get<IOpeningAssetItem[]>(fallbackPath).pipe(
         catchError(() => of([]))
       );
@@ -241,8 +226,7 @@ export class ChessBoardOpeningUtils {
     opening: IParsedOpening,
     matchedDepth: number,
     historyDepth: number,
-    historySteps: string[],
-    uiText: IOpeningDebugTextDictionary
+    historySteps: string[]
   ): string {
     if (!opening || !opening.raw) {
       return '';
@@ -292,8 +276,8 @@ export class ChessBoardOpeningUtils {
     const lineContinuation = effectiveMatchedDepth < effectiveLineDepth
       ? fullProjectedLineSteps[effectiveMatchedDepth]
       : noMovePlaceholder;
-    const nextSide = historyDepth % 2 === 0 ? uiText.status.white : uiText.status.black;
-    const responseSide = nextSide === uiText.status.white ? uiText.status.black : uiText.status.white;
+    const nextSide = historyDepth % 2 === 0 ? UiText.status.white : UiText.status.black;
+    const responseSide = nextSide === UiText.status.white ? UiText.status.black : UiText.status.white;
     let bookRecommendationNow = noMovePlaceholder;
     if (lineContinuation !== noMovePlaceholder) {
       bookRecommendationNow = lineContinuation;
@@ -302,19 +286,19 @@ export class ChessBoardOpeningUtils {
     }
 
     const debugLines = [
-      `${uiText.message.openingPrefix}: ${displayedOpeningName}`,
-      `${uiText.message.matchedStepsPrefix}: ${effectiveMatchedDepth}/${Math.max(effectiveLineDepth, historyDepth)}`,
-      `${uiText.message.linePrefix}: ${openingLineWithExtension}`,
-      `${uiText.message.bookRecommendationPrefix} (${nextSide} ${uiText.message.bookRecommendationNowSuffix}): ${bookRecommendationNow}`
+      `${UiText.message.openingPrefix}: ${displayedOpeningName}`,
+      `${UiText.message.matchedStepsPrefix}: ${effectiveMatchedDepth}/${Math.max(effectiveLineDepth, historyDepth)}`,
+      `${UiText.message.linePrefix}: ${openingLineWithExtension}`,
+      `${UiText.message.bookRecommendationPrefix} (${nextSide} ${UiText.message.bookRecommendationNowSuffix}): ${bookRecommendationNow}`
     ];
 
     if (lineContinuation !== noMovePlaceholder && suggestedStep !== ChessBoardEvalConstants.NA_PLACEHOLDER && !shouldProjectSuggestedLine) {
       debugLines.push(
-        `${uiText.message.bookRecommendationPrefix} (${responseSide} ${uiText.message.bookRecommendationAfterSuffix}): ${suggestedDisplayName} (${suggestedStep})`
+        `${UiText.message.bookRecommendationPrefix} (${responseSide} ${UiText.message.bookRecommendationAfterSuffix}): ${suggestedDisplayName} (${suggestedStep})`
       );
     }
 
-    debugLines.push(`${uiText.message.notesPrefix}: ${description}`);
+    debugLines.push(`${UiText.message.notesPrefix}: ${description}`);
     return debugLines.join('\n');
   }
 }

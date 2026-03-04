@@ -10,7 +10,6 @@ import { CctCategoryEnum } from '../model/enums/cct-category.enum';
 import { ICctRecommendation, ICctRecommendationScored } from '../model/interfaces/cct-recommendation.interface';
 import { IOpeningAssetItem } from '../model/interfaces/opening-asset-item.interface';
 import { IParsedOpening } from '../model/interfaces/parsed-opening.interface';
-import { IChessBoardCctOpeningUiText } from '../model/interfaces/chess-board-cct-opening-ui-text.interface';
 import { IChessBoardCctScoredBuckets } from '../model/interfaces/chess-board-cct-scored-buckets.interface';
 import { ChessRulesService } from '../services/chess-rules.service';
 import { ChessBoardStateService } from './chess-board-state.service';
@@ -18,6 +17,7 @@ import { ChessBoardCctUtils } from '../utils/chess-board-cct.utils';
 import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 import { UiTextLoaderService } from './ui-text-loader.service';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
+import { UiText } from '../constants/ui-text.constants';
 
 @Injectable({ providedIn: 'root' })
 export class ChessBoardCctService {
@@ -265,8 +265,7 @@ export class ChessBoardCctService {
   }
 
   updateRecognizedOpeningForCurrentHistory(
-    historySteps: string[],
-    uiText: IChessBoardCctOpeningUiText
+    historySteps: string[]
   ): { activeOpening: IParsedOpening | null, debugText: string } {
     if (this.openings.length < 1) {
       this.activeOpening = null;
@@ -288,8 +287,7 @@ export class ChessBoardCctService {
       debugText = this.formatOpeningDebugText(
         this.activeOpening,
         bestMatchResult.baseMatchedDepth,
-        normalizedSteps.length,
-        uiText
+        normalizedSteps.length
       );
     }
     
@@ -299,32 +297,31 @@ export class ChessBoardCctService {
   formatOpeningDebugText(
     opening: IParsedOpening,
     matchedDepth: number,
-    historyDepth: number,
-    uiText: IChessBoardCctOpeningUiText
+    historyDepth: number
   ): string {
     if (!opening) {
       return '';
     }
 
     const parts: string[] = [];
-    parts.push(`${uiText.message.openingLabel}: ${opening.name}`);
+    parts.push(`${UiText.message.openingPrefix}: ${opening.name}`);
     
     if (matchedDepth < historyDepth) {
       const nextStep = opening.steps[matchedDepth];
       if (nextStep) {
-        parts.push(`${uiText.message.matchedSteps}: ${matchedDepth}/${opening.steps.length}`);
+        parts.push(`${UiText.message.matchedStepsPrefix}: ${matchedDepth}/${opening.steps.length}`);
         const whiteMove = matchedDepth % 2 === 0;
         const response = whiteMove 
           ? opening.raw?.suggested_best_response_name 
           : opening.raw?.suggested_best_response_notation_step;
         
         if (response) {
-          const label = whiteMove ? uiText.message.bookRecommendationWhite : uiText.message.bookRecommendationBlack;
+          const label = whiteMove ? UiText.status.white : UiText.status.black;
           parts.push(`${label}: ${response}`);
         }
       }
     } else {
-      parts.push(`${uiText.message.lineLabel}: ${opening.raw?.long_algebraic_notation || ChessBoardEvalConstants.NA_PLACEHOLDER}`);
+      parts.push(`${UiText.message.linePrefix}: ${opening.raw?.long_algebraic_notation || ChessBoardEvalConstants.NA_PLACEHOLDER}`);
     }
 
     return parts.join('\n');

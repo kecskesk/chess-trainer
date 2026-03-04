@@ -1,5 +1,6 @@
 import { ChessBoardClockGameStateFacade } from './chess-board-clock-game-state.facade';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { UiText } from '../constants/ui-text.constants';
 
 describe('ChessBoardClockGameStateFacade', () => {
   it('canOfferDraw returns true only when game is active and no pending offer', () => {
@@ -34,24 +35,20 @@ describe('ChessBoardClockGameStateFacade', () => {
   });
 
   it('handleTimeForfeit returns null when game is over and formats winner otherwise', () => {
+    UiText.status.white = 'White';
+    UiText.status.black = 'Black';
+    UiText.message.forfeitsOnTime = 'forfeits on time.';
+    UiText.message.forfeitsOnTimeNoPeriod = 'forfeits on time';
     expect(
       ChessBoardClockGameStateFacade.handleTimeForfeit(
         ChessColorsEnum.White,
-        true,
-        'White',
-        'Black',
-        'forfeits on time.',
-        'forfeits on time'
+        true
       )
     ).toBeNull();
 
     const result = ChessBoardClockGameStateFacade.handleTimeForfeit(
       ChessColorsEnum.Black,
-      false,
-      'White',
-      'Black',
-      'forfeits on time.',
-      'forfeits on time'
+      false
     );
 
     expect(result).not.toBeNull();

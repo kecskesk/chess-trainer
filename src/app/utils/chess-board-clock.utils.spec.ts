@@ -1,6 +1,7 @@
 import { ChessBoardClockUtils } from './chess-board-clock.utils';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { NgZone } from '@angular/core';
+import { UiText } from '../constants/ui-text.constants';
 
 describe('ChessBoardClockUtils formatting', () => {
   it('pads values to two digits', () => {
@@ -158,13 +159,13 @@ describe('ChessBoardClockUtils increment and forfeit behavior', () => {
     );
     expect(noIncrement.blackClockMs).toBe(10000);
 
+    UiText.status.white = 'White';
+    UiText.status.black = 'Black';
+    UiText.message.forfeitsOnTime = 'forfeits on time.';
+    UiText.message.forfeitsOnTimeNoPeriod = 'forfeits on time';
     const forfeit = ChessBoardClockUtils.handleTimeForfeit(
       ChessColorsEnum.White,
-      false,
-      'White',
-      'Black',
-      'forfeits on time.',
-      'forfeits on time'
+      false
     );
     expect(forfeit).not.toBeNull();
     expect(forfeit?.winnerResult).toBe('0-1');
@@ -172,22 +173,14 @@ describe('ChessBoardClockUtils increment and forfeit behavior', () => {
 
     const blackForfeit = ChessBoardClockUtils.handleTimeForfeit(
       ChessColorsEnum.Black,
-      false,
-      'White',
-      'Black',
-      'forfeits on time.',
-      'forfeits on time'
+      false
     );
     expect(blackForfeit?.winnerResult).toBe('1-0');
 
     expect(
       ChessBoardClockUtils.handleTimeForfeit(
         ChessColorsEnum.Black,
-        true,
-        'White',
-        'Black',
-        'forfeits on time.',
-        'forfeits on time'
+        true
       )
     ).toBeNull();
 

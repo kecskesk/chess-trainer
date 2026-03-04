@@ -24,7 +24,6 @@ export interface IChessBoardOpeningStateAccessors {
 export interface IOpeningAssetLoadParams {
   http: HttpClient;
   locale: string;
-  defaultLocale: string;
   loadId: number;
   getCurrentLoadId: () => number;
   state: IChessBoardOpeningStateAccessors;
@@ -78,7 +77,6 @@ export class ChessBoardOpeningFacade {
     const {
       http,
       locale,
-      defaultLocale,
       loadId,
       getCurrentLoadId,
       state,
@@ -87,8 +85,7 @@ export class ChessBoardOpeningFacade {
     this.resetOpeningState(state);
     ChessBoardOpeningUtils.loadOpeningsFromAssets(
       http,
-      locale || defaultLocale,
-      defaultLocale,
+      locale,
       (parsedItems) => {
         if (loadId !== getCurrentLoadId()) {
           return;
@@ -128,8 +125,7 @@ export class ChessBoardOpeningFacade {
           activeOpening,
           bestMatchResult.baseMatchedDepth,
           historySteps.length,
-          historySteps,
-          UiText
+          historySteps
         )
       );
     }

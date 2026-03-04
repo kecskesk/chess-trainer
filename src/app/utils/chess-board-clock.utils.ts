@@ -1,6 +1,7 @@
 import { NgZone } from '@angular/core';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessBoardUiConstants } from '../constants/chess.constants';
+import { UiText } from '../constants/ui-text.constants';
 
 export interface IClockTickResult {
   shouldStop: boolean;
@@ -122,11 +123,7 @@ export class ChessBoardClockUtils {
 
   static handleTimeForfeit(
     loserColor: ChessColorsEnum,
-    isGameOver: boolean,
-    whiteLabel: string,
-    blackLabel: string,
-    forfeitsOnTimeText: string,
-    forfeitsOnTimeNoPeriodText: string
+    isGameOver: boolean
   ): ITimeForfeitResult | null {
     if (isGameOver) {
       return null;
@@ -134,12 +131,12 @@ export class ChessBoardClockUtils {
 
     const winnerColor = loserColor === ChessColorsEnum.White ? ChessColorsEnum.Black : ChessColorsEnum.White;
     const winnerResult = winnerColor === ChessColorsEnum.White ? '1-0' : '0-1';
-    const loserName = loserColor === ChessColorsEnum.White ? whiteLabel : blackLabel;
-    const forfeitReason = `${loserName} ${forfeitsOnTimeNoPeriodText}`;
+    const loserName = loserColor === ChessColorsEnum.White ? UiText.status.white : UiText.status.black;
+    const forfeitReason = `${loserName} ${UiText.message.forfeitsOnTimeNoPeriod}`;
     return {
       winnerResult,
       appendReason: forfeitReason,
-      debugText: `${loserName} ${forfeitsOnTimeText}`
+      debugText: `${loserName} ${UiText.message.forfeitsOnTime}`
     };
   }
 

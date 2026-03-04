@@ -1,22 +1,7 @@
-import { ChessBoardOpeningUtils, IOpeningDebugTextDictionary } from './chess-board-opening.utils';
+import { ChessBoardOpeningUtils } from './chess-board-opening.utils';
 import { HttpClient } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
-
-const uiText: IOpeningDebugTextDictionary = {
-  message: {
-    openingPrefix: 'Opening',
-    matchedStepsPrefix: 'Matched steps',
-    linePrefix: 'Line',
-    bookRecommendationPrefix: 'Book recommendation',
-    bookRecommendationNowSuffix: 'now',
-    bookRecommendationAfterSuffix: 'after',
-    notesPrefix: 'Notes'
-  },
-  status: {
-    white: 'White',
-    black: 'Black'
-  }
-};
+import { UiText } from '../constants/ui-text.constants';
 
 describe('ChessBoardOpeningUtils', () => {
   it('normalizes and extracts notation steps', () => {
@@ -94,6 +79,18 @@ describe('ChessBoardOpeningUtils', () => {
 });
 
 describe('ChessBoardOpeningUtils debug and asset loading', () => {
+  beforeEach(() => {
+    UiText.message.openingPrefix = 'Opening';
+    UiText.message.matchedStepsPrefix = 'Matched steps';
+    UiText.message.linePrefix = 'Line';
+    UiText.message.bookRecommendationPrefix = 'Book recommendation';
+    UiText.message.bookRecommendationNowSuffix = 'now';
+    UiText.message.bookRecommendationAfterSuffix = 'after';
+    UiText.message.notesPrefix = 'Notes';
+    UiText.status.white = 'White';
+    UiText.status.black = 'Black';
+  });
+
   it('formats opening debug text for projected and non-projected suggested lines', () => {
     const opening: any = {
       name: 'Main',
@@ -106,18 +103,18 @@ describe('ChessBoardOpeningUtils debug and asset loading', () => {
       }
     };
 
-    const projected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 2, 3, ['e2-e4', 'e7-e5', 'Ng1-f3'], uiText);
+    const projected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 2, 3, ['e2-e4', 'e7-e5', 'Ng1-f3']);
     expect(projected).toContain('Opening: Main: Ruy Lopez');
     expect(projected).toContain('Book recommendation (Black now): Nb8-c6');
 
-    const nonProjected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 1, 1, ['e2-e4'], uiText);
+    const nonProjected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 1, 1, ['e2-e4']);
     expect(nonProjected).toContain('Book recommendation (Black now): e7-e5');
     expect(nonProjected).toContain('Book recommendation (White after): Main: Ruy Lopez (Ng1-f3 Nb8-c6)');
 
-    const withMissingHistorySteps = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 0, 0, undefined as any, uiText);
+    const withMissingHistorySteps = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 0, 0, undefined as any);
     expect(withMissingHistorySteps).toContain('Opening: Main');
 
-    expect(ChessBoardOpeningUtils.formatOpeningDebugText(null as any, 0, 0, [], uiText)).toBe('');
+    expect(ChessBoardOpeningUtils.formatOpeningDebugText(null as any, 0, 0, [])).toBe('');
   });
 
   it('loads localized assets with fallback and completes after all files', () => {
@@ -141,7 +138,6 @@ describe('ChessBoardOpeningUtils debug and asset loading', () => {
     ChessBoardOpeningUtils.loadOpeningsFromAssets(
       http,
       'hu_HU',
-      'en_US',
       (items) => loadedNames.push(...items.map(item => item.name)),
       () => {
         completed = true;
@@ -159,7 +155,7 @@ describe('ChessBoardOpeningUtils debug and asset loading', () => {
       get: jasmine.createSpy('get').and.returnValue(of([]))
     } as unknown as HttpClient;
 
-    ChessBoardOpeningUtils.getOpeningAsset$(http, 'openings1.json', 'en_US', 'en_US').subscribe();
+    ChessBoardOpeningUtils.getOpeningAsset$(http, 'openings1.json', 'en_US').subscribe();
     expect(http.get).toHaveBeenCalledTimes(1);
     expect(http.get).toHaveBeenCalledWith('assets/openings/openings1.json');
   });
@@ -172,7 +168,6 @@ describe('ChessBoardOpeningUtils debug and asset loading', () => {
 
     ChessBoardOpeningUtils.loadOpeningsFromAssets(
       http,
-      'en_US',
       'en_US',
       () => undefined,
       () => {

@@ -9,6 +9,7 @@ import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 import { ChessBoardCctUtils } from '../utils/chess-board-cct.utils';
 import { UiTextLoaderService } from './ui-text-loader.service';
 import { ChessBoardStateService } from './chess-board-state.service';
+import { UiText } from '../constants/ui-text.constants';
 
 function emptyBoard(): ChessPieceDto[][][] {
   return Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => [] as ChessPieceDto[]));
@@ -245,20 +246,15 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
 
   beforeEach(() => {
     service = new ChessBoardCctService({ get: jasmine.createSpy('get').and.returnValue(of([])) } as any);
+    UiText.message.openingPrefix = 'Opening';
+    UiText.message.matchedStepsPrefix = 'Matched';
+    UiText.message.linePrefix = 'Line';
+    UiText.status.white = 'White';
+    UiText.status.black = 'Black';
   });
 
   it('updates recognized opening and avoids repeating same debug key', () => {
-    const uiText = {
-      message: {
-        openingLabel: 'Opening',
-        matchedSteps: 'Matched',
-        bookRecommendationWhite: 'White',
-        bookRecommendationBlack: 'Black',
-        lineLabel: 'Line'
-      }
-    };
-
-    const none = service.updateRecognizedOpeningForCurrentHistory(['e4'], uiText as any);
+    const none = service.updateRecognizedOpeningForCurrentHistory(['e4']);
     expect(none.activeOpening).toBeNull();
 
     (service as any).openings = [{
@@ -267,10 +263,10 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
       raw: { long_algebraic_notation: '1. e4 e5', suggested_best_response_name: 'line' }
     }];
 
-    const first = service.updateRecognizedOpeningForCurrentHistory(['1.e4'], uiText as any);
+    const first = service.updateRecognizedOpeningForCurrentHistory(['1.e4']);
     expect(first.debugText).toContain('Opening');
 
-    const second = service.updateRecognizedOpeningForCurrentHistory(['1.e4'], uiText as any);
+    const second = service.updateRecognizedOpeningForCurrentHistory(['1.e4']);
     expect(second.debugText).toBe('');
   });
 
@@ -280,17 +276,7 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
       steps: ['e4', 'e5'],
       raw: { long_algebraic_notation: '1. e4 e5' }
     }];
-    const uiText = {
-      message: {
-        openingLabel: 'Opening',
-        matchedSteps: 'Matched',
-        bookRecommendationWhite: 'White',
-        bookRecommendationBlack: 'Black',
-        lineLabel: 'Line'
-      }
-    };
-
-    const result = service.updateRecognizedOpeningForCurrentHistory(['d4'], uiText as any);
+    const result = service.updateRecognizedOpeningForCurrentHistory(['d4']);
     expect(result.activeOpening).toBeNull();
     expect(result.debugText).toBe('');
   });
@@ -301,18 +287,14 @@ describe('ChessBoardCctService opening helper formatting and matching', () => {
 
   beforeEach(() => {
     service = new ChessBoardCctService({ get: jasmine.createSpy('get').and.returnValue(of([])) } as any);
+    UiText.message.openingPrefix = 'Opening';
+    UiText.message.matchedStepsPrefix = 'Matched';
+    UiText.message.linePrefix = 'Line';
+    UiText.status.white = 'White';
+    UiText.status.black = 'Black';
   });
 
   it('formats opening debug text and private parsing/matching helpers', () => {
-    const uiText = {
-      message: {
-        openingLabel: 'Opening',
-        matchedSteps: 'Matched',
-        bookRecommendationWhite: 'White',
-        bookRecommendationBlack: 'Black',
-        lineLabel: 'Line'
-      }
-    };
     const opening = {
       name: 'Main',
       steps: ['e4', 'e5'],
@@ -323,16 +305,15 @@ describe('ChessBoardCctService opening helper formatting and matching', () => {
       }
     };
 
-    expect(service.formatOpeningDebugText(opening as any, 0, 1, uiText as any)).toContain('White: BestName');
-    expect(service.formatOpeningDebugText(opening as any, 1, 2, uiText as any)).toContain('Black: BestMove');
-    expect(service.formatOpeningDebugText(opening as any, 2, 2, uiText as any)).toContain('Line: 1. e4 e5');
+    expect(service.formatOpeningDebugText(opening as any, 0, 1)).toContain('White: BestName');
+    expect(service.formatOpeningDebugText(opening as any, 1, 2)).toContain('Black: BestMove');
+    expect(service.formatOpeningDebugText(opening as any, 2, 2)).toContain('Line: 1. e4 e5');
     expect(service.formatOpeningDebugText(
       { name: 'NoLine', steps: ['e4'], raw: { long_algebraic_notation: '' } } as any,
       1,
-      1,
-      uiText as any
+      1
     )).toContain('Line: n/a');
-    expect(service.formatOpeningDebugText(null as any, 0, 0, uiText as any)).toBe('');
+    expect(service.formatOpeningDebugText(null as any, 0, 0)).toBe('');
 
     expect((service as any).normalizeOpeningNotation('1. e4 e5 2. Nf3')).toEqual(['e4', 'e5', 'Nf3']);
     expect((service as any).normalizeOpeningNotation('')).toEqual([]);

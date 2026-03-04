@@ -1751,8 +1751,7 @@ describe('ChessBoardComponent gameplay moves and rules (opening helpers)', () =>
       } as any,
       0,
       0,
-      [],
-      component.uiText as any
+      []
     );
     expect(formatted).toContain('Line: n/a');
   });
@@ -2443,7 +2442,7 @@ describe('ChessBoardComponent branch coverage helpers (status and opening fallba
     expect(ChessBoardOpeningUtils.parseOpeningsPayload(null as any)).toEqual([]);
     expect(ChessBoardOpeningUtils.normalizeNotationToken('')).toBe('');
     expect(ChessBoardOpeningUtils.getDisplayedOpeningName(null as any, [])).toBe('');
-    expect(ChessBoardOpeningUtils.formatOpeningDebugText(null as any, 0, 0, [], component.uiText as any)).toBe('');
+    expect(ChessBoardOpeningUtils.formatOpeningDebugText(null as any, 0, 0, [])).toBe('');
     const opening = { name: 'X', steps: ['e2-e4'], raw: { suggested_best_response_name: 'Y', suggested_best_response_notation_step: '2... e7-e5' } };
     expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['d2-d4'])).toBe('X');
     expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['e2-e4'])).toBe('X');
@@ -2735,7 +2734,7 @@ describe('ChessBoardComponent branch coverage helpers (index and evaluation bran
     };
     expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['d2-d4'])).toBe('OnlyName');
     expect(ChessBoardOpeningUtils.getDisplayedOpeningName(opening as any, ['e2-e4'])).toBe('OnlyName');
-    expect(ChessBoardOpeningUtils.formatOpeningDebugText(opening, 1, 1, ['e2-e4'], component.uiText as any)).toContain('Opening');
+    expect(ChessBoardOpeningUtils.formatOpeningDebugText(opening, 1, 1, ['e2-e4'])).toContain('Opening');
 
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
     const mine = (component as any).initColors(false);
@@ -2829,7 +2828,7 @@ describe('ChessBoardComponent branch coverage helpers (locale and asset loading 
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4', '2': 'e7-e5', '3': 'Ng1-f3', '4': 'a7-a6' } as any;
 
     expect(component.getOpeningRecognition()).toContain('Main');
-    const debugText = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 3, 4, ['e2-e4', 'e7-e5', 'Ng1-f3', 'a7-a6'], component.uiText as any);
+    const debugText = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 3, 4, ['e2-e4', 'e7-e5', 'Ng1-f3', 'a7-a6']);
     expect(debugText).toContain('Matched steps');
   });
 
@@ -3140,13 +3139,13 @@ describe('ChessBoardComponent branch coverage helpers (locale switching and open
     const _ = new ChessBoardComponent(chessBoardStateService, { get: fallbackGet } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, stockfishServiceStub as any, undefined, undefined);
 
     let successItems: any[] | null = null;
-    ChessBoardOpeningUtils.getOpeningAsset$({ get: fallbackGet } as any, 'openings1.json', 'hu_HU', UiTextLoaderService.DEFAULT_LOCALE).subscribe((items: any[]) => {
+    ChessBoardOpeningUtils.getOpeningAsset$({ get: fallbackGet } as any, 'openings1.json', 'hu_HU').subscribe((items: any[]) => {
       successItems = items;
     });
     expect(successItems).toEqual([{ name: 'Fallback', long_algebraic_notation: '1. e2-e4' }]);
 
     let emptyItems: any[] | null = null;
-    ChessBoardOpeningUtils.getOpeningAsset$({ get: fallbackGet } as any, 'openings2.json', 'hu_HU', UiTextLoaderService.DEFAULT_LOCALE).subscribe((items: any[]) => {
+    ChessBoardOpeningUtils.getOpeningAsset$({ get: fallbackGet } as any, 'openings2.json', 'hu_HU').subscribe((items: any[]) => {
       emptyItems = items;
     });
     expect(emptyItems).toEqual([]);

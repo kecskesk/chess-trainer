@@ -955,7 +955,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     ChessBoardOpeningFacade.loadOpeningsFromAssets({
       http: this.http,
       locale,
-      defaultLocale: UiTextLoaderService.DEFAULT_LOCALE,
       loadId,
       getCurrentLoadId: () => this.openingsLoadId,
       state: this.getOpeningStateAccessors(),
@@ -1289,11 +1288,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     }
 
     const resignState = ChessBoardUiStateFacade.buildResignStateTransition(
-      color,
-      this.uiText.status.white,
-      this.uiText.status.black,
-      this.uiText.message.resigns,
-      this.uiText.message.resignsNoPeriod
+      color
     );
 
     this.snapshotService.resignConfirmColor = resignState.resignConfirmColor;
@@ -1676,11 +1671,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private handleTimeForfeit(loserColor: ChessColorsEnum): void {
     const forfeitResult = ChessBoardClockGameStateFacade.handleTimeForfeit(
       loserColor,
-      this.chessBoardStateService.boardHelper.gameOver,
-      this.uiText.status.white,
-      this.uiText.status.black,
-      this.uiText.message.forfeitsOnTime,
-      this.uiText.message.forfeitsOnTimeNoPeriod
+      this.chessBoardStateService.boardHelper.gameOver
     );
     if (!forfeitResult) {
       return;

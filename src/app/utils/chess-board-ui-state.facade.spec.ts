@@ -1,5 +1,6 @@
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessBoardUiStateFacade } from './chess-board-ui-state.facade';
+import { UiText } from '../constants/ui-text.constants';
 
 describe('ChessBoardUiStateFacade', () => {
   it('builds subtle debug text only when changed', () => {
@@ -29,13 +30,10 @@ describe('ChessBoardUiStateFacade', () => {
   });
 
   it('builds resign transition payload', () => {
-    const result = ChessBoardUiStateFacade.buildResignStateTransition(
-      ChessColorsEnum.White,
-      'White',
-      'Black',
-      'resigns.',
-      'resigns'
-    );
+    UiText.status.white = 'White';
+    UiText.message.resigns = 'resigns.';
+    UiText.message.resignsNoPeriod = 'resigns';
+    const result = ChessBoardUiStateFacade.buildResignStateTransition(ChessColorsEnum.White);
     expect(result.result).toBe('0-1');
     expect(result.debugText).toContain('White');
     expect(result.pendingDrawOfferBy).toBeNull();

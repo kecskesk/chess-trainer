@@ -1,4 +1,5 @@
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { UiText } from '../constants/ui-text.constants';
 
 export interface IChessBoardDrawStateTransition {
   gameOver: true;
@@ -57,21 +58,17 @@ export class ChessBoardUiStateFacade {
   }
 
   static buildResignStateTransition(
-    loserColor: ChessColorsEnum,
-    whiteLabel: string,
-    blackLabel: string,
-    resignsText: string,
-    resignsNoPeriodText: string
+    loserColor: ChessColorsEnum
   ): IChessBoardResignStateTransition {
-    const loserName = loserColor === ChessColorsEnum.White ? whiteLabel : blackLabel;
+    const loserName = loserColor === ChessColorsEnum.White ? UiText.status.white : UiText.status.black;
     return {
       gameOver: true,
       checkmateColor: null,
       pendingDrawOfferBy: null,
       resignConfirmColor: null,
-      debugText: `${loserName} ${resignsText}`,
+      debugText: `${loserName} ${UiText.message.resigns}`,
       result: loserColor === ChessColorsEnum.White ? '0-1' : '1-0',
-      historyReason: `${loserName} ${resignsNoPeriodText}`
+      historyReason: `${loserName} ${UiText.message.resignsNoPeriod}`
     };
   }
 }

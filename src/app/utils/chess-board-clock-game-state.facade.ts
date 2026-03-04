@@ -40,19 +40,11 @@ export class ChessBoardClockGameStateFacade {
 
   static handleTimeForfeit(
     loserColor: ChessColorsEnum,
-    isGameOver: boolean,
-    whiteLabel: string,
-    blackLabel: string,
-    forfeitsOnTimeText: string,
-    forfeitsOnTimeNoPeriodText: string
+    isGameOver: boolean
   ): ITimeForfeitResult | null {
     return ChessBoardClockUtils.handleTimeForfeit(
       loserColor,
-      isGameOver,
-      whiteLabel,
-      blackLabel,
-      forfeitsOnTimeText,
-      forfeitsOnTimeNoPeriodText
+      isGameOver
     );
   }
 }
