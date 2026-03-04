@@ -4,6 +4,7 @@ import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessRulesService } from '../services/chess-rules.service';
 import { ChessFenUtils } from './chess-fen.utils';
 import { ChessBoardExportUtils } from './chess-board-export.utils';
+import { UiText } from '../constants/ui-text.constants';
 
 export class ChessBoardExportFacade {
   private static readonly EMPTY_FEN = '8/8/8/8/8/8/8/8 w - - 0 1';
@@ -95,8 +96,8 @@ export class ChessBoardExportFacade {
     return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
   }
 
-  static getImageDebugText(readyText: string, now: Date): string {
-    return `${readyText} (${now.toLocaleTimeString()})`;
+  static getImageDebugText(now: Date): string {
+    return `${UiText.message.exportImageReady} (${now.toLocaleTimeString()})`;
   }
 
   static getImageFileName(now: Date): string {

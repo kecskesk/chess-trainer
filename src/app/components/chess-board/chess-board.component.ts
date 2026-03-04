@@ -1051,10 +1051,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   async exportBoardImage(): Promise<void> {
     const now = new Date();
-    this.chessBoardStateService.boardHelper.debugText = ChessBoardExportFacade.getImageDebugText(
-      this.uiText.message.exportImageReady,
-      now
-    );
+    this.chessBoardStateService.boardHelper.debugText = ChessBoardExportFacade.getImageDebugText(now);
     const imageDataUrl = await this.createBoardImageDataUrlFromDom();
     if (imageDataUrl) {
       this.downloadDataUrl(
