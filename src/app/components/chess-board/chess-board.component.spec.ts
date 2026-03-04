@@ -21,7 +21,7 @@ import { ChessMoveBadgeUtils } from '../../utils/chess-move-badge.utils';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
-import { ChessConstants } from '../../constants/chess.constants';
+import { ChessBoardEvalConstants, ChessConstants } from '../../constants/chess.constants';
 import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 
@@ -107,7 +107,7 @@ const computeStatusTitle = (boardHelper: any) => {
 };
 
 const parseEvalText = (text: string | null) => {
-  if (!text || text === '...' || text === ChessBoardComponent.NA_PLACEHOLDER) {
+  if (!text || text === '...' || text === ChessBoardEvalConstants.NA_PLACEHOLDER) {
     return null as number | null;
   }
   if (text.startsWith('#')) {

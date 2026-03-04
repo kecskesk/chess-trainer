@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
-import { ChessConstants } from '../constants/chess.constants';
+import { ChessBoardEvalConstants, ChessConstants } from '../constants/chess.constants';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
@@ -18,7 +18,6 @@ import { ChessBoardCctUtils } from '../utils/chess-board-cct.utils';
 import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 import { UiTextLoaderService } from './ui-text-loader.service';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
-import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
 
 @Injectable({ providedIn: 'root' })
 export class ChessBoardCctService {
@@ -325,7 +324,7 @@ export class ChessBoardCctService {
         }
       }
     } else {
-      parts.push(`${uiText.message.lineLabel}: ${opening.raw?.long_algebraic_notation || ChessBoardComponent.NA_PLACEHOLDER}`);
+      parts.push(`${uiText.message.lineLabel}: ${opening.raw?.long_algebraic_notation || ChessBoardEvalConstants.NA_PLACEHOLDER}`);
     }
 
     return parts.join('\n');

@@ -1,9 +1,8 @@
-import { ChessBoardUiConstants, ChessConstants } from '../constants/chess.constants';
+import { ChessBoardUiConstants, ChessConstants, ChessBoardEvalConstants } from '../constants/chess.constants';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessBoardDisplayUtils } from './chess-board-display.utils';
-import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
 
 export class ChessBoardComponentUtils {
   static movePieceBetweenCells(sourceCell: ChessPieceDto[], targetCell: ChessPieceDto[]): void {
@@ -69,8 +68,8 @@ export class ChessBoardComponentUtils {
     evalText: string,
     analysisClampPawns: number
   ): number | null {
-    if (!evalText || evalText === ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER ||
-      evalText === ChessBoardComponent.EVALUATION_ERROR_PLACEHOLDER || evalText === ChessBoardComponent.NA_PLACEHOLDER) {
+    if (!evalText || evalText === ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER ||
+      evalText === ChessBoardEvalConstants.EVALUATION_ERROR_PLACEHOLDER || evalText === ChessBoardEvalConstants.NA_PLACEHOLDER) {
       return null;
     }
     if (evalText.startsWith('#')) {

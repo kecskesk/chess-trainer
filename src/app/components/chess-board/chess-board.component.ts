@@ -14,7 +14,7 @@ import { IVisualizationArrow } from '../../model/interfaces/visualization-arrow.
 import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 import { ICctRecommendation } from '../../model/interfaces/cct-recommendation.interface';
 import { IParsedOpening } from '../../model/interfaces/parsed-opening.interface';
-import { ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
+import { ChessBoardEvalConstants, ChessBoardMessageConstants, ChessBoardUiConstants, ChessConstants } from '../../constants/chess.constants';
 import { UiText } from '../../constants/ui-text.constants';
 import { UiTextLoaderService } from '../../services/ui-text-loader.service';
 import { StockfishService } from '../../services/stockfish.service';
@@ -82,9 +82,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   @Input() previewBoardSize = ChessConstants.BOARD_SIZE;
   @Input() previewRowAnchor: 'top' | 'bottom' = 'bottom';
   @Input() previewPreset: 'default' | 'piece-colors' = 'default';
-  public static readonly NA_PLACEHOLDER = 'n/a';
-  public static readonly PENDING_EVALUATION_PLACEHOLDER = '...';
-  public static readonly EVALUATION_ERROR_PLACEHOLDER = 'err';
   readonly uiText = UiText;
   readonly boardIndices: number[] = Array.from({ length: ChessConstants.BOARD_SIZE }, (_, idx) => idx);
   @ViewChild('chessField') chessField: ElementRef;
@@ -99,7 +96,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   chessColors = ChessColorsEnum;
   clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = ChessBoardUiConstants.CLOCK_PRESETS;
   private clockIntervalId: number | null = null;
-  private readonly clockTickIntervalMs = ChessBoardUiConstants.CLOCK_TICK_INTERVAL_MS;
   historyCursor: number | null = null;
   isBoardFlipped = false;
   areControlsDisabled = true;
@@ -131,7 +127,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private readonly analysisClampPawns = 10;
   private readonly suggestedMovesDepth = 12;
   private readonly suggestedMovesCount = 3;
-  readonly suggestedMovesLoadingPlaceholder = [ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER];
+  readonly suggestedMovesLoadingPlaceholder = [ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER];
   suggestedMoves: string[] = [...this.suggestedMovesLoadingPlaceholder];
   private suggestionQualityByMove: Record<string, string> = {};
   private suggestionEvalTextByMove: Record<string, string> = {};
@@ -908,7 +904,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   getCurrentAnalysisEvalText(): string {
     const currentMoveIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.historyCursor);
     if (currentMoveIndex < 0) {
-      return ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER;
+      return ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER;
     }
     return this.getEvaluationForMove(currentMoveIndex);
   }
@@ -1641,7 +1637,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private startClock(): void {
     this.clockIntervalId = this.timeControlService.startClock(
       this.clockIntervalId,
-      this.clockTickIntervalMs,
       () => this.tickClock(),
       () => this.requestClockRender(),
       this.ngZone

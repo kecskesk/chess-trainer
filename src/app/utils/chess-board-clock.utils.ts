@@ -1,5 +1,6 @@
 import { NgZone } from '@angular/core';
 import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
+import { ChessBoardUiConstants } from '../constants/chess.constants';
 
 export interface IClockTickResult {
   shouldStop: boolean;
@@ -20,7 +21,6 @@ export class ChessBoardClockUtils {
   static startClock(
     clockIntervalId: number | null,
     lastClockTickAt: number,
-    clockTickIntervalMs: number,
     tick: () => void,
     ngZone?: NgZone
   ): { started: boolean, clockIntervalId: number | null, lastClockTickAt: number, clockRunning: boolean } {
@@ -29,7 +29,7 @@ export class ChessBoardClockUtils {
     }
 
     const scheduledTick = ngZone ? () => ngZone.run(tick) : tick;
-    const nextClockIntervalId = window.setInterval(scheduledTick, clockTickIntervalMs);
+    const nextClockIntervalId = window.setInterval(scheduledTick, ChessBoardUiConstants.CLOCK_TICK_INTERVAL_MS);
     return {
       started: true,
       clockIntervalId: nextClockIntervalId,

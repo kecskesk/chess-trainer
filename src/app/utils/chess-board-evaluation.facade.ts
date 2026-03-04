@@ -2,7 +2,7 @@ import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
 import { ChessBoardEvaluationUtils } from './chess-board-evaluation.utils';
 import { ISuggestionEvaluationResult } from './chess-board-suggestion.facade';
-import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
+import { ChessBoardEvalConstants } from '../constants/chess.constants';
 
 export interface IResetEvaluationStateParams {
   evalByHistoryIndex: Map<number, string>;
@@ -192,7 +192,7 @@ export class ChessBoardEvaluationFacade {
       const formattedSuggestions = params.formatEngineSuggestions(engineTopMoves);
       const resolvedSuggestions = formattedSuggestions.length > 0
         ? formattedSuggestions
-        : [ChessBoardComponent.NA_PLACEHOLDER];
+        : [ChessBoardEvalConstants.NA_PLACEHOLDER];
       params.suggestedMovesCacheByFen.set(params.fen, resolvedSuggestions);
       await params.refreshSuggestionQualities(params.runToken, params.fen, engineTopMoves, formattedSuggestions);
       params.requestRender();
@@ -207,7 +207,7 @@ export class ChessBoardEvaluationFacade {
       }
       params.requestRender();
       return {
-        suggestedMoves: [ChessBoardComponent.NA_PLACEHOLDER],
+        suggestedMoves: [ChessBoardEvalConstants.NA_PLACEHOLDER],
         suggestionQualityByMove: {},
         suggestionEvalTextByMove: {}
       };

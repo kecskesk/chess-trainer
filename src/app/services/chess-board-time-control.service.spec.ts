@@ -25,7 +25,7 @@ describe('ChessBoardTimeControlService', () => {
     service.lastClockTickAt = 123;
     const renderSpy = jasmine.createSpy('render');
 
-    const returnedId = service.startClock(9, 200, () => undefined, renderSpy);
+    const returnedId = service.startClock(9, () => undefined, renderSpy);
 
     expect(returnedId).toBe(9);
     expect(service.clockRunning).toBeFalse();
@@ -38,7 +38,7 @@ describe('ChessBoardTimeControlService', () => {
     const setIntervalSpy = spyOn(window, 'setInterval').and.returnValue(77 as any);
     const dateNowSpy = spyOn(Date, 'now').and.returnValue(500);
 
-    const returnedId = service.startClock(null, 200, () => undefined, renderSpy);
+    const returnedId = service.startClock(null, () => undefined, renderSpy);
 
     expect(setIntervalSpy).toHaveBeenCalled();
     expect(returnedId).toBe(77);

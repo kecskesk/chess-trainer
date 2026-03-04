@@ -1,7 +1,7 @@
 import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
 import { ChessBoardComponentUtils } from './chess-board-component.utils';
 import { ChessBoardLogicUtils } from './chess-board-logic.utils';
-import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
+import { ChessBoardEvalConstants } from '../constants/chess.constants';
 
 export interface IEvaluationGetParams {
   halfMoveIndex: number;
@@ -37,12 +37,12 @@ export class ChessBoardEvaluationUtils {
     } = params;
 
     if (halfMoveIndex < 0) {
-      return ChessBoardComponent.NA_PLACEHOLDER;
+      return ChessBoardEvalConstants.NA_PLACEHOLDER;
     }
 
     const fen = ChessBoardEvaluationUtils.getFenForHistoryIndex(halfMoveIndex, moveSnapshots);
     if (!fen) {
-      return ChessBoardComponent.NA_PLACEHOLDER;
+      return ChessBoardEvalConstants.NA_PLACEHOLDER;
     }
 
     const cachedByFen = evalCacheByFen.get(fen);
@@ -54,17 +54,17 @@ export class ChessBoardEvaluationUtils {
     }
 
     if (pendingEvalByHistoryIndex.has(halfMoveIndex)) {
-      return ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER;
+      return ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER;
     }
     if (evalErrorByHistoryIndex.has(halfMoveIndex)) {
-      return ChessBoardComponent.EVALUATION_ERROR_PLACEHOLDER;
+      return ChessBoardEvalConstants.EVALUATION_ERROR_PLACEHOLDER;
     }
 
     const cachedByIndex = evalByHistoryIndex.get(halfMoveIndex);
     if (cachedByIndex) {
       return cachedByIndex;
     }
-    return ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER;
+    return ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER;
   }
 
   static getMoveQuality(
@@ -133,7 +133,7 @@ export class ChessBoardEvaluationUtils {
 
       const fen = ChessBoardEvaluationUtils.getFenForHistoryIndex(idx, moveSnapshots);
       if (!fen) {
-        evalByHistoryIndex.set(idx, ChessBoardComponent.NA_PLACEHOLDER);
+        evalByHistoryIndex.set(idx, ChessBoardEvalConstants.NA_PLACEHOLDER);
         pendingEvalByHistoryIndex.delete(idx);
         evalErrorByHistoryIndex.delete(idx);
         continue;

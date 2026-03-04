@@ -119,6 +119,15 @@ export class ChessBoardUiConstants {
 }
 
 /**
+ * UI/runtime constants specific to the board component.
+ */
+export class ChessBoardEvalConstants {
+  public static readonly NA_PLACEHOLDER = 'n/a';
+  public static readonly PENDING_EVALUATION_PLACEHOLDER = '...';
+  public static readonly EVALUATION_ERROR_PLACEHOLDER = 'err';
+}
+
+/**
  * Reusable user-facing messages for board status/debug/draw outcomes.
  */
 export class ChessBoardMessageConstants {

@@ -3,7 +3,7 @@ import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 import { ChessBoardTimelineFacade } from '../../utils/chess-board-timeline.facade';
-import { ChessBoardComponent } from '../chess-board/chess-board.component';
+import { ChessBoardEvalConstants } from '../../constants/chess.constants';
 
 @Component({
   selector: 'app-chess-board-history-card',
@@ -55,9 +55,9 @@ export class ChessBoardHistoryCardComponent {
 
   getEvaluationForMove(halfMoveIndex: number): string {
     if (halfMoveIndex < 0 || halfMoveIndex >= this.evaluations.length) {
-      return ChessBoardComponent.NA_PLACEHOLDER;
+      return ChessBoardEvalConstants.NA_PLACEHOLDER;
     }
-    return this.evaluations[halfMoveIndex] || ChessBoardComponent.NA_PLACEHOLDER;
+    return this.evaluations[halfMoveIndex] || ChessBoardEvalConstants.NA_PLACEHOLDER;
   }
 
   getHistoryElement(): HTMLDivElement | null {

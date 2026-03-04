@@ -4,7 +4,7 @@ import { IParsedOpening } from '../model/interfaces/parsed-opening.interface';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
+import { ChessBoardEvalConstants } from '../constants/chess.constants';
 
 export interface IOpeningDebugTextDictionary {
   message: {
@@ -249,17 +249,17 @@ export class ChessBoardOpeningUtils {
     }
     const normalizedHistorySteps = historySteps || [];
 
-    const openingLine = opening.raw.long_algebraic_notation || ChessBoardComponent.NA_PLACEHOLDER;
-    const suggestedName = opening.raw.suggested_best_response_name || ChessBoardComponent.NA_PLACEHOLDER;
+    const openingLine = opening.raw.long_algebraic_notation || ChessBoardEvalConstants.NA_PLACEHOLDER;
+    const suggestedName = opening.raw.suggested_best_response_name || ChessBoardEvalConstants.NA_PLACEHOLDER;
     const suggestedDisplayName =
-      suggestedName !== ChessBoardComponent.NA_PLACEHOLDER && ChessBoardOpeningUtils.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
+      suggestedName !== ChessBoardEvalConstants.NA_PLACEHOLDER && ChessBoardOpeningUtils.shouldPrefixSuggestedOpeningName(opening.name, suggestedName)
         ? `${opening.name}: ${suggestedName}`
         : suggestedName;
-    const suggestedStep = opening.raw.suggested_best_response_notation_step || ChessBoardComponent.NA_PLACEHOLDER;
-    const description = opening.raw.short_description || ChessBoardComponent.NA_PLACEHOLDER;
+    const suggestedStep = opening.raw.suggested_best_response_notation_step || ChessBoardEvalConstants.NA_PLACEHOLDER;
+    const description = opening.raw.short_description || ChessBoardEvalConstants.NA_PLACEHOLDER;
     const displayedOpeningName = ChessBoardOpeningUtils.getDisplayedOpeningName(opening, normalizedHistorySteps);
     const suggestedSequence = ChessBoardOpeningUtils.extractNotationSteps(suggestedStep);
-    const suggestedResponseMove = suggestedSequence[0] || ChessBoardComponent.NA_PLACEHOLDER;
+    const suggestedResponseMove = suggestedSequence[0] || ChessBoardEvalConstants.NA_PLACEHOLDER;
     const hasStartedSuggestedLine =
       suggestedSequence.length > 0 &&
       normalizedHistorySteps.length > opening.steps.length &&
@@ -284,7 +284,7 @@ export class ChessBoardOpeningUtils {
 
     const effectiveLineDepth = fullProjectedLineSteps.length;
     const openingLineWithExtension =
-      shouldProjectSuggestedLine && suggestedStep !== ChessBoardComponent.NA_PLACEHOLDER
+      shouldProjectSuggestedLine && suggestedStep !== ChessBoardEvalConstants.NA_PLACEHOLDER
         ? `${openingLine} ${suggestedStep}`
         : openingLine;
 
@@ -297,7 +297,7 @@ export class ChessBoardOpeningUtils {
     let bookRecommendationNow = noMovePlaceholder;
     if (lineContinuation !== noMovePlaceholder) {
       bookRecommendationNow = lineContinuation;
-    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== ChessBoardComponent.NA_PLACEHOLDER) {
+    } else if (!shouldProjectSuggestedLine && suggestedResponseMove !== ChessBoardEvalConstants.NA_PLACEHOLDER) {
       bookRecommendationNow = suggestedResponseMove;
     }
 
@@ -308,7 +308,7 @@ export class ChessBoardOpeningUtils {
       `${uiText.message.bookRecommendationPrefix} (${nextSide} ${uiText.message.bookRecommendationNowSuffix}): ${bookRecommendationNow}`
     ];
 
-    if (lineContinuation !== noMovePlaceholder && suggestedStep !== ChessBoardComponent.NA_PLACEHOLDER && !shouldProjectSuggestedLine) {
+    if (lineContinuation !== noMovePlaceholder && suggestedStep !== ChessBoardEvalConstants.NA_PLACEHOLDER && !shouldProjectSuggestedLine) {
       debugLines.push(
         `${uiText.message.bookRecommendationPrefix} (${responseSide} ${uiText.message.bookRecommendationAfterSuffix}): ${suggestedDisplayName} (${suggestedStep})`
       );

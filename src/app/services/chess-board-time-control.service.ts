@@ -32,7 +32,6 @@ export class ChessBoardTimeControlService {
 
   startClock(
     clockIntervalId: number | null,
-    clockTickIntervalMs: number,
     tick: () => void,
     requestRender: () => void,
     ngZone?: NgZone
@@ -40,7 +39,6 @@ export class ChessBoardTimeControlService {
     const startResult = ChessBoardClockUtils.startClock(
       clockIntervalId,
       this.lastClockTickAt,
-      clockTickIntervalMs,
       tick,
       ngZone
     );

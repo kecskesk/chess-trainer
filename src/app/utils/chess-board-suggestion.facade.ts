@@ -7,7 +7,7 @@ import { ChessBoardCctUtils } from './chess-board-cct.utils';
 import { ChessRulesService } from '../services/chess-rules.service';
 import { ChessBoardComponentUtils } from './chess-board-component.utils';
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
-import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
+import { ChessBoardEvalConstants } from '../constants/chess.constants';
 
 export interface IChessBoardSuggestionEngineService {
   evaluateFen: (fen: string, options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
@@ -303,8 +303,8 @@ export class ChessBoardSuggestionFacade {
         const evaluation = typeof engineService.evaluateFenAfterMoves === 'function'
           ? await engineService.evaluateFenAfterMoves(fen, [uciMove], { depth: suggestedMovesDepth })
           : await engineService.evaluateFen(fen, { depth: suggestedMovesDepth });
-        if (evaluation && evaluation !== ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER && evaluation !== ChessBoardComponent.EVALUATION_ERROR_PLACEHOLDER &&
-          evaluation !== ChessBoardComponent.NA_PLACEHOLDER) {
+        if (evaluation && evaluation !== ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER && evaluation !== ChessBoardEvalConstants.EVALUATION_ERROR_PLACEHOLDER &&
+          evaluation !== ChessBoardEvalConstants.NA_PLACEHOLDER) {
           evalTextByUci.set(uciMove, evaluation);
         }
         const pawns = ChessBoardComponentUtils.parseEvaluationPawns(

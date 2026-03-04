@@ -63,7 +63,6 @@ describe('ChessBoardClockUtils interval lifecycle', () => {
     ChessBoardClockUtils.startClock(
       null,
       0,
-      200,
       () => {
         ran = true;
       },
