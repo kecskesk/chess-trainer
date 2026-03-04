@@ -1,6 +1,7 @@
 import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
 import { ChessBoardComponentUtils } from './chess-board-component.utils';
 import { ChessBoardLogicUtils } from './chess-board-logic.utils';
+import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
 
 export interface IEvaluationGetParams {
   halfMoveIndex: number;
@@ -9,9 +10,6 @@ export interface IEvaluationGetParams {
   evalCacheByFen: Map<string, string>;
   pendingEvalByHistoryIndex: Set<number>;
   evalErrorByHistoryIndex: Set<number>;
-  naPlaceholder: string;
-  pendingEvaluationPlaceholder: string;
-  evaluationErrorPlaceholder: string;
 }
 
 export interface IRefreshVisibleEvaluationsParams {
@@ -24,7 +22,6 @@ export interface IRefreshVisibleEvaluationsParams {
   evalCacheByFen: Map<string, string>;
   pendingEvalByHistoryIndex: Set<number>;
   evalErrorByHistoryIndex: Set<number>;
-  naPlaceholder: string;
   requestRender: () => void;
 }
 
@@ -36,19 +33,16 @@ export class ChessBoardEvaluationUtils {
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
-      evalErrorByHistoryIndex,
-      naPlaceholder,
-      pendingEvaluationPlaceholder,
-      evaluationErrorPlaceholder
+      evalErrorByHistoryIndex
     } = params;
 
     if (halfMoveIndex < 0) {
-      return naPlaceholder;
+      return ChessBoardComponent.NA_PLACEHOLDER;
     }
 
     const fen = ChessBoardEvaluationUtils.getFenForHistoryIndex(halfMoveIndex, moveSnapshots);
     if (!fen) {
-      return naPlaceholder;
+      return ChessBoardComponent.NA_PLACEHOLDER;
     }
 
     const cachedByFen = evalCacheByFen.get(fen);
@@ -60,25 +54,22 @@ export class ChessBoardEvaluationUtils {
     }
 
     if (pendingEvalByHistoryIndex.has(halfMoveIndex)) {
-      return pendingEvaluationPlaceholder;
+      return ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER;
     }
     if (evalErrorByHistoryIndex.has(halfMoveIndex)) {
-      return evaluationErrorPlaceholder;
+      return ChessBoardComponent.EVALUATION_ERROR_PLACEHOLDER;
     }
 
     const cachedByIndex = evalByHistoryIndex.get(halfMoveIndex);
     if (cachedByIndex) {
       return cachedByIndex;
     }
-    return pendingEvaluationPlaceholder;
+    return ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER;
   }
 
   static getMoveQuality(
     halfMoveIndex: number,
     getEvaluationForMove: (halfMoveIndex: number) => string,
-    pendingEvaluationPlaceholder: string,
-    evaluationErrorPlaceholder: string,
-    naPlaceholder: string,
     analysisClampPawns: number
   ): { label: string; className: string } | null {
     const previousEvalText = getEvaluationForMove(halfMoveIndex - 1);
@@ -86,16 +77,10 @@ export class ChessBoardEvaluationUtils {
 
     let previousEval = ChessBoardComponentUtils.parseEvaluationPawns(
       previousEvalText,
-      pendingEvaluationPlaceholder,
-      evaluationErrorPlaceholder,
-      naPlaceholder,
       analysisClampPawns
     );
     let currentEval = ChessBoardComponentUtils.parseEvaluationPawns(
       currentEvalText,
-      pendingEvaluationPlaceholder,
-      evaluationErrorPlaceholder,
-      naPlaceholder,
       analysisClampPawns
     );
 
@@ -134,7 +119,6 @@ export class ChessBoardEvaluationUtils {
       evalCacheByFen,
       pendingEvalByHistoryIndex,
       evalErrorByHistoryIndex,
-      naPlaceholder,
       requestRender
     } = params;
 
@@ -149,7 +133,7 @@ export class ChessBoardEvaluationUtils {
 
       const fen = ChessBoardEvaluationUtils.getFenForHistoryIndex(idx, moveSnapshots);
       if (!fen) {
-        evalByHistoryIndex.set(idx, naPlaceholder);
+        evalByHistoryIndex.set(idx, ChessBoardComponent.NA_PLACEHOLDER);
         pendingEvalByHistoryIndex.delete(idx);
         evalErrorByHistoryIndex.delete(idx);
         continue;

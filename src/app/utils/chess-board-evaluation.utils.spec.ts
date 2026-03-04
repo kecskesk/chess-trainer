@@ -30,10 +30,7 @@ describe('ChessBoardEvaluationUtils', () => {
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
-      evalErrorByHistoryIndex,
-      naPlaceholder: 'n/a',
-      pendingEvaluationPlaceholder: '...',
-      evaluationErrorPlaceholder: 'err'
+      evalErrorByHistoryIndex
     });
     expect(fromFenCache).toBe('+0.42');
     expect(evalByHistoryIndex.get(1)).toBe('+0.42');
@@ -44,10 +41,7 @@ describe('ChessBoardEvaluationUtils', () => {
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
-      evalErrorByHistoryIndex,
-      naPlaceholder: 'n/a',
-      pendingEvaluationPlaceholder: '...',
-      evaluationErrorPlaceholder: 'err'
+      evalErrorByHistoryIndex
     });
     expect(pending).toBe('...');
 
@@ -57,10 +51,7 @@ describe('ChessBoardEvaluationUtils', () => {
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
-      evalErrorByHistoryIndex,
-      naPlaceholder: 'n/a',
-      pendingEvaluationPlaceholder: '...',
-      evaluationErrorPlaceholder: 'err'
+      evalErrorByHistoryIndex
     });
     expect(error).toBe('err');
 
@@ -70,10 +61,7 @@ describe('ChessBoardEvaluationUtils', () => {
       evalByHistoryIndex: new Map<number, string>([[4, '-0.33']]),
       evalCacheByFen: new Map<string, string>(),
       pendingEvalByHistoryIndex: new Set<number>(),
-      evalErrorByHistoryIndex: new Set<number>(),
-      naPlaceholder: 'n/a',
-      pendingEvaluationPlaceholder: '...',
-      evaluationErrorPlaceholder: 'err'
+      evalErrorByHistoryIndex: new Set<number>()
     });
     expect(byIndex).toBe('-0.33');
 
@@ -83,10 +71,7 @@ describe('ChessBoardEvaluationUtils', () => {
       evalByHistoryIndex: new Map<number, string>(),
       evalCacheByFen: new Map<string, string>(),
       pendingEvalByHistoryIndex: new Set<number>(),
-      evalErrorByHistoryIndex: new Set<number>(),
-      naPlaceholder: 'n/a',
-      pendingEvaluationPlaceholder: '...',
-      evaluationErrorPlaceholder: 'err'
+      evalErrorByHistoryIndex: new Set<number>()
     });
     expect(na).toBe('n/a');
   });
@@ -95,9 +80,6 @@ describe('ChessBoardEvaluationUtils', () => {
     const quality = ChessBoardEvaluationUtils.getMoveQuality(
       2,
       (idx) => (idx === 1 ? '+0.10' : '+3.20'),
-      '...',
-      'err',
-      'n/a',
       10
     );
 
@@ -119,9 +101,6 @@ describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
         }
         return 'n/a';
       },
-      '...',
-      'err',
-      'n/a',
       10
     );
 
@@ -140,9 +119,6 @@ describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
         }
         return 'n/a';
       },
-      '...',
-      'err',
-      'n/a',
       10
     );
 
@@ -161,9 +137,6 @@ describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
         }
         return 'n/a';
       },
-      '...',
-      'err',
-      'n/a',
       10
     );
     expect(currentMateZeroFromPositive).not.toBeNull();
@@ -179,9 +152,6 @@ describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
         }
         return 'n/a';
       },
-      '...',
-      'err',
-      'n/a',
       10
     );
     expect(previousMateZeroFromNegative).not.toBeNull();
@@ -221,9 +191,7 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
-      evalErrorByHistoryIndex,
-      naPlaceholder: 'n/a',
-      requestRender: renderSpy
+      evalErrorByHistoryIndex,      requestRender: renderSpy
     });
 
     expect(evalByHistoryIndex.get(0)).toBe('+0.20');
@@ -235,3 +203,4 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
     expect(fenForIdxSpy).toHaveBeenCalled();
   });
 });
+

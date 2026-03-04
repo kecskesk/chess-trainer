@@ -100,9 +100,6 @@ describe('Coverage extras', () => {
       fen: 'fen',
       uniqueUciMoves: ['e2e4'],
       suggestedMovesDepth: 1,
-      pendingEvaluationPlaceholder: '...',
-      evaluationErrorPlaceholder: 'err',
-      naPlaceholder: 'n/a',
       analysisClampPawns: 10
     } as any);
     expect(result1.pawnsByUci.size).toBe(0);
@@ -113,9 +110,6 @@ describe('Coverage extras', () => {
       fen: 'fen',
       uniqueUciMoves: ['e2e4'],
       suggestedMovesDepth: 1,
-      pendingEvaluationPlaceholder: '...',
-      evaluationErrorPlaceholder: 'err',
-      naPlaceholder: 'n/a',
       analysisClampPawns: 10
     } as any);
     expect(result2.pawnsByUci.size).toBe(0);
@@ -137,3 +131,4 @@ describe('Coverage extras', () => {
     expect(typeof grid.getDisplaySquareHighlightClass(0, 0)).toBe('string');
   });
 });
+

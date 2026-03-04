@@ -58,9 +58,7 @@ describe('ChessBoardEvaluationFacade', () => {
       suggestedMovesCacheByFen: new Map<string, string[]>(),
       suggestionQualityByFen: new Map<string, Record<string, string>>(),
       suggestionEvalTextByFen: new Map<string, Record<string, string>>(),
-      suggestedMovesLoadingPlaceholder: ['...'],
-      naPlaceholder: 'n/a',
-      requestRender: () => undefined,
+      suggestedMovesLoadingPlaceholder: ['...'],      requestRender: () => undefined,
       formatEngineSuggestions: () => [],
       refreshSuggestionQualities: async () => undefined
     });
@@ -90,3 +88,4 @@ describe('ChessBoardEvaluationFacade', () => {
     expect(result).toEqual({ suggestionQualityByMove: {}, suggestionEvalTextByMove: {} });
   });
 });
+

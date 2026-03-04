@@ -2,6 +2,7 @@ import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snapshot.interface';
 import { ChessBoardEvaluationUtils } from './chess-board-evaluation.utils';
 import { ISuggestionEvaluationResult } from './chess-board-suggestion.facade';
+import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
 
 export interface IResetEvaluationStateParams {
   evalByHistoryIndex: Map<number, string>;
@@ -48,7 +49,6 @@ export interface IRefreshVisibleHistoryEvaluationsParams {
   evalCacheByFen: Map<string, string>;
   pendingEvalByHistoryIndex: Set<number>;
   evalErrorByHistoryIndex: Set<number>;
-  naPlaceholder: string;
   requestRender: () => void;
   onRefreshSuggestedMoves: () => Promise<void>;
 }
@@ -64,7 +64,6 @@ export interface IRefreshSuggestedMovesParams {
   suggestionQualityByFen: Map<string, Record<string, string>>;
   suggestionEvalTextByFen: Map<string, Record<string, string>>;
   suggestedMovesLoadingPlaceholder: string[];
-  naPlaceholder: string;
   requestRender: () => void;
   formatEngineSuggestions: (uciMoves: string[]) => string[];
   refreshSuggestionQualities: (runToken: number, fen: string, engineTopMoves?: string[], formattedEngineSuggestions?: string[]) => Promise<void>;
@@ -152,7 +151,6 @@ export class ChessBoardEvaluationFacade {
       evalCacheByFen: params.evalCacheByFen,
       pendingEvalByHistoryIndex: params.pendingEvalByHistoryIndex,
       evalErrorByHistoryIndex: params.evalErrorByHistoryIndex,
-      naPlaceholder: params.naPlaceholder,
       requestRender: params.requestRender
     });
     await params.onRefreshSuggestedMoves();
@@ -194,7 +192,7 @@ export class ChessBoardEvaluationFacade {
       const formattedSuggestions = params.formatEngineSuggestions(engineTopMoves);
       const resolvedSuggestions = formattedSuggestions.length > 0
         ? formattedSuggestions
-        : [params.naPlaceholder];
+        : [ChessBoardComponent.NA_PLACEHOLDER];
       params.suggestedMovesCacheByFen.set(params.fen, resolvedSuggestions);
       await params.refreshSuggestionQualities(params.runToken, params.fen, engineTopMoves, formattedSuggestions);
       params.requestRender();
@@ -209,7 +207,7 @@ export class ChessBoardEvaluationFacade {
       }
       params.requestRender();
       return {
-        suggestedMoves: [params.naPlaceholder],
+        suggestedMoves: [ChessBoardComponent.NA_PLACEHOLDER],
         suggestionQualityByMove: {},
         suggestionEvalTextByMove: {}
       };

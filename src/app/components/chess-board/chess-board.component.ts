@@ -83,6 +83,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   @Input() previewRowAnchor: 'top' | 'bottom' = 'bottom';
   @Input() previewPreset: 'default' | 'piece-colors' = 'default';
   public static readonly NA_PLACEHOLDER = 'n/a';
+  public static readonly PENDING_EVALUATION_PLACEHOLDER = '...';
+  public static readonly EVALUATION_ERROR_PLACEHOLDER = 'err';
   readonly uiText = UiText;
   readonly boardIndices: number[] = Array.from({ length: ChessConstants.BOARD_SIZE }, (_, idx) => idx);
   @ViewChild('chessField') chessField: ElementRef;
@@ -125,12 +127,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private evaluationRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   private evaluationRunToken = 0;
   private readonly evaluationDebounceMs = 140;
-  private readonly pendingEvaluationPlaceholder = '...';
-  private readonly evaluationErrorPlaceholder = 'err';
+
   private readonly analysisClampPawns = 10;
   private readonly suggestedMovesDepth = 12;
   private readonly suggestedMovesCount = 3;
-  readonly suggestedMovesLoadingPlaceholder = [this.pendingEvaluationPlaceholder];
+  readonly suggestedMovesLoadingPlaceholder = [ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER];
   suggestedMoves: string[] = [...this.suggestedMovesLoadingPlaceholder];
   private suggestionQualityByMove: Record<string, string> = {};
   private suggestionEvalTextByMove: Record<string, string> = {};
@@ -170,18 +171,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   get visibleHistoryEvaluations(): string[] {
     const visibleHistory = this.getVisibleHistory();
     return visibleHistory.map((_, idx) => this.getEvaluationForMove(idx));
-  }
-
-  get pendingEvaluationPlaceholderText(): string {
-    return this.pendingEvaluationPlaceholder;
-  }
-
-  get evaluationErrorPlaceholderText(): string {
-    return this.evaluationErrorPlaceholder;
-  }
-
-  get naPlaceholderText(): string {
-    return ChessBoardComponent.NA_PLACEHOLDER;
   }
 
   get analysisClampPawnsLimit(): number {
@@ -912,17 +901,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       evalByHistoryIndex: this.evalByHistoryIndex,
       evalCacheByFen: this.evalCacheByFen,
       pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
-      evalErrorByHistoryIndex: this.evalErrorByHistoryIndex,
-      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
-      pendingEvaluationPlaceholder: this.pendingEvaluationPlaceholder,
-      evaluationErrorPlaceholder: this.evaluationErrorPlaceholder
+      evalErrorByHistoryIndex: this.evalErrorByHistoryIndex
     });
   }
 
   getCurrentAnalysisEvalText(): string {
     const currentMoveIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.historyCursor);
     if (currentMoveIndex < 0) {
-      return this.pendingEvaluationPlaceholder;
+      return ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER;
     }
     return this.getEvaluationForMove(currentMoveIndex);
   }
@@ -931,9 +917,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     const evalText = this.getCurrentAnalysisEvalText();
     const pawns = ChessBoardComponentUtils.parseEvaluationPawns(
       evalText,
-      this.pendingEvaluationPlaceholder,
-      this.evaluationErrorPlaceholder,
-      ChessBoardComponent.NA_PLACEHOLDER,
       this.analysisClampPawns
     );
     if (pawns === null) {
@@ -995,7 +978,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.getOpeningStateAccessors(),
       historySteps,
       this.uiText,
-      ChessBoardComponent.NA_PLACEHOLDER,
       (debugText) => {
         this.chessBoardStateService.boardHelper.debugText = debugText;
       }
@@ -1862,7 +1844,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       evalCacheByFen: this.evalCacheByFen,
       pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
       evalErrorByHistoryIndex: this.evalErrorByHistoryIndex,
-      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
       requestRender: () => this.requestClockRender(),
       onRefreshSuggestedMoves: () => this.refreshSuggestedMoves(runToken)
     });
@@ -1883,7 +1864,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       suggestionQualityByFen: this.suggestionQualityByFen,
       suggestionEvalTextByFen: this.suggestionEvalTextByFen,
       suggestedMovesLoadingPlaceholder: this.suggestedMovesLoadingPlaceholder,
-      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
       requestRender: () => this.requestClockRender(),
       formatEngineSuggestions: (uciMoves) => this.formatEngineSuggestions(uciMoves),
       refreshSuggestionQualities: (token, fen, topMoves, formatted) =>
@@ -1949,9 +1929,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       uniqueUciMoves,
       engineService: this.stockfishService,
       suggestedMovesDepth: this.suggestedMovesDepth,
-      pendingEvaluationPlaceholder: this.pendingEvaluationPlaceholder,
-      evaluationErrorPlaceholder: this.evaluationErrorPlaceholder,
-      naPlaceholder: ChessBoardComponent.NA_PLACEHOLDER,
       analysisClampPawns: this.analysisClampPawns
     });
   }
@@ -1973,5 +1950,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
 }
+
 
 

@@ -13,9 +13,7 @@ describe('ChessBoardHistoryCardComponent', () => {
   });
 
   it('returns evaluation by index with fallback', () => {
-    component.evaluations = ['+0.10', '-0.20'];
-    component.naPlaceholder = 'n/a';
-    expect(component.getEvaluationForMove(0)).toBe('+0.10');
+    component.evaluations = ['+0.10', '-0.20'];    expect(component.getEvaluationForMove(0)).toBe('+0.10');
     expect(component.getEvaluationForMove(1)).toBe('-0.20');
     expect(component.getEvaluationForMove(2)).toBe('n/a');
     expect(component.getEvaluationForMove(-1)).toBe('n/a');
@@ -42,9 +40,7 @@ describe('ChessBoardHistoryCardComponent', () => {
   });
 
   it('falls back to na placeholder for empty-string evaluation entry', () => {
-    component.evaluations = [''];
-    component.naPlaceholder = 'n/a';
-    expect(component.getEvaluationForMove(0)).toBe('n/a');
+    component.evaluations = [''];    expect(component.getEvaluationForMove(0)).toBe('n/a');
   });
 
   it('returns history native element when view child exists', () => {
@@ -69,3 +65,4 @@ describe('ChessBoardHistoryCardComponent', () => {
     expect(component.visibleHistory).toEqual([]);
   });
 });
+

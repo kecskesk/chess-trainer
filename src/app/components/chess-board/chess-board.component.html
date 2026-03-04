@@ -117,9 +117,6 @@
       [historyCursor]="historyCursor"
       [maxMoveIndex]="getHistoryMaxMoveIndex()"
       [evaluations]="allHistoryEvaluations"
-      [pendingEvaluationPlaceholder]="pendingEvaluationPlaceholderText"
-      [evaluationErrorPlaceholder]="evaluationErrorPlaceholderText"
-      [naPlaceholder]="naPlaceholderText"
       [analysisClampPawns]="analysisClampPawnsLimit"
       (undo)="undoMove()"
       (redo)="redoMove()"></app-chess-board-history-card>
@@ -135,8 +132,6 @@
       (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-cct-card>
   </section>
 </div>
-
-
 
 
 

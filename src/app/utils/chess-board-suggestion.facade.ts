@@ -7,6 +7,7 @@ import { ChessBoardCctUtils } from './chess-board-cct.utils';
 import { ChessRulesService } from '../services/chess-rules.service';
 import { ChessBoardComponentUtils } from './chess-board-component.utils';
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
+import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
 
 export interface IChessBoardSuggestionEngineService {
   evaluateFen: (fen: string, options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
@@ -39,9 +40,6 @@ export interface IEvaluateUciMovesParams {
   uniqueUciMoves: string[];
   engineService?: IChessBoardSuggestionEngineService;
   suggestedMovesDepth: number;
-  pendingEvaluationPlaceholder: string;
-  evaluationErrorPlaceholder: string;
-  naPlaceholder: string;
   analysisClampPawns: number;
 }
 
@@ -289,9 +287,6 @@ export class ChessBoardSuggestionFacade {
       uniqueUciMoves,
       engineService,
       suggestedMovesDepth,
-      pendingEvaluationPlaceholder,
-      evaluationErrorPlaceholder,
-      naPlaceholder,
       analysisClampPawns
     } = params;
     const evalByUci = new Map<string, number>();
@@ -308,15 +303,12 @@ export class ChessBoardSuggestionFacade {
         const evaluation = typeof engineService.evaluateFenAfterMoves === 'function'
           ? await engineService.evaluateFenAfterMoves(fen, [uciMove], { depth: suggestedMovesDepth })
           : await engineService.evaluateFen(fen, { depth: suggestedMovesDepth });
-        if (evaluation && evaluation !== pendingEvaluationPlaceholder && evaluation !== evaluationErrorPlaceholder &&
-          evaluation !== naPlaceholder) {
+        if (evaluation && evaluation !== ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER && evaluation !== ChessBoardComponent.EVALUATION_ERROR_PLACEHOLDER &&
+          evaluation !== ChessBoardComponent.NA_PLACEHOLDER) {
           evalTextByUci.set(uciMove, evaluation);
         }
         const pawns = ChessBoardComponentUtils.parseEvaluationPawns(
           evaluation,
-          pendingEvaluationPlaceholder,
-          evaluationErrorPlaceholder,
-          naPlaceholder,
           analysisClampPawns
         );
         if (pawns !== null) {

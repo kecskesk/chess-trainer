@@ -37,14 +37,14 @@ describe('ChessBoardComponentUtils', () => {
   });
 
   it('parses evaluation text and computes move quality labels', () => {
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('', '...', 'err', 'n/a', 10)).toBeNull();
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('...', '...', 'err', 'n/a', 10)).toBeNull();
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('err', '...', 'err', 'n/a', 10)).toBeNull();
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('n/a', '...', 'err', 'n/a', 10)).toBeNull();
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('#3', '...', 'err', 'n/a', 10)).toBe(10);
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('#-2', '...', 'err', 'n/a', 10)).toBe(-10);
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('+1.2', '...', 'err', 'n/a', 10)).toBe(1.2);
-    expect(ChessBoardComponentUtils.parseEvaluationPawns('bad', '...', 'err', 'n/a', 10)).toBeNull();
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('',  10)).toBeNull();
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('...',  10)).toBeNull();
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('err',  10)).toBeNull();
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('n/a',  10)).toBeNull();
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('#3',  10)).toBe(10);
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('#-2',  10)).toBe(-10);
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('+1.2',  10)).toBe(1.2);
+    expect(ChessBoardComponentUtils.parseEvaluationPawns('bad',  10)).toBeNull();
 
     expect(ChessBoardComponentUtils.getMoveQuality(0, 0, 1)).toBeNull();
     expect(ChessBoardComponentUtils.getMoveQuality(1, null, 1)).toBeNull();
@@ -59,3 +59,4 @@ describe('ChessBoardComponentUtils', () => {
     expect(ChessBoardComponentUtils.getMoveQuality(2, 1, 0.8)).toBeNull();
   });
 });
+

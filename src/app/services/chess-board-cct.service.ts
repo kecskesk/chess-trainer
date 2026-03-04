@@ -18,6 +18,7 @@ import { ChessBoardCctUtils } from '../utils/chess-board-cct.utils';
 import { ChessBoardLogicUtils } from '../utils/chess-board-logic.utils';
 import { UiTextLoaderService } from './ui-text-loader.service';
 import { ChessBoardHelperDto } from '../model/chess-board-helper.dto';
+import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
 
 @Injectable({ providedIn: 'root' })
 export class ChessBoardCctService {
@@ -266,8 +267,7 @@ export class ChessBoardCctService {
 
   updateRecognizedOpeningForCurrentHistory(
     historySteps: string[],
-    uiText: IChessBoardCctOpeningUiText,
-    naPlaceholder: string
+    uiText: IChessBoardCctOpeningUiText
   ): { activeOpening: IParsedOpening | null, debugText: string } {
     if (this.openings.length < 1) {
       this.activeOpening = null;
@@ -290,8 +290,7 @@ export class ChessBoardCctService {
         this.activeOpening,
         bestMatchResult.baseMatchedDepth,
         normalizedSteps.length,
-        uiText,
-        naPlaceholder
+        uiText
       );
     }
     
@@ -302,8 +301,7 @@ export class ChessBoardCctService {
     opening: IParsedOpening,
     matchedDepth: number,
     historyDepth: number,
-    uiText: IChessBoardCctOpeningUiText,
-    naPlaceholder: string
+    uiText: IChessBoardCctOpeningUiText
   ): string {
     if (!opening) {
       return '';
@@ -327,7 +325,7 @@ export class ChessBoardCctService {
         }
       }
     } else {
-      parts.push(`${uiText.message.lineLabel}: ${opening.raw?.long_algebraic_notation || naPlaceholder}`);
+      parts.push(`${uiText.message.lineLabel}: ${opening.raw?.long_algebraic_notation || ChessBoardComponent.NA_PLACEHOLDER}`);
     }
 
     return parts.join('\n');

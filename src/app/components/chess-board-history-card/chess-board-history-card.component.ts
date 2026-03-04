@@ -3,6 +3,7 @@ import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@
 import { UiText } from '../../constants/ui-text.constants';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 import { ChessBoardTimelineFacade } from '../../utils/chess-board-timeline.facade';
+import { ChessBoardComponent } from '../chess-board/chess-board.component';
 
 @Component({
   selector: 'app-chess-board-history-card',
@@ -17,9 +18,6 @@ export class ChessBoardHistoryCardComponent {
   @Input() historyCursor: number | null = null;
   @Input() maxMoveIndex = -1;
   @Input() evaluations: string[] = [];
-  @Input() pendingEvaluationPlaceholder = '...';
-  @Input() evaluationErrorPlaceholder = 'err';
-  @Input() naPlaceholder = 'n/a';
   @Input() analysisClampPawns = 10;
 
   @Output() undo = new EventEmitter<void>();
@@ -57,9 +55,9 @@ export class ChessBoardHistoryCardComponent {
 
   getEvaluationForMove(halfMoveIndex: number): string {
     if (halfMoveIndex < 0 || halfMoveIndex >= this.evaluations.length) {
-      return this.naPlaceholder;
+      return ChessBoardComponent.NA_PLACEHOLDER;
     }
-    return this.evaluations[halfMoveIndex] || this.naPlaceholder;
+    return this.evaluations[halfMoveIndex] || ChessBoardComponent.NA_PLACEHOLDER;
   }
 
   getHistoryElement(): HTMLDivElement | null {
@@ -70,9 +68,6 @@ export class ChessBoardHistoryCardComponent {
     return ChessBoardEvaluationUtils.getMoveQuality(
       halfMoveIndex,
       (idx) => this.getEvaluationForMove(idx),
-      this.pendingEvaluationPlaceholder,
-      this.evaluationErrorPlaceholder,
-      this.naPlaceholder,
       this.analysisClampPawns
     );
   }

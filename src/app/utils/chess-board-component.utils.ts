@@ -3,6 +3,7 @@ import { ChessColorsEnum } from '../model/enums/chess-colors.enum';
 import { ChessPiecesEnum } from '../model/enums/chess-pieces.enum';
 import { ChessPieceDto } from '../model/chess-piece.dto';
 import { ChessBoardDisplayUtils } from './chess-board-display.utils';
+import { ChessBoardComponent } from '../components/chess-board/chess-board.component';
 
 export class ChessBoardComponentUtils {
   static movePieceBetweenCells(sourceCell: ChessPieceDto[], targetCell: ChessPieceDto[]): void {
@@ -66,13 +67,10 @@ export class ChessBoardComponentUtils {
 
   static parseEvaluationPawns(
     evalText: string,
-    pendingEvaluationPlaceholder: string,
-    evaluationErrorPlaceholder: string,
-    naPlaceholder: string,
     analysisClampPawns: number
   ): number | null {
-    if (!evalText || evalText === pendingEvaluationPlaceholder ||
-      evalText === evaluationErrorPlaceholder || evalText === naPlaceholder) {
+    if (!evalText || evalText === ChessBoardComponent.PENDING_EVALUATION_PLACEHOLDER ||
+      evalText === ChessBoardComponent.EVALUATION_ERROR_PLACEHOLDER || evalText === ChessBoardComponent.NA_PLACEHOLDER) {
       return null;
     }
     if (evalText.startsWith('#')) {

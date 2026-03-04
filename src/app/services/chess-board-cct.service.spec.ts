@@ -258,7 +258,7 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
       }
     };
 
-    const none = service.updateRecognizedOpeningForCurrentHistory(['e4'], uiText as any, '-');
+    const none = service.updateRecognizedOpeningForCurrentHistory(['e4'], uiText as any);
     expect(none.activeOpening).toBeNull();
 
     (service as any).openings = [{
@@ -267,10 +267,10 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
       raw: { long_algebraic_notation: '1. e4 e5', suggested_best_response_name: 'line' }
     }];
 
-    const first = service.updateRecognizedOpeningForCurrentHistory(['1.e4'], uiText as any, '-');
+    const first = service.updateRecognizedOpeningForCurrentHistory(['1.e4'], uiText as any);
     expect(first.debugText).toContain('Opening');
 
-    const second = service.updateRecognizedOpeningForCurrentHistory(['1.e4'], uiText as any, '-');
+    const second = service.updateRecognizedOpeningForCurrentHistory(['1.e4'], uiText as any);
     expect(second.debugText).toBe('');
   });
 
@@ -290,7 +290,7 @@ describe('ChessBoardCctService opening matching and helper coverage', () => {
       }
     };
 
-    const result = service.updateRecognizedOpeningForCurrentHistory(['d4'], uiText as any, '-');
+    const result = service.updateRecognizedOpeningForCurrentHistory(['d4'], uiText as any);
     expect(result.activeOpening).toBeNull();
     expect(result.debugText).toBe('');
   });
@@ -323,17 +323,16 @@ describe('ChessBoardCctService opening helper formatting and matching', () => {
       }
     };
 
-    expect(service.formatOpeningDebugText(opening as any, 0, 1, uiText as any, '-')).toContain('White: BestName');
-    expect(service.formatOpeningDebugText(opening as any, 1, 2, uiText as any, '-')).toContain('Black: BestMove');
-    expect(service.formatOpeningDebugText(opening as any, 2, 2, uiText as any, 'N/A')).toContain('Line: 1. e4 e5');
+    expect(service.formatOpeningDebugText(opening as any, 0, 1, uiText as any)).toContain('White: BestName');
+    expect(service.formatOpeningDebugText(opening as any, 1, 2, uiText as any)).toContain('Black: BestMove');
+    expect(service.formatOpeningDebugText(opening as any, 2, 2, uiText as any)).toContain('Line: 1. e4 e5');
     expect(service.formatOpeningDebugText(
       { name: 'NoLine', steps: ['e4'], raw: { long_algebraic_notation: '' } } as any,
       1,
       1,
-      uiText as any,
-      'N/A'
-    )).toContain('Line: N/A');
-    expect(service.formatOpeningDebugText(null as any, 0, 0, uiText as any, '-')).toBe('');
+      uiText as any
+    )).toContain('Line: n/a');
+    expect(service.formatOpeningDebugText(null as any, 0, 0, uiText as any)).toBe('');
 
     expect((service as any).normalizeOpeningNotation('1. e4 e5 2. Nf3')).toEqual(['e4', 'e5', 'Nf3']);
     expect((service as any).normalizeOpeningNotation('')).toEqual([]);
@@ -398,3 +397,4 @@ describe('ChessBoardCctService threatened-piece callback wiring', () => {
     expect(stepSpy).toHaveBeenCalled();
   });
 });
+

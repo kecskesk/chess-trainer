@@ -106,18 +106,18 @@ describe('ChessBoardOpeningUtils debug and asset loading', () => {
       }
     };
 
-    const projected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 2, 3, ['e2-e4', 'e7-e5', 'Ng1-f3'], uiText, 'n/a');
+    const projected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 2, 3, ['e2-e4', 'e7-e5', 'Ng1-f3'], uiText);
     expect(projected).toContain('Opening: Main: Ruy Lopez');
     expect(projected).toContain('Book recommendation (Black now): Nb8-c6');
 
-    const nonProjected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 1, 1, ['e2-e4'], uiText, 'n/a');
+    const nonProjected = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 1, 1, ['e2-e4'], uiText);
     expect(nonProjected).toContain('Book recommendation (Black now): e7-e5');
     expect(nonProjected).toContain('Book recommendation (White after): Main: Ruy Lopez (Ng1-f3 Nb8-c6)');
 
-    const withMissingHistorySteps = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 0, 0, undefined as any, uiText, 'n/a');
+    const withMissingHistorySteps = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 0, 0, undefined as any, uiText);
     expect(withMissingHistorySteps).toContain('Opening: Main');
 
-    expect(ChessBoardOpeningUtils.formatOpeningDebugText(null as any, 0, 0, [], uiText, 'n/a')).toBe('');
+    expect(ChessBoardOpeningUtils.formatOpeningDebugText(null as any, 0, 0, [], uiText)).toBe('');
   });
 
   it('loads localized assets with fallback and completes after all files', () => {
@@ -185,3 +185,4 @@ describe('ChessBoardOpeningUtils debug and asset loading', () => {
     expect((http.get as jasmine.Spy).calls.count()).toBe(0);
   });
 });
+

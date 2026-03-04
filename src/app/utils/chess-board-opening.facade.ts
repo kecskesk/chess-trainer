@@ -110,7 +110,6 @@ export class ChessBoardOpeningFacade {
     state: IChessBoardOpeningStateAccessors,
     historySteps: string[],
     uiText: typeof UiText,
-    naPlaceholder: string,
     onDebugText: (debugText: string) => void
   ): void {
     const openings = state.getOpenings();
@@ -132,8 +131,7 @@ export class ChessBoardOpeningFacade {
           bestMatchResult.baseMatchedDepth,
           historySteps.length,
           historySteps,
-          uiText,
-          naPlaceholder
+          uiText
         )
       );
     }
