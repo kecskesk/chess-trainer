@@ -95,8 +95,8 @@ export class ChessBoardExportFacade {
     return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
   }
 
-  static getImageDebugText(mockReadyText: string, now: Date): string {
-    return `${mockReadyText} (${now.toLocaleTimeString()})`;
+  static getImageDebugText(readyText: string, now: Date): string {
+    return `${readyText} (${now.toLocaleTimeString()})`;
   }
 
   static getImageFileName(now: Date): string {
@@ -111,3 +111,4 @@ export class ChessBoardExportFacade {
     return window;
   }
 }
+

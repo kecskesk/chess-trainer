@@ -2,12 +2,9 @@ import { ChessBoardExportUtils } from './chess-board-export.utils';
 
 describe('ChessBoardExportUtils', () => {
   it('builds PGN and appends result when move section has no explicit result', () => {
-    jasmine.clock().install();
-    jasmine.clock().mockDate(new Date('2026-03-02T00:00:00.000Z'));
-    const pgn = ChessBoardExportUtils.getCurrentPgn(['e2-e4', 'e7-e5']);
+    const pgn = ChessBoardExportUtils.getCurrentPgn(['e2-e4', 'e7-e5'], new Date('2026-03-02T00:00:00.000Z'));
     expect(pgn).toContain('[Date "2026.03.02"]');
     expect(pgn).toContain('\n\n1. e2-e4 e7-e5 *');
-    jasmine.clock().uninstall();
   });
 
   it('keeps explicit result and supports sparse history rows', () => {

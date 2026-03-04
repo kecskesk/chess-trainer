@@ -106,9 +106,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private readonly clockTickIntervalMs = ChessBoardUiConstants.CLOCK_TICK_INTERVAL_MS;
   pendingDrawOfferBy: ChessColorsEnum | null = null;
   resignConfirmColor: ChessColorsEnum | null = null;
-  mockHistoryCursor: number | null = null;
+  historyCursor: number | null = null;
   isBoardFlipped = false;
-  areMockControlsDisabled = true;
+  areControlsDisabled = true;
   isDebugPanelOpen = false;
   selectedLocale = UiTextLoaderService.DEFAULT_LOCALE;
   isLanguageSwitching = false;
@@ -251,7 +251,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   resetTransientUiState(): void {
     this.pendingDrawOfferBy = null;
     this.resignConfirmColor = null;
-    this.mockHistoryCursor = null;
+    this.historyCursor = null;
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
     this.lastMatePreviewKey = '';
@@ -877,7 +877,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getVisibleHistory(): string[] {
-    return ChessBoardTimelineFacade.getVisibleHistory(this.chessBoardStateService.history || [], this.mockHistoryCursor);
+    return ChessBoardTimelineFacade.getVisibleHistory(this.chessBoardStateService.history || [], this.historyCursor);
   }
 
   getHistoryMaxMoveIndex(): number {
@@ -885,11 +885,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   canUndoMove(): boolean {
-    return ChessBoardTimelineFacade.canUndoMove(this.getMaxMoveIndex(), this.mockHistoryCursor);
+    return ChessBoardTimelineFacade.canUndoMove(this.getMaxMoveIndex(), this.historyCursor);
   }
 
   canRedoMove(): boolean {
-    return ChessBoardTimelineFacade.canRedoMove(this.getMaxMoveIndex(), this.mockHistoryCursor);
+    return ChessBoardTimelineFacade.canRedoMove(this.getMaxMoveIndex(), this.historyCursor);
   }
 
   undoMove(): void {
@@ -897,20 +897,20 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     if (maxIndex < 0) {
       return;
     }
-    const nextCursor = ChessBoardTimelineFacade.getUndoCursor(maxIndex, this.mockHistoryCursor);
+    const nextCursor = ChessBoardTimelineFacade.getUndoCursor(maxIndex, this.historyCursor);
     if (nextCursor === null) {
       return;
     }
-    this.mockHistoryCursor = nextCursor;
+    this.historyCursor = nextCursor;
     this.restoreSnapshotForVisibleHistory();
   }
 
   redoMove(): void {
     const maxIndex = this.getMaxMoveIndex();
-    if (maxIndex < 0 || this.mockHistoryCursor === null) {
+    if (maxIndex < 0 || this.historyCursor === null) {
       return;
     }
-    this.mockHistoryCursor = ChessBoardTimelineFacade.getRedoCursor(maxIndex, this.mockHistoryCursor);
+    this.historyCursor = ChessBoardTimelineFacade.getRedoCursor(maxIndex, this.historyCursor);
     this.restoreSnapshotForVisibleHistory();
     this.scheduleHistoryAutoScroll();
   }
@@ -930,7 +930,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getCurrentAnalysisEvalText(): string {
-    const currentMoveIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.mockHistoryCursor);
+    const currentMoveIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(this.getMaxMoveIndex(), this.historyCursor);
     if (currentMoveIndex < 0) {
       return this.pendingEvaluationPlaceholder;
     }
@@ -972,7 +972,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     document.body.classList.toggle('board-flipped-drag-active', shouldApply);
   }
 
-  getMockOpeningRecognition(): string {
+  getOpeningRecognition(): string {
     const historySteps = ChessBoardOpeningFacade.normalizeHistorySteps(this.getVisibleHistory());
     this.updateRecognizedOpeningForCurrentHistory(historySteps);
     return ChessBoardOpeningFacade.getRecognitionLabel(
@@ -1016,7 +1016,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.openingStateAccessors;
   }
 
-  getMockEndgameRecognition(): string {
+  getEndgameRecognition(): string {
     const totalPieces = ChessBoardLogicUtils.getCurrentPieceCount(this.chessBoardStateService.field);
     if (totalPieces <= 12) {
       return this.uiText.recognition.likelyEndgame;
@@ -1027,7 +1027,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.uiText.recognition.notEndgameYet;
   }
 
-  getMockSuggestedMoves(): string[] {
+  getSuggestedMoves(): string[] {
     const turn = this.chessBoardStateService.boardHelper.colorTurn;
     if (turn === ChessColorsEnum.White) {
       return ['Qh5+', 'Nxe5', 'd4'];
@@ -1084,10 +1084,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     void this.copyToClipboard(pgn);
   }
 
-  async exportBoardImageMock(): Promise<void> {
+  async exportBoardImage(): Promise<void> {
     const now = new Date();
     this.chessBoardStateService.boardHelper.debugText = ChessBoardExportFacade.getImageDebugText(
-      this.uiText.message.mockExportImageReady,
+      this.uiText.message.exportImageReady,
       now
     );
     const imageDataUrl = await this.createBoardImageDataUrlFromDom();
@@ -1765,7 +1765,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   private initializeSnapshotTimeline(): void {
     this.moveSnapshots = ChessBoardTimelineFacade.getInitializedSnapshots(() => this.captureCurrentSnapshot());
-    this.mockHistoryCursor = null;
+    this.historyCursor = null;
     this.resetEvaluationState();
     this.scheduleEvaluationRefresh();
     this.scheduleHistoryAutoScroll();
@@ -1777,13 +1777,13 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.getActiveSnapshotIndex(),
       () => this.captureCurrentSnapshot()
     );
-    this.mockHistoryCursor = null;
+    this.historyCursor = null;
     this.scheduleEvaluationRefresh();
     this.scheduleHistoryAutoScroll();
   }
 
   private scheduleHistoryAutoScroll(): void {
-    if (!ChessBoardTimelineFacade.shouldAutoScrollHistory(this.previewMode, this.mockHistoryCursor)) {
+    if (!ChessBoardTimelineFacade.shouldAutoScrollHistory(this.previewMode, this.historyCursor)) {
       return;
     }
     setTimeout(() => {
@@ -1826,7 +1826,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private restoreSnapshotForVisibleHistory(): void {
     const targetSnapshotIndex = ChessBoardTimelineFacade.getTargetSnapshotIndex(
       this.getMaxMoveIndex(),
-      this.mockHistoryCursor,
+      this.historyCursor,
       this.moveSnapshots.length
     );
     if (targetSnapshotIndex < 0) {
@@ -1996,7 +1996,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private getActiveSnapshotIndex(): number {
     return ChessBoardHistoryService.getActiveSnapshotIndex(
       this.moveSnapshots.length,
-      this.mockHistoryCursor,
+      this.historyCursor,
       this.getMaxMoveIndex()
     );
   }
@@ -2041,3 +2041,4 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
 }
+

@@ -182,8 +182,8 @@ const UiTextDefaults = {
     resignsNoPeriod: '',
     forfeitsOnTime: '',
     forfeitsOnTimeNoPeriod: '',
-    mockExportPgnReady: '',
-    mockExportImageReady: '',
+    exportPgnReady: '',
+    exportImageReady: '',
     forkIdeas: '',
     pinIdeas: '',
     openingPrefix: '',
@@ -235,3 +235,4 @@ function deepAssign(target: JsonObject, source: JsonObject): void {
 function isObject(value: unknown): value is JsonObject {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
+

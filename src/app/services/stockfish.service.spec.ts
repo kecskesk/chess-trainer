@@ -1,6 +1,6 @@
-import { StockfishService } from './stockfish.service';
+﻿import { StockfishService } from './stockfish.service';
 
-class WorkerMock {
+class WorkerStub {
   onmessage: ((event: MessageEvent<string>) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   onmessageerror: ((event: MessageEvent<unknown>) => void) | null = null;
@@ -63,20 +63,20 @@ class WorkerMock {
   }
 }
 
-const setupServiceWithMockWorker = () => {
+const setupServiceWithWorkerStub = () => {
   (StockfishService as any).HANDSHAKE_TIMEOUT_MS = 8000;
   const service = new StockfishService();
-  const worker = new WorkerMock();
+  const worker = new WorkerStub();
   spyOn<any>(service, 'createWorker').and.returnValue(worker as unknown as Worker);
   return { service, worker };
 };
 
 describe('StockfishService evaluateFen', () => {
   let service: StockfishService;
-  let worker: WorkerMock;
+  let worker: WorkerStub;
 
   beforeEach(() => {
-    ({ service, worker } = setupServiceWithMockWorker());
+    ({ service, worker } = setupServiceWithWorkerStub());
   });
 
   it('completes handshake and parses cp score', async () => {
@@ -123,7 +123,7 @@ describe('StockfishService evaluateFen', () => {
   });
 
   it('returns initPromise while handshake is in progress', async () => {
-    const slowWorker = new WorkerMock({ uciDelayMs: 2, readyDelayMs: 2, moveDelayMs: 0 });
+    const slowWorker = new WorkerStub({ uciDelayMs: 2, readyDelayMs: 2, moveDelayMs: 0 });
     (service as any).createWorker.and.returnValue(slowWorker as unknown as Worker);
 
     const p1 = (service as any).ensureReady();
@@ -161,10 +161,10 @@ describe('StockfishService evaluateFen', () => {
 
 describe('StockfishService evaluateFenAfterMoves and top moves', () => {
   let service: StockfishService;
-  let worker: WorkerMock;
+  let worker: WorkerStub;
 
   beforeEach(() => {
-    ({ service, worker } = setupServiceWithMockWorker());
+    ({ service, worker } = setupServiceWithWorkerStub());
   });
 
   it('evaluates fen after moves and caches by composite cache key', async () => {
@@ -239,10 +239,10 @@ describe('StockfishService evaluateFenAfterMoves and top moves', () => {
 
 describe('StockfishService edge paths (errors/readiness)', () => {
   let service: StockfishService;
-  let worker: WorkerMock;
+  let worker: WorkerStub;
 
   beforeEach(() => {
-    ({ service, worker } = setupServiceWithMockWorker());
+    ({ service, worker } = setupServiceWithWorkerStub());
   });
 
   it('rejects when worker emits error', async () => {
@@ -269,8 +269,8 @@ describe('StockfishService edge paths (errors/readiness)', () => {
   });
 
   it('re-initializes with a fresh worker after a worker runtime failure', async () => {
-    const firstWorker = new WorkerMock();
-    const secondWorker = new WorkerMock();
+    const firstWorker = new WorkerStub();
+    const secondWorker = new WorkerStub();
     const createWorkerSpy = (service as any).createWorker as jasmine.Spy;
     createWorkerSpy.and.returnValues(firstWorker as unknown as Worker, secondWorker as unknown as Worker);
 
@@ -299,7 +299,7 @@ describe('StockfishService edge paths (errors/readiness)', () => {
   });
 
   it('cancels previous pending evaluation when a newer request starts', async () => {
-    const delayedWorker = new WorkerMock({ moveDelayMs: 20 });
+    const delayedWorker = new WorkerStub({ moveDelayMs: 20 });
     (service as any).createWorker.and.returnValue(delayedWorker as unknown as Worker);
     const first = service.evaluateFen('8/8/8/8/8/8/8/8 w - - 0 1');
     const second = service.evaluateFen('8/8/8/8/8/8/8/8 b - - 0 1');
@@ -339,10 +339,10 @@ describe('StockfishService edge paths (errors/readiness)', () => {
 
 describe('StockfishService edge paths (helpers)', () => {
   let service: StockfishService;
-  let worker: WorkerMock;
+  let worker: WorkerStub;
 
   beforeEach(() => {
-    ({ service, worker } = setupServiceWithMockWorker());
+    ({ service, worker } = setupServiceWithWorkerStub());
   });
 
   it('ignores empty/non-string worker messages', async () => {
@@ -433,3 +433,5 @@ describe('StockfishService edge paths (helpers)', () => {
     }
   });
 });
+
+

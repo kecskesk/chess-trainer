@@ -2,48 +2,48 @@ import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snap
 import { ChessBoardHistoryService } from '../services/chess-board-history.service';
 
 export class ChessBoardTimelineFacade {
-  static getVisibleHistory(history: string[], mockHistoryCursor: number | null): string[] {
-    if (mockHistoryCursor === null) {
+  static getVisibleHistory(history: string[], historyCursor: number | null): string[] {
+    if (historyCursor === null) {
       return history;
     }
     if (history.length < 1) {
       return [];
     }
     const maxIndex = history.length - 1;
-    const clampedIndex = Math.max(-1, Math.min(mockHistoryCursor, maxIndex));
+    const clampedIndex = Math.max(-1, Math.min(historyCursor, maxIndex));
     if (clampedIndex < 0) {
       return [];
     }
     return history.slice(0, clampedIndex + 1);
   }
 
-  static canUndoMove(maxIndex: number, mockHistoryCursor: number | null): boolean {
-    return ChessBoardHistoryService.getCurrentVisibleMoveIndex(maxIndex, mockHistoryCursor) >= 0;
+  static canUndoMove(maxIndex: number, historyCursor: number | null): boolean {
+    return ChessBoardHistoryService.getCurrentVisibleMoveIndex(maxIndex, historyCursor) >= 0;
   }
 
-  static canRedoMove(maxIndex: number, mockHistoryCursor: number | null): boolean {
-    if (maxIndex < 0 || mockHistoryCursor === null) {
+  static canRedoMove(maxIndex: number, historyCursor: number | null): boolean {
+    if (maxIndex < 0 || historyCursor === null) {
       return false;
     }
-    return mockHistoryCursor < maxIndex;
+    return historyCursor < maxIndex;
   }
 
-  static getUndoCursor(maxIndex: number, mockHistoryCursor: number | null): number | null {
-    const currentIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(maxIndex, mockHistoryCursor);
+  static getUndoCursor(maxIndex: number, historyCursor: number | null): number | null {
+    const currentIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(maxIndex, historyCursor);
     if (currentIndex < 0) {
       return null;
     }
     return currentIndex - 1;
   }
 
-  static getRedoCursor(maxIndex: number, mockHistoryCursor: number | null): number | null {
-    if (maxIndex < 0 || mockHistoryCursor === null) {
-      return mockHistoryCursor;
+  static getRedoCursor(maxIndex: number, historyCursor: number | null): number | null {
+    if (maxIndex < 0 || historyCursor === null) {
+      return historyCursor;
     }
-    if (mockHistoryCursor >= maxIndex) {
+    if (historyCursor >= maxIndex) {
       return null;
     }
-    const advancedCursor = mockHistoryCursor + 1;
+    const advancedCursor = historyCursor + 1;
     if (advancedCursor >= maxIndex) {
       return null;
     }
@@ -75,15 +75,16 @@ export class ChessBoardTimelineFacade {
     return nextSnapshots;
   }
 
-  static getTargetSnapshotIndex(maxMoveIndex: number, mockHistoryCursor: number | null, moveSnapshotsLength: number): number {
-    const targetSnapshotIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(maxMoveIndex, mockHistoryCursor) + 1;
+  static getTargetSnapshotIndex(maxMoveIndex: number, historyCursor: number | null, moveSnapshotsLength: number): number {
+    const targetSnapshotIndex = ChessBoardHistoryService.getCurrentVisibleMoveIndex(maxMoveIndex, historyCursor) + 1;
     if (targetSnapshotIndex < 0 || targetSnapshotIndex >= moveSnapshotsLength) {
       return -1;
     }
     return targetSnapshotIndex;
   }
 
-  static shouldAutoScrollHistory(previewMode: boolean, mockHistoryCursor: number | null): boolean {
-    return !previewMode && mockHistoryCursor === null;
+  static shouldAutoScrollHistory(previewMode: boolean, historyCursor: number | null): boolean {
+    return !previewMode && historyCursor === null;
   }
 }
+

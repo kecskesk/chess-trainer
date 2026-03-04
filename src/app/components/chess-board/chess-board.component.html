@@ -95,8 +95,8 @@
       [suggestedMoves]="suggestedMoves"
       [suggestedMoveQualityByMove]="suggestionQualityByMoveMap"
       [suggestedMoveEvalByMove]="suggestionEvalTextByMoveMap"
-      [openingRecognition]="getMockOpeningRecognition()"
-      [endgameRecognition]="getMockEndgameRecognition()"
+      [openingRecognition]="getOpeningRecognition()"
+      [endgameRecognition]="getEndgameRecognition()"
       (promotePiece)="promotePiece($event)"
       (showThreats)="showThreats($event)"
       (showProtected)="showProtected($event)"
@@ -105,7 +105,7 @@
       (showPinIdeas)="showPinIdeas()"
       (toggleBoardFlip)="toggleBoardFlip()"
       (exportPgn)="exportPgn()"
-      (exportBoardImage)="exportBoardImageMock()"
+      (exportBoardImage)="exportBoardImage()"
       (exportFen)="exportFen()"
       (previewMove)="previewSuggestedMoveArrows($event)"
       (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-tools-card>
@@ -114,7 +114,7 @@
       #historyLog
       [uiText]="uiText"
       [history]="chessBoardStateService.history"
-      [historyCursor]="mockHistoryCursor"
+      [historyCursor]="historyCursor"
       [maxMoveIndex]="getHistoryMaxMoveIndex()"
       [evaluations]="allHistoryEvaluations"
       [pendingEvaluationPlaceholder]="pendingEvaluationPlaceholderText"
@@ -135,6 +135,7 @@
       (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-cct-card>
   </section>
 </div>
+
 
 
 

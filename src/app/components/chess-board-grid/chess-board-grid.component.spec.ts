@@ -1,4 +1,4 @@
-import { fakeAsync, tick } from '@angular/core/testing';
+﻿import { fakeAsync, tick } from '@angular/core/testing';
 import { ChessBoardGridComponent } from './chess-board-grid.component';
 import { ChessBoardComponentUtils } from '../../utils/chess-board-component.utils';
 import { ChessColorsEnum } from '../../model/enums/chess-colors.enum';
@@ -22,11 +22,11 @@ describe('ChessBoardGridComponent', () => {
   });
 
   it('loads drop lists after view init', fakeAsync(() => {
-    const mockedDropLists = [{ id: 'a' }, { id: 'b' }] as any[];
-    (component as any).dropListElements = { toArray: () => mockedDropLists };
+    const dropListsStub = [{ id: 'a' }, { id: 'b' }] as any[];
+    (component as any).dropListElements = { toArray: () => dropListsStub };
     component.ngAfterViewInit();
     tick(0);
-    expect(component.dropLists).toEqual(mockedDropLists as any);
+    expect(component.dropLists).toEqual(dropListsStub as any);
   }));
 
   it('returns preview cell colors when preview preset is piece-colors', () => {
@@ -81,3 +81,5 @@ describe('ChessBoardGridComponent', () => {
     expect(component.getArrowTransformForDisplay(null as any)).toContain('rotate()');
   });
 });
+
+

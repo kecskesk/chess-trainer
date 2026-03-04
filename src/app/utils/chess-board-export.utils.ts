@@ -1,8 +1,8 @@
 export class ChessBoardExportUtils {
-  static getCurrentPgn(history: string[]): string {
+  static getCurrentPgn(history: string[], now: Date = new Date()): string {
     const safeHistory = history || [];
     const result = ChessBoardExportUtils.getPgnResultFromHistory(safeHistory);
-    const pgnDate = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+    const pgnDate = now.toISOString().slice(0, 10).replace(/-/g, '.');
     const headers = [
       '[Event "Chess Trainer Game"]',
       '[Site "Local"]',
