@@ -324,17 +324,28 @@ export class ChessBoardLogicUtils {
 
   private static withBoardContext<T>(board: ChessPieceDto[][][], turn: ChessColorsEnum, callback: () => T): T {
     const previousField = ChessBoardStateService.CHESS_FIELD;
-    const previousTurn = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.colorTurn : null;
-    const previousCastle = ChessBoardStateService.BOARD_HELPER ? ChessBoardStateService.BOARD_HELPER.justDidCastle : null;
+    const previousHelper = ChessBoardStateService.BOARD_HELPER;
+    const previousTurn = previousHelper ? previousHelper.colorTurn : null;
+    const previousCastle = previousHelper ? previousHelper.justDidCastle : null;
     try {
       ChessBoardStateService.CHESS_FIELD = board;
-      if (ChessBoardStateService.BOARD_HELPER) {
+      if (!ChessBoardStateService.BOARD_HELPER) {
+        ChessBoardStateService.BOARD_HELPER = {
+          history: {},
+          colorTurn: turn,
+          justDidCastle: null,
+          possibles: {},
+          hits: {},
+          checks: {}
+        } as any;
+      } else {
         ChessBoardStateService.BOARD_HELPER.colorTurn = turn;
         ChessBoardStateService.BOARD_HELPER.justDidCastle = null;
       }
       return callback();
     } finally {
       ChessBoardStateService.CHESS_FIELD = previousField;
+      ChessBoardStateService.BOARD_HELPER = previousHelper;
       if (ChessBoardStateService.BOARD_HELPER) {
         ChessBoardStateService.BOARD_HELPER.colorTurn = previousTurn;
         ChessBoardStateService.BOARD_HELPER.justDidCastle = previousCastle;

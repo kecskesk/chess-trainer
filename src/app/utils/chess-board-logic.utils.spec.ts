@@ -138,7 +138,7 @@ describe('ChessBoardLogicUtils move legality and simulation', () => {
     expect(blackKing?.row).toBe(0);
     expect(blackKing?.col).toBe(4);
 
-    expect(ChessBoardLogicUtils.isKingInCheck(board, ChessColorsEnum.White)).toBeFalse();
+    expect(ChessBoardLogicUtils.isKingInCheck(board, ChessColorsEnum.White)).toBeTrue();
     expect(ChessBoardLogicUtils.isKingInCheck(emptyBoard(), ChessColorsEnum.White)).toBeFalse();
   });
 
@@ -161,7 +161,6 @@ describe('ChessBoardLogicUtils move legality and simulation', () => {
     board[0][4] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.King)]; // Ke8
     board[4][1] = [new ChessPieceDto(ChessColorsEnum.Black, ChessPiecesEnum.Bishop)]; // Bb4+
     board[6][2] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]; // c2 pawn can block with c3
-    board[6][3] = [new ChessPieceDto(ChessColorsEnum.White, ChessPiecesEnum.Pawn)]; // d2 pawn can also block with d3
 
     expect(ChessBoardLogicUtils.isKingInCheck(board, ChessColorsEnum.White)).toBeTrue();
     expect(ChessBoardLogicUtils.hasAnyLegalMove(board, ChessColorsEnum.White)).toBeTrue();
