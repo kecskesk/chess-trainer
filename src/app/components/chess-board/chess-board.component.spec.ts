@@ -3821,6 +3821,30 @@ describe('ChessBoardComponent additional suggestion coverage (preview helpers)',
   });
 });
 
+describe('ChessBoardComponent status board state binding', () => {
+  it('returns a fresh status object so OnPush status card updates with turn changes', () => {
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
+    chessBoardStateService.boardHelper.gameOver = false;
+    chessBoardStateService.boardHelper.checkmateColor = null;
+
+    const first = component.statusBoardState;
+    expect(first).toEqual({
+      colorTurn: ChessColorsEnum.White,
+      gameOver: false,
+      checkmateColor: null
+    });
+
+    chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
+    const second = component.statusBoardState;
+    expect(second).toEqual({
+      colorTurn: ChessColorsEnum.Black,
+      gameOver: false,
+      checkmateColor: null
+    });
+    expect(second).not.toBe(first);
+  });
+});
+
 
 
 

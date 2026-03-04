@@ -94,6 +94,18 @@ export class ChessBoardEvaluationUtils {
       previousEval = currentEval > 0 ? analysisClampPawns : -analysisClampPawns;
     }
 
+    // Treat converting mate-in-N into mate now as stronger than a neutral
+    // "best" move so checkmating moves are surfaced as standout decisions.
+    if (currentEvalText === '#0' && previousEval !== null) {
+      const movedByWhite = (halfMoveIndex % 2) === 0;
+      const deliveredMate =
+        (movedByWhite && previousEval > 0) ||
+        (!movedByWhite && previousEval < 0);
+      if (deliveredMate) {
+        return { label: 'great', className: 'history-quality--great' };
+      }
+    }
+
     return ChessBoardComponentUtils.getMoveQuality(halfMoveIndex, previousEval, currentEval);
   }
 

@@ -181,6 +181,20 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.timeControlService.clockStarted;
   }
 
+  get statusBoardState(): { colorTurn: ChessColorsEnum; gameOver: boolean; checkmateColor: ChessColorsEnum | null } | null {
+    const helper = this.chessBoardStateService?.boardHelper;
+    if (!helper) {
+      return null;
+    }
+    // Status card uses OnPush detection; provide a fresh input object so
+    // turn and game-over updates are always picked up.
+    return {
+      colorTurn: helper.colorTurn,
+      gameOver: helper.gameOver,
+      checkmateColor: helper.checkmateColor
+    };
+  }
+
   get clockRunning(): boolean {
     return this.timeControlService.clockRunning;
   }

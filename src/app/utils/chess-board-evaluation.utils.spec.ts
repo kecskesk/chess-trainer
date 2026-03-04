@@ -90,7 +90,7 @@ describe('ChessBoardEvaluationUtils', () => {
 });
 
 describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
-  it('does not misclassify mate-zero continuation as blunder when sign is implicit', () => {
+  it('classifies mate-zero conversion as great for black when sign is implicit', () => {
     const quality = ChessBoardEvaluationUtils.getMoveQuality(
       3,
       (idx) => {
@@ -105,7 +105,25 @@ describe('ChessBoardEvaluationUtils mate-zero propagation', () => {
       10
     );
 
-    expect(quality).toEqual({ label: 'best', className: 'history-quality--best' });
+    expect(quality).toEqual({ label: 'great', className: 'history-quality--great' });
+  });
+
+  it('classifies mate-zero conversion as great for white', () => {
+    const quality = ChessBoardEvaluationUtils.getMoveQuality(
+      6,
+      (idx) => {
+        if (idx === 5) {
+          return '#+1';
+        }
+        if (idx === 6) {
+          return '#0';
+        }
+        return 'n/a';
+      },
+      10
+    );
+
+    expect(quality).toEqual({ label: 'great', className: 'history-quality--great' });
   });
 
   it('propagates sign from previous #0 to current eval when needed', () => {
