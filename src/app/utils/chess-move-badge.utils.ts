@@ -27,6 +27,28 @@ export class ChessMoveBadgeUtils {
     if (!move) {
       return '';
     }
-    return evalByMove[move] || '';
+    const raw = `${move}`.trim();
+    if (!raw) {
+      return '';
+    }
+    const direct = evalByMove[raw];
+    if (direct) {
+      return direct;
+    }
+
+    const normalized = raw.replace(/^\.\.\./, '').replace(/[+#?!]+$/g, '').trim();
+    if (!normalized) {
+      return '';
+    }
+    const normalizedDirect = evalByMove[normalized];
+    if (normalizedDirect) {
+      return normalizedDirect;
+    }
+
+    const normalizedKey = Object.keys(evalByMove).find((key) => {
+      const keyNormalized = `${key}`.trim().replace(/^\.\.\./, '').replace(/[+#?!]+$/g, '');
+      return keyNormalized === normalized;
+    });
+    return normalizedKey ? evalByMove[normalizedKey] : '';
   }
 }

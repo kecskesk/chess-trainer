@@ -34,6 +34,7 @@ describe('ChessBoardClockCardComponent', () => {
     expect(component.formatClock(500)).toBe('00:00.5');
     expect(component.formatClock(65000)).toBe('01:05');
     expect(component.formatClock(10 * 60 * 1000)).toBe('10:00');
+    expect(component.formatClock(Number.NaN)).toBe('00:00.0');
   });
 
   it('computes active and low clock flags across states', () => {
@@ -59,5 +60,8 @@ describe('ChessBoardClockCardComponent', () => {
     component.blackClockMs = 10001;
     expect(component.isWhiteClockLow).toBeTrue();
     expect(component.isBlackClockLow).toBeFalse();
+
+    component.blackClockMs = Number.NaN;
+    expect(component.isBlackClockLow).toBeTrue();
   });
 });

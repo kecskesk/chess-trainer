@@ -66,7 +66,8 @@ export class ChessBoardClockCardComponent {
   }
 
   private isClockLow(color: ChessColorsEnum): boolean {
-    const remainingTime = color === ChessColorsEnum.White ? this.whiteClockMs : this.blackClockMs;
+    const remainingTimeRaw = color === ChessColorsEnum.White ? this.whiteClockMs : this.blackClockMs;
+    const remainingTime = Number.isFinite(remainingTimeRaw) ? remainingTimeRaw : 0;
     return remainingTime <= 10000;
   }
 }

@@ -141,7 +141,8 @@ export class ChessBoardClockUtils {
   }
 
   static formatClock(clockMs: number): string {
-    const totalMs = Math.max(0, Math.floor(clockMs));
+    const safeClockMs = Number.isFinite(clockMs) ? clockMs : 0;
+    const totalMs = Math.max(0, Math.floor(safeClockMs));
     const totalSeconds = Math.floor(totalMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;

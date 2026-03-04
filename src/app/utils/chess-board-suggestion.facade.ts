@@ -8,11 +8,7 @@ import { ChessRulesService } from '../services/chess-rules.service';
 import { ChessBoardComponentUtils } from './chess-board-component.utils';
 import { IVisualizationArrow } from '../model/interfaces/visualization-arrow.interface';
 import { ChessBoardEvalConstants } from '../constants/chess.constants';
-
-export interface IChessBoardSuggestionEngineService {
-  evaluateFen: (fen: string, options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
-  evaluateFenAfterMoves?: (fen: string, uciMoves: string[], options?: { depth?: number; movetimeMs?: number; multiPv?: number }) => Promise<string>;
-}
+import { StockfishService } from '../services/stockfish.service';
 
 export interface ISuggestionEvaluationResult {
   pawnsByUci: Map<string, number>;
@@ -38,7 +34,6 @@ export interface IEvaluateUciMovesParams {
   getCurrentRunToken: () => number;
   fen: string;
   uniqueUciMoves: string[];
-  engineService?: IChessBoardSuggestionEngineService;
   suggestedMovesDepth: number;
   analysisClampPawns: number;
 }
@@ -285,13 +280,12 @@ export class ChessBoardSuggestionFacade {
       getCurrentRunToken,
       fen,
       uniqueUciMoves,
-      engineService,
       suggestedMovesDepth,
       analysisClampPawns
     } = params;
     const evalByUci = new Map<string, number>();
     const evalTextByUci = new Map<string, string>();
-    if (!engineService) {
+    if (!StockfishService) {
       return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
     }
 
@@ -300,9 +294,9 @@ export class ChessBoardSuggestionFacade {
         return { pawnsByUci: evalByUci, textByUci: evalTextByUci };
       }
       try {
-        const evaluation = typeof engineService.evaluateFenAfterMoves === 'function'
-          ? await engineService.evaluateFenAfterMoves(fen, [uciMove], { depth: suggestedMovesDepth })
-          : await engineService.evaluateFen(fen, { depth: suggestedMovesDepth });
+        const evaluation = typeof StockfishService.evaluateFenAfterMoves === 'function'
+          ? await StockfishService.evaluateFenAfterMoves(fen, [uciMove], { depth: suggestedMovesDepth })
+          : await StockfishService.evaluateFen(fen, { depth: suggestedMovesDepth });
         if (evaluation && evaluation !== ChessBoardEvalConstants.PENDING_EVALUATION_PLACEHOLDER && evaluation !== ChessBoardEvalConstants.EVALUATION_ERROR_PLACEHOLDER &&
           evaluation !== ChessBoardEvalConstants.NA_PLACEHOLDER) {
           evalTextByUci.set(uciMove, evaluation);

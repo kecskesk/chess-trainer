@@ -107,6 +107,9 @@ export class ChessBoardStateService {
   }
 
   get history(): string[] {
+    if (!this.boardHelper || !this.boardHelper.history) {
+      return [];
+    }
     return Object.values(this.boardHelper.history);
   }
 

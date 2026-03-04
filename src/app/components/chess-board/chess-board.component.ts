@@ -173,6 +173,26 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     return this.analysisClampPawns;
   }
 
+  get selectedClockPresetLabel(): string {
+    return this.timeControlService.selectedClockPresetLabel;
+  }
+
+  get clockStarted(): boolean {
+    return this.timeControlService.clockStarted;
+  }
+
+  get clockRunning(): boolean {
+    return this.timeControlService.clockRunning;
+  }
+
+  get whiteClockMs(): number {
+    return this.timeControlService.whiteClockMs;
+  }
+
+  get blackClockMs(): number {
+    return this.timeControlService.blackClockMs;
+  }
+
   private get previewRenderSize(): number {
     return Math.max(1, Math.min(ChessConstants.BOARD_SIZE, this.previewBoardSize));
   }
@@ -220,7 +240,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.evaluationRunToken += 1;
     this.stopClock();
     this.syncFlippedDragClass();
-    this.stockfishService.terminate();
+    StockfishService.terminate();
   }
 
   ngAfterViewInit(): void {
@@ -852,7 +872,8 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   getVisibleHistory(): string[] {
-    return ChessBoardTimelineFacade.getVisibleHistory(this.chessBoardStateService.history || [], this.historyCursor);
+    const history = this.chessBoardStateService ? this.chessBoardStateService.history || [] : [];
+    return ChessBoardTimelineFacade.getVisibleHistory(history, this.historyCursor);
   }
 
   getHistoryMaxMoveIndex(): number {
@@ -1820,7 +1841,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       getCurrentRunToken: () => this.evaluationRunToken,
       visibleHistoryLength: this.getVisibleHistory().length,
       moveSnapshots: this.moveSnapshots,
-      evaluateFen: (fen) => this.stockfishService.evaluateFen(fen),
       evalByHistoryIndex: this.evalByHistoryIndex,
       evalCacheByFen: this.evalCacheByFen,
       pendingEvalByHistoryIndex: this.pendingEvalByHistoryIndex,
@@ -1838,7 +1858,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       runToken,
       getCurrentRunToken: () => this.evaluationRunToken,
       fen: this.getCurrentFen(),
-      getTopMoves: (fen, options) => this.stockfishService.getTopMoves(fen, options),
+      getTopMoves: (fen, options) => StockfishService.getTopMoves(fen, options),
       suggestedMovesDepth: this.suggestedMovesDepth,
       suggestedMovesCount: this.suggestedMovesCount,
       suggestedMovesCacheByFen: this.suggestedMovesCacheByFen,
@@ -1872,7 +1892,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       fen,
       engineTopMoves,
       formattedEngineSuggestions,
-      getTopMoves: (fenArg, options) => this.stockfishService.getTopMoves(fenArg, options),
+      getTopMoves: (fenArg, options) => StockfishService.getTopMoves(fenArg, options),
       suggestedMovesDepth: this.suggestedMovesDepth,
       suggestedMovesCount: this.suggestedMovesCount,
       suggestionQualityByFen: this.suggestionQualityByFen,
@@ -1908,7 +1928,6 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       getCurrentRunToken: () => this.evaluationRunToken,
       fen,
       uniqueUciMoves,
-      engineService: this.stockfishService,
       suggestedMovesDepth: this.suggestedMovesDepth,
       analysisClampPawns: this.analysisClampPawns
     });

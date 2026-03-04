@@ -1,5 +1,6 @@
 import { ChessBoardEvaluationUtils } from './chess-board-evaluation.utils';
 import { ChessBoardLogicUtils } from './chess-board-logic.utils';
+import { StockfishService } from '../services/stockfish.service';
 
 describe('ChessBoardEvaluationUtils', () => {
   it('returns fen for valid snapshot index and empty string for invalid index', () => {
@@ -165,13 +166,6 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
     const pendingEvalByHistoryIndex = new Set<number>();
     const evalErrorByHistoryIndex = new Set<number>();
     const renderSpy = jasmine.createSpy('render');
-
-    const evaluateFenSpy = jasmine.createSpy('evaluateFen').and.callFake(async (fen: string) => {
-      if (fen === 'fen-error') {
-        throw new Error('boom');
-      }
-      return '+0.80';
-    });
     const fenForIdxSpy = spyOn(ChessBoardEvaluationUtils, 'getFenForHistoryIndex').and.callFake((idx: number) => {
       if (idx === 0) {
         return 'fen-cached';
@@ -182,12 +176,18 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
       return 'fen-error';
     });
 
+    spyOn(StockfishService, 'evaluateFen').and.callFake(async (fen: string) => {
+      if (fen === 'fen-new') {
+        return '+0.80';
+      }
+      throw new Error('engine failed');
+    });
+
     await ChessBoardEvaluationUtils.refreshVisibleHistoryEvaluations({
       runToken: 5,
       getCurrentRunToken: () => 5,
       visibleHistoryLength: 3,
       moveSnapshots: [{}, {}, {}, {}] as any,
-      evaluateFen: evaluateFenSpy,
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
@@ -203,4 +203,3 @@ describe('ChessBoardEvaluationUtils async evaluation refresh', () => {
     expect(fenForIdxSpy).toHaveBeenCalled();
   });
 });
-

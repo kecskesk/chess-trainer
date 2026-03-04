@@ -87,6 +87,14 @@ describe('ChessBoardStateService state helpers (highlights/arrows)', () => {
     expect(chessBoardStateService.history).toEqual(['e2-e4']);
   });
 
+  it('returns empty history when board helper history is missing', () => {
+    (chessBoardStateService as any).boardHelper = { history: null } as any;
+    expect(chessBoardStateService.history).toEqual([]);
+
+    (chessBoardStateService as any).boardHelper = null;
+    expect(chessBoardStateService.history).toEqual([]);
+  });
+
   it('clears move highlights through service helper', () => {
     chessBoardStateService.boardHelper.possibles['11'] = { row: 1, col: 1 } as any;
     chessBoardStateService.boardHelper.hits['22'] = { row: 2, col: 2 } as any;

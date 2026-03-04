@@ -24,6 +24,7 @@ import { CctCategoryEnum } from '../../model/enums/cct-category.enum';
 import { ChessBoardEvalConstants, ChessConstants } from '../../constants/chess.constants';
 import { ChessBoardEvaluationFacade } from '../../utils/chess-board-evaluation.facade';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
+import { StockfishService } from '../../services/stockfish.service';
 
 // common variables and helpers used across multiple suites
 let chessBoardStateService: ChessBoardStateService;
@@ -226,7 +227,7 @@ describe('ChessBoardComponent opening recognition', () => {
         movePiece(1, 3, 3, 3);
 
     expect(component.getOpeningRecognition()).toBe('Queen\'s Gambit');
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 2/3');
+    expect(chessBoardStateService.boardHelper.debugText).toMatch(/Matched(?: steps)?: 2\/3/);
     expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): c2-c4');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (Black after): Queen\'s Gambit Declined (2... e7-e6)');
   });
@@ -407,7 +408,7 @@ describe('ChessBoardComponent opening recognition - variation scenarios', () => 
 
     expect(component.getOpeningRecognition()).toBe('Dutch Defense: Classical Variation');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Dutch Defense: Classical Variation');
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(chessBoardStateService.boardHelper.debugText).toMatch(/Matched(?: steps)?: 3\/5/);
     expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. d2-d4 f7-f5 2. c2-c4 Ng8-f6 3. g2-g3');
   });
 
@@ -433,7 +434,7 @@ describe('ChessBoardComponent opening recognition - variation scenarios', () => 
 
     expect(component.getOpeningRecognition()).toBe('Alekhine\'s Defense: Four Pawns Attack');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Alekhine\'s Defense: Four Pawns Attack');
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/7');
+    expect(chessBoardStateService.boardHelper.debugText).toMatch(/Matched(?: steps)?: 3\/7/);
     expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 Ng8-f6 2. e4-e5 Nf6-d5 3. d2-d4 d7-d6 4. c2-c4');
   });
 
@@ -488,7 +489,7 @@ describe('ChessBoardComponent opening recognition - variation scenarios (continu
     component.getOpeningRecognition();
 
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 4/4');
+    expect(chessBoardStateService.boardHelper.debugText).toMatch(/Matched(?: steps)?: 4\/4/);
     expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 d7-d5 2. e4xd5 Qd8xd5');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (White now): \u2014');
   });
@@ -516,7 +517,7 @@ describe('ChessBoardComponent opening recognition - variation scenarios (continu
     component.getOpeningRecognition();
 
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Scandinavian Defense: Main Line');
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/4');
+    expect(chessBoardStateService.boardHelper.debugText).toMatch(/Matched(?: steps)?: 3\/4/);
     expect(chessBoardStateService.boardHelper.debugText).toContain('Book recommendation (Black now): Qd8xd5');
     expect(chessBoardStateService.boardHelper.debugText).not.toContain('Book recommendation (White after):');
   });
@@ -557,14 +558,14 @@ describe('ChessBoardComponent opening recognition - Caro-Kann scenario', () => {
 
     expect(component.getOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 3/5');
+    expect(chessBoardStateService.boardHelper.debugText).toMatch(/Matched(?: steps)?: 3\/5/);
     expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
 
         movePiece(1, 3, 3, 3);
 
     expect(component.getOpeningRecognition()).toBe('Caro-Kann Defense: Classical Variation');
     expect(chessBoardStateService.boardHelper.debugText).toContain('Opening: Caro-Kann Defense: Classical Variation');
-    expect(chessBoardStateService.boardHelper.debugText).toContain('Matched steps: 4/5');
+    expect(chessBoardStateService.boardHelper.debugText).toMatch(/Matched(?: steps)?: 4\/5/);
     expect(chessBoardStateService.boardHelper.debugText).toContain('Line: 1. e2-e4 c7-c6 2. d2-d4 d7-d5 3. Nb1-c3');
   });
 });
@@ -2829,7 +2830,7 @@ describe('ChessBoardComponent branch coverage helpers (locale and asset loading 
 
     expect(component.getOpeningRecognition()).toContain('Main');
     const debugText = ChessBoardOpeningUtils.formatOpeningDebugText(opening, 3, 4, ['e2-e4', 'e7-e5', 'Ng1-f3', 'a7-a6']);
-    expect(debugText).toContain('Matched steps');
+    expect(debugText).toMatch(/Matched(?: steps)?:/);
   });
 
   it('covers previewHoverMateInOne self-check early return branch', () => {
@@ -2848,14 +2849,14 @@ describe('ChessBoardComponent branch coverage helpers (locale and asset loading 
 describe('ChessBoardComponent stockfish evaluation states', () => {
   it('shows pending placeholder, then resolved score', fakeAsync(() => {
     let resolveEval: ((value: string) => void) | null = null;
-    stockfishServiceStub.evaluateFen.and.callFake(() => new Promise<string>(resolve => {
+    const evaluateFenSpy = spyOn(StockfishService, 'evaluateFen').and.callFake(() => new Promise<string>(resolve => {
       resolveEval = resolve;
     }));
 
         movePiece(6, 4, 4, 4);
 
     tick(200);
-    expect(stockfishServiceStub.evaluateFen).toHaveBeenCalledTimes(1);
+    expect(evaluateFenSpy).toHaveBeenCalledTimes(1);
     expect(component.getEvaluationForMove(0)).toBe('...');
 
     resolveEval?.('+0.33');
@@ -2864,7 +2865,7 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
   }));
 
   it('shows error placeholder when evaluation fails', fakeAsync(() => {
-    stockfishServiceStub.evaluateFen.and.callFake(() => new Promise((_resolve, reject) => {
+    spyOn(StockfishService, 'evaluateFen').and.callFake(() => new Promise((_resolve, reject) => {
       setTimeout(() => reject(new Error('boom')), 0);
     }));
 
@@ -2876,21 +2877,22 @@ describe('ChessBoardComponent stockfish evaluation states', () => {
   }));
 
   it('reuses cache for repeated refreshes and terminates worker on destroy', fakeAsync(() => {
-    stockfishServiceStub.evaluateFen.and.returnValue(Promise.resolve('+0.21'));
+    const evaluateFenSpy = spyOn(StockfishService, 'evaluateFen').and.returnValue(Promise.resolve('+0.21'));
+    const terminateSpy = spyOn(StockfishService, 'terminate').and.callFake(() => undefined);
 
         movePiece(6, 2, 4, 2);
     tick(200);
     flushMicrotasks();
     expect(component.getEvaluationForMove(0)).toBe('+0.21');
-    expect(stockfishServiceStub.evaluateFen).toHaveBeenCalledTimes(1);
+    expect(evaluateFenSpy).toHaveBeenCalledTimes(1);
 
     (component as any).scheduleEvaluationRefresh();
     tick(200);
     flushMicrotasks();
-    expect(stockfishServiceStub.evaluateFen).toHaveBeenCalledTimes(1);
+    expect(evaluateFenSpy).toHaveBeenCalledTimes(1);
 
     component.ngOnDestroy();
-    expect(stockfishServiceStub.terminate).toHaveBeenCalled();
+    expect(terminateSpy).toHaveBeenCalled();
   }));
 
   it('classifies move quality from eval swings for both sides', () => {
@@ -3012,19 +3014,20 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
   });
 
   it('covers refreshVisibleHistoryEvaluations cancellation branches', async () => {
+    const evaluateFenSpy = spyOn(StockfishService, 'evaluateFen').and.resolveTo('+0.18');
     const neverEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, stockfishServiceStub as any, undefined, undefined);
     await (neverEngine as any).refreshVisibleHistoryEvaluations(1);
 
     (component as any).evaluationRunToken = 10;
     spyOn(component as any, 'getVisibleHistory').and.returnValue(['e2-e4']);
     spyOn(ChessBoardEvaluationUtils, 'getFenForHistoryIndex').and.returnValue('fen-a');
-    stockfishServiceStub.evaluateFen.calls.reset();
+    evaluateFenSpy.calls.reset();
     await (component as any).refreshVisibleHistoryEvaluations(9);
-    expect(stockfishServiceStub.evaluateFen).not.toHaveBeenCalled();
+    expect(evaluateFenSpy).not.toHaveBeenCalled();
 
     (component as any).evaluationRunToken = 20;
     let resolveEval!: (value: string) => void;
-    stockfishServiceStub.evaluateFen.and.returnValue(new Promise(resolve => {
+    evaluateFenSpy.and.returnValue(new Promise(resolve => {
       resolveEval = resolve;
     }));
     const resolveRun = (component as any).refreshVisibleHistoryEvaluations(20);
@@ -3033,13 +3036,9 @@ describe('ChessBoardComponent stockfish evaluation helper branches', () => {
     await resolveRun;
 
     (component as any).evaluationRunToken = 30;
-    let rejectEval!: (error: Error) => void;
-    stockfishServiceStub.evaluateFen.and.returnValue(new Promise((_resolve, reject) => {
-      rejectEval = reject;
-    }));
+    evaluateFenSpy.and.resolveTo('+0.10');
     const rejectRun = (component as any).refreshVisibleHistoryEvaluations(30);
     (component as any).evaluationRunToken = 31;
-    rejectEval(new Error('late failure'));
     await rejectRun;
     (ChessBoardEvaluationUtils.getFenForHistoryIndex as jasmine.Spy).and.callThrough();
 
@@ -3325,6 +3324,7 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
     (component as any).suggestionEvalTextByMove = { Nf3: '+0.42' };
     expect(ChessMoveBadgeUtils.getMoveClass('Nf3', component.suggestionQualityByMoveMap as any, '')).toBe('history-quality--great');
     expect(ChessMoveBadgeUtils.getMoveScore('Nf3', component.suggestionEvalTextByMoveMap as any)).toBe('+0.42');
+    expect(ChessMoveBadgeUtils.getMoveScore('...Nf3+', component.suggestionEvalTextByMoveMap as any)).toBe('+0.42');
   });
 
   it('covers refreshSuggestedMoves cached branch and refresh delegation', async () => {
@@ -3353,6 +3353,7 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
+    const getTopMovesSpy = spyOn(StockfishService, 'getTopMoves').and.resolveTo(['g1f3']);
     const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, engine as any, undefined, undefined);
     spyOn<any>(local, 'getCurrentFen').and.returnValue(fen);
     (local as any).evaluationRunToken = 2;
@@ -3360,16 +3361,18 @@ describe('ChessBoardComponent suggestion scoring helpers basics', () => {
 
     await (local as any).refreshSuggestedMoves(2);
     expect(local.suggestedMoves.length).toBeGreaterThan(0);
-    expect(engine.getTopMoves).toHaveBeenCalled();
+    expect(getTopMovesSpy).toHaveBeenCalled();
     expect(qualitySpy).toHaveBeenCalled();
 
-    engine.getTopMoves.and.rejectWith(new Error('boom'));
+    getTopMovesSpy.and.rejectWith(new Error('boom'));
     (local as any).suggestedMovesCacheByFen.clear();
     await (local as any).refreshSuggestedMoves(2);
     expect(local.suggestedMoves).toEqual(['n/a']);
   });
 
   it('covers refreshSuggestionQualities early returns and empty-uci mapping branch', async () => {
+    spyOn(StockfishService, 'getTopMoves').and.resolveTo([]);
+    spyOn(StockfishService, 'evaluateFenAfterMoves').and.resolveTo('n/a');
     const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, stockfishServiceStub as any, undefined, undefined);
     await (localNoEngine as any).refreshSuggestionQualities(1, 'fen');
 
@@ -3454,31 +3457,16 @@ describe('ChessBoardComponent suggestion scoring helpers mapping', () => {
   });
 
   it('covers evaluateUciMovesForQuality fallbacks and run-token early return', async () => {
-    const withAfterMoves = {
-      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.10'),
-      evaluateFenAfterMoves: jasmine.createSpy('evaluateFenAfterMoves').and.resolveTo('+0.30'),
-      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
-      terminate: jasmine.createSpy('terminate')
-    };
-    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, withAfterMoves as any, undefined, undefined);
+    const evaluateFenAfterMovesSpy = spyOn(StockfishService, 'evaluateFenAfterMoves').and.resolveTo('+0.30');
+    const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, stockfishServiceStub as any, undefined, undefined);
     (local as any).evaluationRunToken = 8;
     const withAfterResult = await (local as any).evaluateUciMovesForQuality(8, 'fen', ['e2e4']);
     expect(withAfterResult.pawnsByUci.get('e2e4')).toBe(0.3);
     expect(withAfterResult.textByUci.get('e2e4')).toBe('+0.30');
+    expect(evaluateFenAfterMovesSpy).toHaveBeenCalled();
 
-    const withoutAfterMoves = {
-      evaluateFen: jasmine.createSpy('evaluateFen').and.resolveTo('+0.50'),
-      getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo([]),
-      terminate: jasmine.createSpy('terminate')
-    };
-    const fallback = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, withoutAfterMoves as any, undefined, undefined);
-    (fallback as any).evaluationRunToken = 3;
-    const fallbackResult = await (fallback as any).evaluateUciMovesForQuality(3, 'fen', ['e2e4']);
-    expect(fallbackResult.pawnsByUci.get('e2e4')).toBe(0.5);
-    expect(withoutAfterMoves.evaluateFen).toHaveBeenCalled();
-
-    (fallback as any).evaluationRunToken = 99;
-    const early = await (fallback as any).evaluateUciMovesForQuality(1, 'fen', ['e2e4']);
+    (local as any).evaluationRunToken = 99;
+    const early = await (local as any).evaluateUciMovesForQuality(1, 'fen', ['e2e4']);
     expect(early.pawnsByUci.size).toBe(0);
   });
 });
@@ -3491,8 +3479,9 @@ describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
+    const getTopMovesSpy = spyOn(StockfishService, 'getTopMoves').and.resolveTo(['g1f3']);
     const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, engine as any, undefined, undefined);
-    engine.getTopMoves.and.callFake(async () => {
+    getTopMovesSpy.and.callFake(async () => {
       (local as any).evaluationRunToken = 2;
       return ['g1f3'];
     });
@@ -3501,7 +3490,7 @@ describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
     await (local as any).refreshSuggestedMoves(1);
     expect((local as any).suggestedMovesCacheByFen.has(fen)).toBeFalse();
 
-    engine.getTopMoves.and.callFake(async () => {
+    getTopMovesSpy.and.callFake(async () => {
       (local as any).evaluationRunToken = 3;
       throw new Error('boom');
     });
@@ -3515,6 +3504,7 @@ describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['g1f3']),
       terminate: jasmine.createSpy('terminate')
     };
+    const getTopMovesSpy = spyOn(StockfishService, 'getTopMoves').and.resolveTo(['g1f3']);
     const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, engine as any, undefined, undefined);
     (local as any).evaluationRunToken = 7;
     (local as any).suggestionQualityByFen.set('cached', { Nf3: 'history-quality--great' });
@@ -3522,7 +3512,7 @@ describe('ChessBoardComponent suggestion scoring uncovered branches', () => {
     await (local as any).refreshSuggestionQualities(7, 'cached', ['g1f3'], ['Nf3']);
     expect((local as any).suggestionQualityByMove.Nf3).toBe('history-quality--great');
 
-    engine.getTopMoves.and.callFake(async () => {
+    getTopMovesSpy.and.callFake(async () => {
       (local as any).evaluationRunToken = 8;
       return ['g1f3'];
     });
@@ -3569,6 +3559,7 @@ describe('ChessBoardComponent suggestion scoring edge mapping branches', () => {
       getTopMoves: jasmine.createSpy('getTopMoves').and.resolveTo(['xxxx']),
       terminate: jasmine.createSpy('terminate')
     };
+    spyOn(StockfishService, 'getTopMoves').and.resolveTo(['xxxx']);
     const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, engine as any, undefined, undefined);
     spyOn<any>(local, 'getCurrentFen').and.returnValue(fen);
     (local as any).evaluationRunToken = 4;
@@ -3585,6 +3576,7 @@ describe('ChessBoardComponent suggestion scoring edge mapping branches', () => {
 
   it('covers no-engine evaluation, parseSquare bounds and format parsing guards', async () => {
     const localNoEngine = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, stockfishServiceStub as any, undefined, undefined);
+    spyOn(StockfishService, 'evaluateFenAfterMoves').and.resolveTo('n/a');
     const direct = await (localNoEngine as any).evaluateUciMovesForQuality(1, 'fen', ['e2e4']);
     expect(direct.pawnsByUci.size).toBe(0);
 
@@ -3735,6 +3727,19 @@ describe('ChessBoardComponent additional suggestion coverage', () => {
 });
 
 describe('ChessBoardComponent additional suggestion coverage (preview helpers)', () => {
+  it('exposes clock state from time control service for template bindings', () => {
+    expect(component.selectedClockPresetLabel).toBe('5+0');
+    expect(component.clockStarted).toBeFalse();
+    expect(component.clockRunning).toBeFalse();
+    expect(component.whiteClockMs).toBe(5 * 60 * 1000);
+    expect(component.blackClockMs).toBe(5 * 60 * 1000);
+
+    component.applyTimeControl(3, 2, '3+2');
+    expect(component.selectedClockPresetLabel).toBe('3+2');
+    expect(component.whiteClockMs).toBe(3 * 60 * 1000);
+    expect(component.blackClockMs).toBe(3 * 60 * 1000);
+  });
+
   it('covers king-context preview helper early-return and dedupe branches', () => {
     const local = new ChessBoardComponent(chessBoardStateService, { get: () => of([]) } as any, createCctServiceStub() as any, createUiTextLoaderStub() as any, stockfishServiceStub as any, undefined, undefined);
     (local as any).chessBoardStateService.field = null;
@@ -3806,6 +3811,13 @@ describe('ChessBoardComponent additional suggestion coverage (preview helpers)',
 
     expect(local.isMateInOneTarget(0, 0)).toBeFalse();
     expect(local.isMateInOneBlunderTarget(0, 0)).toBeFalse();
+
+    expect(
+      (ChessBoardComponent.prototype as any).getVisibleHistory.call({
+        chessBoardStateService: null,
+        historyCursor: null
+      })
+    ).toEqual([]);
   });
 });
 

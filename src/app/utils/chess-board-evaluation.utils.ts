@@ -2,6 +2,7 @@ import { IGameplaySnapshot } from '../model/interfaces/chess-board-gameplay-snap
 import { ChessBoardComponentUtils } from './chess-board-component.utils';
 import { ChessBoardLogicUtils } from './chess-board-logic.utils';
 import { ChessBoardEvalConstants } from '../constants/chess.constants';
+import { StockfishService } from '../services/stockfish.service';
 
 export interface IEvaluationGetParams {
   halfMoveIndex: number;
@@ -17,7 +18,6 @@ export interface IRefreshVisibleEvaluationsParams {
   getCurrentRunToken: () => number;
   visibleHistoryLength: number;
   moveSnapshots: IGameplaySnapshot[];
-  evaluateFen: (fen: string) => Promise<string>;
   evalByHistoryIndex: Map<number, string>;
   evalCacheByFen: Map<string, string>;
   pendingEvalByHistoryIndex: Set<number>;
@@ -114,7 +114,6 @@ export class ChessBoardEvaluationUtils {
       getCurrentRunToken,
       visibleHistoryLength,
       moveSnapshots,
-      evaluateFen,
       evalByHistoryIndex,
       evalCacheByFen,
       pendingEvalByHistoryIndex,
@@ -152,7 +151,7 @@ export class ChessBoardEvaluationUtils {
       requestRender();
 
       try {
-        const score = await evaluateFen(fen);
+        const score = await StockfishService.evaluateFen(fen);
         if (runToken !== getCurrentRunToken()) {
           return;
         }

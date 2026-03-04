@@ -14,6 +14,8 @@ describe('ChessBoardClockUtils formatting', () => {
     expect(ChessBoardClockUtils.formatClock(500)).toBe('00:00.5');
     expect(ChessBoardClockUtils.formatClock(65000)).toBe('01:05');
     expect(ChessBoardClockUtils.formatClock(10 * 60 * 1000)).toBe('10:00');
+    expect(ChessBoardClockUtils.formatClock(Number.NaN)).toBe('00:00.0');
+    expect(ChessBoardClockUtils.formatClock(Number.POSITIVE_INFINITY)).toBe('00:00.0');
   });
 });
 

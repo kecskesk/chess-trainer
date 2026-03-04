@@ -44,7 +44,6 @@ export interface IRefreshVisibleHistoryEvaluationsParams {
   getCurrentRunToken: () => number;
   visibleHistoryLength: number;
   moveSnapshots: IGameplaySnapshot[];
-  evaluateFen: (fen: string) => Promise<string>;
   evalByHistoryIndex: Map<number, string>;
   evalCacheByFen: Map<string, string>;
   pendingEvalByHistoryIndex: Set<number>;
@@ -146,7 +145,6 @@ export class ChessBoardEvaluationFacade {
       getCurrentRunToken: params.getCurrentRunToken,
       visibleHistoryLength: params.visibleHistoryLength,
       moveSnapshots: params.moveSnapshots,
-      evaluateFen: params.evaluateFen,
       evalByHistoryIndex: params.evalByHistoryIndex,
       evalCacheByFen: params.evalCacheByFen,
       pendingEvalByHistoryIndex: params.pendingEvalByHistoryIndex,
@@ -196,10 +194,12 @@ export class ChessBoardEvaluationFacade {
       params.suggestedMovesCacheByFen.set(params.fen, resolvedSuggestions);
       await params.refreshSuggestionQualities(params.runToken, params.fen, engineTopMoves, formattedSuggestions);
       params.requestRender();
+      const refreshedQuality = params.suggestionQualityByFen.get(params.fen) || {};
+      const refreshedEvalText = params.suggestionEvalTextByFen.get(params.fen) || {};
       return {
         suggestedMoves: [...resolvedSuggestions],
-        suggestionQualityByMove: {},
-        suggestionEvalTextByMove: {}
+        suggestionQualityByMove: { ...refreshedQuality },
+        suggestionEvalTextByMove: { ...refreshedEvalText }
       };
     } catch {
       if (params.runToken !== params.getCurrentRunToken()) {

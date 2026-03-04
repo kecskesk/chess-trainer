@@ -38,21 +38,21 @@ export class StockfishService implements OnDestroy {
   private static readonly HANDSHAKE_TIMEOUT_MS = 8000;
   private static readonly NOT_AVAILABLE = 'n/a';
 
-  private worker: Worker | null = null;
-  private initPromise: Promise<void> | null = null;
-  private ready = false;
-  private waiters: ILineWaiter[] = [];
-  private pendingEvaluation: IPendingEvaluation | null = null;
-  private pendingTopMoves: IPendingTopMoves | null = null;
-  private requestId = 0;
-  private readonly evalCacheByFen = new Map<string, string>();
-  private readonly topMovesCacheByFen = new Map<string, string[]>();
+  private static worker: Worker | null = null;
+  private static initPromise: Promise<void> | null = null;
+  private static ready = false;
+  private static waiters: ILineWaiter[] = [];
+  private static pendingEvaluation: IPendingEvaluation | null = null;
+  private static pendingTopMoves: IPendingTopMoves | null = null;
+  private static requestId = 0;
+  private static readonly evalCacheByFen = new Map<string, string>();
+  private static readonly topMovesCacheByFen = new Map<string, string[]>();
 
   ngOnDestroy(): void {
-    this.terminate();
+    StockfishService.terminate();
   }
 
-  evaluateFen(fen: string, options: IStockfishAnalysisOptions = {}): Promise<string> {
+  static evaluateFen(fen: string, options: IStockfishAnalysisOptions = {}): Promise<string> {
     const normalizedFen = (fen || '').trim();
     if (!normalizedFen) {
       return Promise.resolve(StockfishService.NOT_AVAILABLE);
@@ -67,7 +67,7 @@ export class StockfishService implements OnDestroy {
     return this.ensureReady().then(() => this.runEvaluation(normalizedFen, cacheKey, options));
   }
 
-  evaluateFenAfterMoves(fen: string, uciMoves: string[], options: IStockfishAnalysisOptions = {}): Promise<string> {
+  static evaluateFenAfterMoves(fen: string, uciMoves: string[], options: IStockfishAnalysisOptions = {}): Promise<string> {
     const normalizedFen = (fen || '').trim();
     if (!normalizedFen) {
       return Promise.resolve(StockfishService.NOT_AVAILABLE);
@@ -90,7 +90,7 @@ export class StockfishService implements OnDestroy {
     return this.ensureReady().then(() => this.runEvaluation(perspectiveFen, cacheKey, options, positionCommand));
   }
 
-  getTopMoves(fen: string, options: IStockfishAnalysisOptions = {}): Promise<string[]> {
+  static getTopMoves(fen: string, options: IStockfishAnalysisOptions = {}): Promise<string[]> {
     const normalizedFen = (fen || '').trim();
     if (!normalizedFen) {
       return Promise.resolve([]);
@@ -107,7 +107,7 @@ export class StockfishService implements OnDestroy {
     return this.ensureReady().then(() => this.runTopMoves(normalizedFen, maxMoves, options, cacheKey));
   }
 
-  terminate(): void {
+  static terminate(): void {
     this.rejectPendingEvaluation('Stockfish terminated');
     this.rejectPendingTopMoves('Stockfish terminated');
     this.rejectAllWaiters('Stockfish terminated');
@@ -124,7 +124,7 @@ export class StockfishService implements OnDestroy {
     this.destroyWorker();
   }
 
-  private ensureReady(): Promise<void> {
+  static ensureReady(): Promise<void> {
     if (this.ready && this.worker) {
       return Promise.resolve();
     }
@@ -175,7 +175,7 @@ export class StockfishService implements OnDestroy {
     return this.initPromise;
   }
 
-  private runEvaluation(
+  static runEvaluation(
     fen: string,
     cacheKey: string,
     options: IStockfishAnalysisOptions,
@@ -201,7 +201,7 @@ export class StockfishService implements OnDestroy {
     });
   }
 
-  private runTopMoves(
+  static runTopMoves(
     fen: string,
     maxMoves: number,
     options: IStockfishAnalysisOptions,
@@ -238,7 +238,7 @@ export class StockfishService implements OnDestroy {
     });
   }
 
-  private onWorkerMessage(event: MessageEvent<string>): void {
+  static onWorkerMessage(event: MessageEvent<string>): void {
     const line = (event && typeof event.data === 'string' ? event.data : '').trim();
     if (!line) {
       return;
@@ -284,7 +284,7 @@ export class StockfishService implements OnDestroy {
     }
   }
 
-  private parseTopMoveFromInfoLine(line: string): { pv: number; move: string } | null {
+  static parseTopMoveFromInfoLine(line: string): { pv: number; move: string } | null {
     if (!line.startsWith('info ')) {
       return null;
     }
@@ -300,7 +300,7 @@ export class StockfishService implements OnDestroy {
     return { pv, move: moveMatch[1] };
   }
 
-  private collectTopMoves(pending: IPendingTopMoves): string[] {
+  static collectTopMoves(pending: IPendingTopMoves): string[] {
     const moves: string[] = [];
     for (let pv = 1; pv <= pending.maxMoves; pv++) {
       const move = pending.movesByPv.get(pv);
@@ -314,7 +314,7 @@ export class StockfishService implements OnDestroy {
     return moves;
   }
 
-  private parseScoreFromInfoLine(line: string, fen: string): string | null {
+  static parseScoreFromInfoLine(line: string, fen: string): string | null {
     if (!line.startsWith('info ')) {
       return null;
     }
@@ -349,12 +349,12 @@ export class StockfishService implements OnDestroy {
     return `${sign}${pawns.toFixed(2)}`;
   }
 
-  private getSideToMoveFromFen(fen: string): 'w' | 'b' {
+  static getSideToMoveFromFen(fen: string): 'w' | 'b' {
     const parts = (fen || '').trim().split(/\s+/);
     return parts[1] === 'b' ? 'b' : 'w';
   }
 
-  private withAppliedMoveParity(fen: string, moveCount: number): string {
+  static withAppliedMoveParity(fen: string, moveCount: number): string {
     if (moveCount % 2 === 0) {
       return fen;
     }
@@ -366,7 +366,7 @@ export class StockfishService implements OnDestroy {
     return parts.join(' ');
   }
 
-  private waitForLine(predicate: (line: string) => boolean, timeoutMs: number): Promise<void> {
+  static waitForLine(predicate: (line: string) => boolean, timeoutMs: number): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.waiters = this.waiters.filter(waiter => waiter.timeoutId !== timeoutId);
@@ -376,7 +376,7 @@ export class StockfishService implements OnDestroy {
     });
   }
 
-  private resolveWaiters(line: string): void {
+  static resolveWaiters(line: string): void {
     if (this.waiters.length < 1) {
       return;
     }
@@ -393,7 +393,7 @@ export class StockfishService implements OnDestroy {
     this.waiters = unresolved;
   }
 
-  private rejectAllWaiters(message: string): void {
+  static rejectAllWaiters(message: string): void {
     this.waiters.forEach(waiter => {
       clearTimeout(waiter.timeoutId);
       waiter.reject(new Error(message));
@@ -401,7 +401,7 @@ export class StockfishService implements OnDestroy {
     this.waiters = [];
   }
 
-  private rejectPendingEvaluation(message: string): void {
+  static rejectPendingEvaluation(message: string): void {
     if (!this.pendingEvaluation) {
       return;
     }
@@ -409,7 +409,7 @@ export class StockfishService implements OnDestroy {
     this.pendingEvaluation = null;
   }
 
-  private rejectPendingTopMoves(message: string): void {
+  static rejectPendingTopMoves(message: string): void {
     if (!this.pendingTopMoves) {
       return;
     }
@@ -417,7 +417,7 @@ export class StockfishService implements OnDestroy {
     this.pendingTopMoves = null;
   }
 
-  private post(command: string): void {
+  static post(command: string): void {
     if (!this.worker) {
       throw new Error('Stockfish worker is not initialized');
     }
@@ -428,11 +428,11 @@ export class StockfishService implements OnDestroy {
     }
   }
 
-  private createWorker(): Worker {
+  static createWorker(): Worker {
     return new Worker('assets/stockfish/stockfish.js');
   }
 
-  private handleWorkerFailure(message: string): Error {
+  static handleWorkerFailure(message: string): Error {
     const errorMessage = (message || '').trim() || 'Stockfish worker error';
     this.rejectPendingEvaluation(errorMessage);
     this.rejectPendingTopMoves(errorMessage);
@@ -443,7 +443,7 @@ export class StockfishService implements OnDestroy {
     return new Error(errorMessage);
   }
 
-  private destroyWorker(): void {
+  static destroyWorker(): void {
     if (!this.worker) {
       return;
     }
@@ -451,14 +451,14 @@ export class StockfishService implements OnDestroy {
     this.worker = null;
   }
 
-  private extractWorkerErrorMessage(event: Event | ErrorEvent): string {
+  static extractWorkerErrorMessage(event: Event | ErrorEvent): string {
     const message = typeof (event as ErrorEvent).message === 'string'
       ? (event as ErrorEvent).message.trim()
       : '';
     return message ? `Stockfish worker error: ${message}` : 'Stockfish worker error';
   }
 
-  private extractPostErrorMessage(error: unknown): string {
+  static extractPostErrorMessage(error: unknown): string {
     if (error instanceof Error && error.message.trim()) {
       return `Stockfish worker postMessage failed: ${error.message}`;
     }
