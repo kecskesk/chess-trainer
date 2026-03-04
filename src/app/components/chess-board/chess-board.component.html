@@ -45,7 +45,7 @@
         [uiText]="uiText"
         [boardHelper]="chessBoardStateService.boardHelper"
         [isDebugPanelOpen]="isDebugPanelOpen"
-        [debugPositionKey]="getDebugPositionKey()"
+        [debugPositionKey]="chessBoardStateService.getDebugPositionKey()"
         (debugPanelToggle)="onDebugPanelToggle($event)"></app-chess-board-position-key>
     </div>
   </section>

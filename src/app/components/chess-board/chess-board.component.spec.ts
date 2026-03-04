@@ -308,8 +308,8 @@ describe('ChessBoardComponent coverage helpers (js flip mapping)', () => {
 
     expect(component.translateFieldNames(6, 4)).toBe('e2');
     expect(ChessBoardClockUtils.formatClock(65000)).toBe('01:05');
-    component.whiteClockMs = 9000;
-    component.blackClockMs = 12000;
+    (component as any).timeControlService.whiteClockMs = 9000;
+    (component as any).timeControlService.blackClockMs = 12000;
     expect(component.isClockLow(ChessColorsEnum.White)).toBeTrue();
     expect(component.isClockLow(ChessColorsEnum.Black)).toBeFalse();
 
@@ -740,7 +740,7 @@ describe('ChessBoardComponent gameplay moves and rules (continued)', () => {
     chessBoardStateService.field[5][5] = [knight];
     chessBoardStateService.field[7][6] = [];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
-    const targetPositionKey = component.getDebugPositionKey();
+    const targetPositionKey = chessBoardStateService.getDebugPositionKey();
     chessBoardStateService.field[7][6] = [knight];
     chessBoardStateService.field[5][5] = [];
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
@@ -1181,32 +1181,32 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview and clock s
     const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
 
     chessBoardStateService.boardHelper.gameOver = true;
-    component.clockRunning = false;
+    (component as any).timeControlService.clockRunning = false;
     component.startOrPauseClock();
     expect(startClockSpy).not.toHaveBeenCalled();
     expect(stopClockSpy).not.toHaveBeenCalled();
 
     chessBoardStateService.boardHelper.gameOver = false;
-    component.clockRunning = true;
+    (component as any).timeControlService.clockRunning = true;
     component.startOrPauseClock();
     expect(stopClockSpy).toHaveBeenCalled();
 
-    component.clockRunning = false;
-    component.clockStarted = false;
+    (component as any).timeControlService.clockRunning = false;
+    (component as any).timeControlService.clockStarted = false;
     component.startOrPauseClock();
     expect(startClockSpy).toHaveBeenCalled();
-    expect(component.clockStarted).toBeTrue();
+    expect((component as any).timeControlService.clockStarted).toBeTrue();
   });
 
   it('resetClock applies selected preset and ignores unknown label', () => {
-    const applyTimeControlSpy = spyOn(component, 'applyTimeControl').and.callThrough();
+    const applyTimeControlSpy = spyOn((component as any).timeControlService, 'applyTimeControl').and.callThrough();
 
-    component.selectedClockPresetLabel = '3+2';
+    (component as any).timeControlService.selectedClockPresetLabel = '3+2';
     component.resetClock();
     expect(applyTimeControlSpy).toHaveBeenCalledWith(3, 2, '3+2');
 
     applyTimeControlSpy.calls.reset();
-    component.selectedClockPresetLabel = 'does-not-exist';
+    (component as any).timeControlService.selectedClockPresetLabel = 'does-not-exist';
     component.resetClock();
     expect(applyTimeControlSpy).not.toHaveBeenCalled();
   });
@@ -1217,31 +1217,31 @@ describe('ChessBoardComponent gameplay moves and rules (drag preview and clock s
     spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
 
     chessBoardStateService.boardHelper.gameOver = false;
-    component.clockRunning = true;
-    component.clockStarted = true;
-    (component as any).lastClockTickAt = 1000;
+    (component as any).timeControlService.clockRunning = true;
+    (component as any).timeControlService.clockStarted = true;
+    (component as any).timeControlService.lastClockTickAt = 1000;
 
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.White;
-    component.whiteClockMs = 100;
+    (component as any).timeControlService.whiteClockMs = 100;
     (component as any).tickClock();
-    expect(component.whiteClockMs).toBe(0);
+    expect((component as any).timeControlService.whiteClockMs).toBe(0);
     expect(forfeitSpy).toHaveBeenCalledWith(ChessColorsEnum.White);
 
     forfeitSpy.calls.reset();
     dateNowSpy.and.returnValue(1300);
-    (component as any).lastClockTickAt = 1200;
+    (component as any).timeControlService.lastClockTickAt = 1200;
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
-    component.blackClockMs = 500;
+    (component as any).timeControlService.blackClockMs = 500;
     (component as any).tickClock();
-    expect(component.blackClockMs).toBe(400);
+    expect((component as any).timeControlService.blackClockMs).toBe(400);
     expect(forfeitSpy).not.toHaveBeenCalled();
   });
 
   it('tickClock stops immediately when clock is not active', () => {
     const stopClockSpy = spyOn<any>(component, 'stopClock').and.callFake(() => undefined);
 
-    component.clockRunning = false;
-    component.clockStarted = true;
+    (component as any).timeControlService.clockRunning = false;
+    (component as any).timeControlService.clockStarted = true;
     chessBoardStateService.boardHelper.gameOver = false;
 
     (component as any).tickClock();
@@ -1292,12 +1292,12 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
 
     component.resign(ChessColorsEnum.White);
     expect(chessBoardStateService.boardHelper.gameOver).toBeTrue();
-    expect(component.clockRunning).toBeFalse();
+    expect((component as any).timeControlService.clockRunning).toBeFalse();
     expect(chessBoardStateService.history[chessBoardStateService.history.length - 1]).toContain('0-1 {White resigns}');
 
     component.undoMove();
     expect(chessBoardStateService.boardHelper.gameOver).toBeFalse();
-    expect(component.clockRunning).toBeTrue();
+    expect((component as any).timeControlService.clockRunning).toBeTrue();
     expect(chessBoardStateService.history).toEqual(historyBeforeResign);
 
     component.redoMove();
@@ -1366,13 +1366,13 @@ describe('ChessBoardComponent gameplay moves and rules (clock and controls)', ()
         movePiece(4, 3, 3, 3);
         movePiece(1, 2, 3, 2);
 
-    expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
+    expect(chessBoardStateService.getDebugPositionKey().split('|')[2]).toBe('c6');
 
     component.undoMove();
-    expect(component.getDebugPositionKey().split('|')[2]).toBe('-');
+    expect(chessBoardStateService.getDebugPositionKey().split('|')[2]).toBe('-');
 
     component.redoMove();
-    expect(component.getDebugPositionKey().split('|')[2]).toBe('c6');
+    expect(chessBoardStateService.getDebugPositionKey().split('|')[2]).toBe('c6');
   });
 
 });
@@ -1905,7 +1905,7 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
   it('handles time forfeit and records result suffix', () => {
     chessBoardStateService.boardHelper.gameOver = false;
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
-    component.clockRunning = true;
+    (component as any).timeControlService.clockRunning = true;
 
     (component as any).handleTimeForfeit(ChessColorsEnum.Black);
 
@@ -1918,7 +1918,7 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
     chessBoardStateService.boardHelper.gameOver = false;
     chessBoardStateService.boardHelper.history = { '1': 'e2-e4' } as any;
     component.pendingDrawOfferBy = ChessColorsEnum.Black;
-    component.clockRunning = true;
+    (component as any).timeControlService.clockRunning = true;
 
     (component as any).handleTimeForfeit(ChessColorsEnum.White);
 
@@ -1942,11 +1942,11 @@ describe('ChessBoardComponent gameplay moves and rules (time and overlays)', () 
     expect(component.isDebugPanelOpen).toBeFalse();
 
     chessBoardStateService.boardHelper.gameOver = false;
-    component.clockRunning = true;
-    component.clockStarted = false;
+    (component as any).timeControlService.clockRunning = true;
+    (component as any).timeControlService.clockStarted = false;
     expect(component.isClockActive(ChessColorsEnum.White)).toBeFalse();
 
-    component.clockStarted = true;
+    (component as any).timeControlService.clockStarted = true;
     chessBoardStateService.boardHelper.gameOver = true;
     expect(component.isClockActive(ChessColorsEnum.White)).toBeFalse();
 
@@ -1989,17 +1989,17 @@ describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', 
     component.undoMove();
     component.redoMove();
 
-    component.clockStarted = true;
-    (component as any).incrementMs = 2000;
+    (component as any).timeControlService.clockStarted = true;
+    (component as any).timeControlService.incrementMs = 2000;
     chessBoardStateService.boardHelper.gameOver = true;
-    component.whiteClockMs = 5000;
-    component.blackClockMs = 5000;
+    (component as any).timeControlService.whiteClockMs = 5000;
+    (component as any).timeControlService.blackClockMs = 5000;
     (component as any).addIncrementToColor(ChessColorsEnum.White);
-    expect(component.whiteClockMs).toBe(5000);
+    expect((component as any).timeControlService.whiteClockMs).toBe(5000);
 
     chessBoardStateService.boardHelper.gameOver = false;
     (component as any).addIncrementToColor(ChessColorsEnum.Black);
-    expect(component.blackClockMs).toBe(7000);
+    expect((component as any).timeControlService.blackClockMs).toBe(7000);
   });
 
   it('handles black-side en passant branch', () => {
@@ -2044,7 +2044,7 @@ describe('ChessBoardComponent gameplay moves and rules (history and outcomes)', 
     });
     const clearIntervalSpy = spyOn(window, 'clearInterval').and.callFake(() => undefined);
 
-    component.clockRunning = false;
+    (component as any).timeControlService.clockRunning = false;
     (component as any).clockIntervalId = null;
     (component as any).startClock();
     expect(setIntervalSpy).toHaveBeenCalled();
@@ -2663,7 +2663,7 @@ describe('ChessBoardComponent branch coverage helpers (simulation and clock bran
       (callback as Function)();
       return 1 as any;
     });
-    zoneComponent.clockRunning = false;
+    (zoneComponent as any).timeControlService.clockRunning = false;
     (zoneComponent as any).clockIntervalId = null;
     (zoneComponent as any).startClock();
     expect(setIntervalSpy).toHaveBeenCalled();
@@ -2671,19 +2671,19 @@ describe('ChessBoardComponent branch coverage helpers (simulation and clock bran
     (zoneComponent as any).startClock();
 
     chessBoardStateService.boardHelper.gameOver = false;
-    zoneComponent.clockRunning = true;
-    zoneComponent.clockStarted = true;
+    (zoneComponent as any).timeControlService.clockRunning = true;
+    (zoneComponent as any).timeControlService.clockStarted = true;
     chessBoardStateService.boardHelper.colorTurn = ChessColorsEnum.Black;
-    zoneComponent.blackClockMs = 1;
-    (zoneComponent as any).lastClockTickAt = Date.now() - 5;
+    (zoneComponent as any).timeControlService.blackClockMs = 1;
+    (zoneComponent as any).timeControlService.lastClockTickAt = Date.now() - 5;
     (zoneComponent as any).tickClock();
 
     chessBoardStateService.boardHelper.gameOver = false;
-    zoneComponent.clockStarted = true;
-    (zoneComponent as any).incrementMs = 1000;
-    zoneComponent.whiteClockMs = 0;
+    (zoneComponent as any).timeControlService.clockStarted = true;
+    (zoneComponent as any).timeControlService.incrementMs = 1000;
+    (zoneComponent as any).timeControlService.whiteClockMs = 0;
     (zoneComponent as any).addIncrementToColor(ChessColorsEnum.White);
-    expect(zoneComponent.whiteClockMs).toBe(1000);
+    expect((zoneComponent as any).timeControlService.whiteClockMs).toBe(1000);
 
     chessBoardStateService.boardHelper.gameOver = true;
     const debugBefore = chessBoardStateService.boardHelper.debugText;
@@ -2692,9 +2692,9 @@ describe('ChessBoardComponent branch coverage helpers (simulation and clock bran
 
     const nowSpy = spyOn(Date, 'now').and.returnValues(100, 100);
     chessBoardStateService.boardHelper.gameOver = false;
-    zoneComponent.clockRunning = true;
-    zoneComponent.clockStarted = true;
-    (zoneComponent as any).lastClockTickAt = 100;
+    (zoneComponent as any).timeControlService.clockRunning = true;
+    (zoneComponent as any).timeControlService.clockStarted = true;
+    (zoneComponent as any).timeControlService.lastClockTickAt = 100;
     (zoneComponent as any).tickClock();
     nowSpy.and.callThrough();
   });

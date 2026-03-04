@@ -364,18 +364,22 @@ export class ChessBoardStateService {
     }
 
     this.repetitionCounts = {};
-    this.recordPositionKey(ChessBoardLogicUtils.getPositionKey(this.field, this.boardHelper.colorTurn, this.boardHelper.history));
+    this.recordPositionKey(this.getDebugPositionKey());
     this.trackedHistoryLength = historyLength;
   }
 
   recordCurrentPosition(): void {
-    const positionKey = ChessBoardLogicUtils.getPositionKey(
+    const positionKey = this.getDebugPositionKey();
+    this.recordPositionKey(positionKey);
+    this.trackedHistoryLength = this.history.length;
+  }
+
+  getDebugPositionKey(): string {
+    return ChessBoardLogicUtils.getPositionKey(
       this.field,
       this.boardHelper.colorTurn,
       this.boardHelper.history
     );
-    this.recordPositionKey(positionKey);
-    this.trackedHistoryLength = this.history.length;
   }
 
   private recordPositionKey(positionKey: string): void {

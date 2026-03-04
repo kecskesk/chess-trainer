@@ -37,6 +37,7 @@ import { ChessBoardComponentUtils } from '../../utils/chess-board-component.util
 import { ChessBoardStorageService } from '../../services/chess-board-storage.service';
 import { ChessBoardEvaluationUtils } from '../../utils/chess-board-evaluation.utils';
 import { ChessBoardCctService } from '../../services/chess-board-cct.service';
+import { ChessBoardTimeControlService } from '../../services/chess-board-time-control.service';
 import {
   ChessBoardSuggestionFacade,
   ISuggestionEvaluationResult
@@ -95,14 +96,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   private isFinalizingDropState = false;
   chessColors = ChessColorsEnum;
   clockPresets: {label: string; baseMinutes: number; incrementSeconds: number}[] = ChessBoardUiConstants.CLOCK_PRESETS;
-  selectedClockPresetLabel = ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL;
-  whiteClockMs = 0;
-  blackClockMs = 0;
-  clockRunning = false;
-  clockStarted = false;
   private clockIntervalId: number | null = null;
-  private lastClockTickAt = 0;
-  private incrementMs = 0;
   private readonly clockTickIntervalMs = ChessBoardUiConstants.CLOCK_TICK_INTERVAL_MS;
   pendingDrawOfferBy: ChessColorsEnum | null = null;
   resignConfirmColor: ChessColorsEnum | null = null;
@@ -222,10 +216,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     private readonly uiTextLoaderService: UiTextLoaderService,
     private readonly stockfishService: StockfishService,
     private readonly ngZone?: NgZone,
-    private readonly cdr?: ChangeDetectorRef
+    private readonly cdr?: ChangeDetectorRef,
+    private readonly timeControlService: ChessBoardTimeControlService = new ChessBoardTimeControlService()
   ) {
     this.randomizeAmbientStyle();
-    this.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
+    this.timeControlService.applyTimeControl(5, 0, ChessBoardUiConstants.DEFAULT_CLOCK_PRESET_LABEL);
     this.isDebugPanelOpen = ChessBoardStorageService.readDebugPanelOpenState(this.debugPanelStorageKey);
     this.selectedLocale = this.uiTextLoaderService.getCurrentLocale();
     this.initializeSnapshotTimeline();
@@ -431,9 +426,9 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private prepareUiForDrop(moveContext: { srcColor: ChessColorsEnum }): void {
-    const wasClockStarted = this.clockStarted;
+    const wasClockStarted = this.timeControlService.clockStarted;
     this.pendingDrawOfferBy = ChessBoardMoveFacade.prepareUiForDrop({
-      clockStarted: this.clockStarted,
+      clockStarted: this.timeControlService.clockStarted,
       pendingDrawOfferBy: this.pendingDrawOfferBy,
       srcColor: moveContext.srcColor,
       startClock: () => this.startClock(),
@@ -441,7 +436,7 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       boardHelper: this.chessBoardStateService.boardHelper
     });
     if (!wasClockStarted) {
-      this.clockStarted = true;
+      this.timeControlService.clockStarted = true;
     }
     this.mateInOneTargets = {};
     this.mateInOneBlunderTargets = {};
@@ -769,34 +764,28 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
 
   applyTimeControl(baseMinutes: number, incrementSeconds: number, label: string): void {
     this.stopClock();
-    const nextTimeControl = ChessBoardClockGameStateFacade.getAppliedTimeControl(baseMinutes, incrementSeconds, label);
-    this.selectedClockPresetLabel = nextTimeControl.selectedClockPresetLabel;
-    this.incrementMs = nextTimeControl.incrementMs;
-    this.whiteClockMs = nextTimeControl.whiteClockMs;
-    this.blackClockMs = nextTimeControl.blackClockMs;
-    this.clockStarted = nextTimeControl.clockStarted;
-    this.clockRunning = nextTimeControl.clockRunning;
-    this.lastClockTickAt = nextTimeControl.lastClockTickAt;
+    this.timeControlService.applyTimeControl(baseMinutes, incrementSeconds, label);
   }
 
   startOrPauseClock(): void {
     if (!ChessBoardClockGameStateFacade.canToggleClock(this.chessBoardStateService.boardHelper.gameOver)) {
       return;
     }
-    if (this.clockRunning) {
+    if (this.timeControlService.clockRunning) {
       this.stopClock();
       return;
     }
-    this.clockStarted = true;
+    this.timeControlService.clockStarted = true;
     this.startClock();
   }
 
   resetClock(): void {
-    const selectedPreset = this.clockPresets.find(preset => preset.label === this.selectedClockPresetLabel);
+    const selectedPreset = this.clockPresets.find(preset => preset.label === this.timeControlService.selectedClockPresetLabel);
     if (!selectedPreset) {
       return;
     }
-    this.applyTimeControl(selectedPreset.baseMinutes, selectedPreset.incrementSeconds, selectedPreset.label);
+    this.stopClock();
+    this.timeControlService.applyTimeControl(selectedPreset.baseMinutes, selectedPreset.incrementSeconds, selectedPreset.label);
   }
 
   getResignConfirmTitle(): string {
@@ -807,14 +796,16 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   isClockActive(color: ChessColorsEnum): boolean {
-    if (!this.clockRunning || !this.clockStarted || this.chessBoardStateService.boardHelper.gameOver) {
+    if (!this.timeControlService.clockRunning || !this.timeControlService.clockStarted || this.chessBoardStateService.boardHelper.gameOver) {
       return false;
     }
     return this.chessBoardStateService.boardHelper.colorTurn === color;
   }
 
   isClockLow(color: ChessColorsEnum): boolean {
-    const remainingTime = color === ChessColorsEnum.White ? this.whiteClockMs : this.blackClockMs;
+    const remainingTime = color === ChessColorsEnum.White
+      ? this.timeControlService.whiteClockMs
+      : this.timeControlService.blackClockMs;
     return remainingTime <= 10000;
   }
 
@@ -1667,46 +1658,31 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private startClock(): void {
-    const startResult = ChessBoardClockGameStateFacade.startClock(
+    this.clockIntervalId = this.timeControlService.startClock(
       this.clockIntervalId,
-      this.lastClockTickAt,
       this.clockTickIntervalMs,
       () => this.tickClock(),
+      () => this.requestClockRender(),
       this.ngZone
     );
-    if (!startResult.started) {
-      return;
-    }
-    this.clockIntervalId = startResult.clockIntervalId;
-    this.lastClockTickAt = startResult.lastClockTickAt;
-    this.clockRunning = startResult.clockRunning;
-    this.requestClockRender();
   }
 
   private stopClock(): void {
-    const stopResult = ChessBoardClockGameStateFacade.stopClock(this.clockIntervalId);
-    this.clockIntervalId = stopResult.clockIntervalId;
-    this.clockRunning = stopResult.clockRunning;
-    this.requestClockRender();
+    this.clockIntervalId = this.timeControlService.stopClock(
+      this.clockIntervalId,
+      () => this.requestClockRender()
+    );
   }
 
   private tickClock(): void {
-    const tickResult = ChessBoardClockGameStateFacade.tickClock(
-      this.clockRunning,
-      this.clockStarted,
+    const tickResult = this.timeControlService.tickClock(
       this.chessBoardStateService.boardHelper.gameOver,
-      this.lastClockTickAt,
-      this.chessBoardStateService.boardHelper.colorTurn,
-      this.whiteClockMs,
-      this.blackClockMs
+      this.chessBoardStateService.boardHelper.colorTurn
     );
     if (tickResult.shouldStop) {
       this.stopClock();
       return;
     }
-    this.lastClockTickAt = tickResult.lastClockTickAt;
-    this.whiteClockMs = tickResult.whiteClockMs;
-    this.blackClockMs = tickResult.blackClockMs;
     if (tickResult.forfeitColor !== null) {
       this.handleTimeForfeit(tickResult.forfeitColor);
     }
@@ -1716,23 +1692,11 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
   }
 
   private requestClockRender(): void {
-    if (!this.cdr || this.isDestroyed || typeof this.cdr.markForCheck !== 'function') {
-      return;
-    }
-    this.cdr.markForCheck();
+    this.timeControlService.requestClockRender(this.cdr, this.isDestroyed);
   }
 
   private addIncrementToColor(color: ChessColorsEnum): void {
-    const nextClocks = ChessBoardClockGameStateFacade.addIncrementToColor(
-      color,
-      this.clockStarted,
-      this.incrementMs,
-      this.chessBoardStateService.boardHelper.gameOver,
-      this.whiteClockMs,
-      this.blackClockMs
-    );
-    this.whiteClockMs = nextClocks.whiteClockMs;
-    this.blackClockMs = nextClocks.blackClockMs;
+    this.timeControlService.addIncrementToColor(color, this.chessBoardStateService.boardHelper.gameOver);
   }
 
   private handleTimeForfeit(loserColor: ChessColorsEnum): void {
@@ -2006,10 +1970,10 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
       this.chessBoardStateService,
       this.chessBoardStateService.trackedHistoryLength,
       this.pendingDrawOfferBy,
-      this.clockStarted,
-      this.clockRunning,
-      this.whiteClockMs,
-      this.blackClockMs
+      this.timeControlService.clockStarted,
+      this.timeControlService.clockRunning,
+      this.timeControlService.whiteClockMs,
+      this.timeControlService.blackClockMs
     );
   }
 
@@ -2022,22 +1986,14 @@ export class ChessBoardComponent implements AfterViewInit, OnDestroy {
     this.resignConfirmColor = null;
     this.chessBoardStateService.repetitionCounts = restoredState.repetitionCounts;
     this.chessBoardStateService.trackedHistoryLength = restoredState.trackedHistoryLength;
-    this.clockStarted = restoredState.clockStarted;
-    this.whiteClockMs = restoredState.whiteClockMs;
-    this.blackClockMs = restoredState.blackClockMs;
+    this.timeControlService.clockStarted = restoredState.clockStarted;
+    this.timeControlService.whiteClockMs = restoredState.whiteClockMs;
+    this.timeControlService.blackClockMs = restoredState.blackClockMs;
     if (restoredState.shouldRunClock) {
       this.startClock();
     } else {
       this.stopClock();
     }
-  }
-
-  getDebugPositionKey(): string {
-    return ChessBoardLogicUtils.getPositionKey(
-      this.chessBoardStateService.field,
-      this.chessBoardStateService.boardHelper.colorTurn,
-      this.chessBoardStateService.boardHelper.history
-    );
   }
 
 }
