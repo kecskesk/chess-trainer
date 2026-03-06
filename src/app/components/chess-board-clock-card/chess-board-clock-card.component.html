@@ -44,14 +44,17 @@
     </div>
 
     <div class="clock-controls">
-      <div class="clock-controls-grid">
+      <div class="handicap-group">
+        <p class="controls-label">Handicap</p>
+        <div class="handicap-grid">
         <button
           *ngFor="let option of handicapOptions"
-          class="time-btn"
+          class="time-btn handicap-btn"
           [class.time-btn--selected]="selectedHandicap === option.value"
           (click)="onHandicapSelect(option.value)">
           {{option.label}}
         </button>
+        </div>
       </div>
       <div class="clock-controls-grid">
         <button class="time-btn"

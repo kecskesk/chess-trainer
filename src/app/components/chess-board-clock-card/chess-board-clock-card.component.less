@@ -177,7 +177,36 @@
 
 .clock-controls {
   display: grid;
-  gap: 0;
+  gap: 8px;
+}
+
+.handicap-group {
+  display: grid;
+  gap: 6px;
+}
+
+.controls-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+  color: rgba(201, 216, 252, 0.92);
+}
+
+.handicap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.handicap-btn {
+  padding: 9px 10px;
+  min-height: 44px;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: left;
 }
 
 .clock-controls-grid {
@@ -327,6 +356,10 @@
   .clock-controls-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .handicap-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 620px) {
@@ -341,6 +374,11 @@
 
   .clock-controls-grid {
     gap: 5px;
+  }
+
+  .handicap-btn {
+    min-height: 42px;
+    font-size: 12px;
   }
 }
 
