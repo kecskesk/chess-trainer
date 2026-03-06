@@ -80,6 +80,7 @@ const resetStockfishStaticState = () => {
   stockfish.pendingEvaluation = null;
   stockfish.pendingTopMoves = null;
   stockfish.requestId = 0;
+  stockfish.latestAnalysisRequestToken = 0;
   stockfish.evalCacheByFen.clear();
   stockfish.topMovesCacheByFen.clear();
   stockfish.HANDSHAKE_TIMEOUT_MS = 8000;

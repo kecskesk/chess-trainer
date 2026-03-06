@@ -45,6 +45,7 @@ export class StockfishService implements OnDestroy {
   private static pendingEvaluation: IPendingEvaluation | null = null;
   private static pendingTopMoves: IPendingTopMoves | null = null;
   private static requestId = 0;
+  private static latestAnalysisRequestToken = 0;
   private static readonly evalCacheByFen = new Map<string, string>();
   private static readonly topMovesCacheByFen = new Map<string, string[]>();
 
@@ -64,7 +65,13 @@ export class StockfishService implements OnDestroy {
       return Promise.resolve(cached);
     }
 
-    return this.ensureReady().then(() => this.runEvaluation(normalizedFen, cacheKey, options));
+    const requestToken = ++this.latestAnalysisRequestToken;
+    return this.ensureReady().then(() => {
+      if (requestToken !== this.latestAnalysisRequestToken) {
+        return Promise.reject(new Error('Evaluation cancelled'));
+      }
+      return this.runEvaluation(normalizedFen, cacheKey, options);
+    });
   }
 
   static evaluateFenAfterMoves(fen: string, uciMoves: string[], options: IStockfishAnalysisOptions = {}): Promise<string> {
@@ -87,7 +94,13 @@ export class StockfishService implements OnDestroy {
 
     const perspectiveFen = this.withAppliedMoveParity(normalizedFen, sanitizedMoves.length);
     const positionCommand = `position fen ${normalizedFen} moves ${sanitizedMoves.join(' ')}`;
-    return this.ensureReady().then(() => this.runEvaluation(perspectiveFen, cacheKey, options, positionCommand));
+    const requestToken = ++this.latestAnalysisRequestToken;
+    return this.ensureReady().then(() => {
+      if (requestToken !== this.latestAnalysisRequestToken) {
+        return Promise.reject(new Error('Evaluation cancelled'));
+      }
+      return this.runEvaluation(perspectiveFen, cacheKey, options, positionCommand);
+    });
   }
 
   static getTopMoves(fen: string, options: IStockfishAnalysisOptions = {}): Promise<string[]> {
@@ -104,7 +117,13 @@ export class StockfishService implements OnDestroy {
       return Promise.resolve([...cached]);
     }
 
-    return this.ensureReady().then(() => this.runTopMoves(normalizedFen, maxMoves, options, cacheKey));
+    const requestToken = ++this.latestAnalysisRequestToken;
+    return this.ensureReady().then(() => {
+      if (requestToken !== this.latestAnalysisRequestToken) {
+        return Promise.reject(new Error('Evaluation cancelled'));
+      }
+      return this.runTopMoves(normalizedFen, maxMoves, options, cacheKey);
+    });
   }
 
   static terminate(): void {
