@@ -1,5 +1,7 @@
 import { APP_INITIALIZER, enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
+import { initializeApp } from 'firebase/app';
+import { getAnalytics } from 'firebase/analytics';
 
 import { AppComponent } from './app/app.component';
 import { environment } from './environments/environment';
@@ -13,6 +15,11 @@ import { UiTextLoaderService } from './app/services/ui-text-loader.service';
 
 if (environment.production) {
   enableProdMode();
+}
+
+if (environment.firebaseConfig.apiKey) {
+  const firebaseApp = initializeApp(environment.firebaseConfig);
+  getAnalytics(firebaseApp);
 }
 
 // eslint-disable-next-line no-console

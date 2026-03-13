@@ -42,3 +42,6 @@ testem.log
 .DS_Store
 Thumbs.db
 .angular/
+
+# Generated environment (secrets injected at build time)
+src/environments/environment.prod.ts

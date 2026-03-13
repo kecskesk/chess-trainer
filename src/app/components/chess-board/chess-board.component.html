@@ -49,83 +49,89 @@
   </section>
 
   <section class="sidebar-panel" *ngIf="!previewMode">
-    <app-chess-board-clock-card
-      [selectedLocale]="selectedLocale"
-      [chessColors]="chessColors"
-      [selectedClockPresetLabel]="selectedClockPresetLabel"
-      [clockStarted]="clockStarted"
-      [clockRunning]="clockRunning"
-      [blackClockMs]="blackClockMs"
-      [whiteClockMs]="whiteClockMs"
-      [analysisMeterOffsetPercent]="getAnalysisMeterOffsetPercent()"
-      [currentAnalysisEvalText]="getCurrentAnalysisEvalText()"
-      [turnColor]="chessBoardStateService.boardHelper.colorTurn"
-      [isGameOver]="chessBoardStateService.boardHelper.gameOver"
-      [selectedHandicap]="selectedHandicap"
-      [whiteHasInfiniteTime]="whiteHasInfiniteTime"
-      (timeControlChange)="applyTimeControl($event.baseMinutes, $event.incrementSeconds, $event.label)"
-      (handicapChange)="onHandicapChange($event)"
-      (toggleClock)="startOrPauseClock()"
-      (resetClock)="resetClock()"></app-chess-board-clock-card>
+    <div class="sidebar-stack sidebar-stack--top">
+      <app-chess-board-clock-card
+        [selectedLocale]="selectedLocale"
+        [chessColors]="chessColors"
+        [selectedClockPresetLabel]="selectedClockPresetLabel"
+        [clockStarted]="clockStarted"
+        [clockRunning]="clockRunning"
+        [blackClockMs]="blackClockMs"
+        [whiteClockMs]="whiteClockMs"
+        [analysisMeterOffsetPercent]="getAnalysisMeterOffsetPercent()"
+        [currentAnalysisEvalText]="getCurrentAnalysisEvalText()"
+        [turnColor]="chessBoardStateService.boardHelper.colorTurn"
+        [isGameOver]="chessBoardStateService.boardHelper.gameOver"
+        [selectedHandicap]="selectedHandicap"
+        [whiteHasInfiniteTime]="whiteHasInfiniteTime"
+        (timeControlChange)="applyTimeControl($event.baseMinutes, $event.incrementSeconds, $event.label)"
+        (handicapChange)="onHandicapChange($event)"
+        (toggleClock)="startOrPauseClock()"
+        (resetClock)="resetClock()"></app-chess-board-clock-card>
 
-    <app-chess-board-status-card
-      [selectedLocale]="selectedLocale"
-      [boardState]="statusBoardState"
-      [pendingDrawOfferBy]="snapshotService.pendingDrawOfferBy"
-      [clockRunning]="clockRunning"
-      [resignConfirmColor]="snapshotService.resignConfirmColor"
-      [chessColors]="chessColors"
-      [canClaimDraw]="canClaimDraw()"
-      (showPossibleMoves)="showPossibleMoves($event)"
-      (startNewGame)="startNewGame()"
-      (offerDraw)="offerDraw()"
-      (acceptDraw)="acceptDrawOffer()"
-      (declineDraw)="declineDrawOffer()"
-      (claimDraw)="claimDraw()"
-      (openResignConfirm)="openResignConfirm($event)"
-      (cancelResignConfirm)="cancelResignConfirm()"
-      (confirmResign)="confirmResign()"></app-chess-board-status-card>
+      <app-chess-board-status-card
+        [selectedLocale]="selectedLocale"
+        [boardState]="statusBoardState"
+        [pendingDrawOfferBy]="snapshotService.pendingDrawOfferBy"
+        [clockRunning]="clockRunning"
+        [resignConfirmColor]="snapshotService.resignConfirmColor"
+        [chessColors]="chessColors"
+        [canClaimDraw]="canClaimDraw()"
+        (showPossibleMoves)="showPossibleMoves($event)"
+        (startNewGame)="startNewGame()"
+        (offerDraw)="offerDraw()"
+        (acceptDraw)="acceptDrawOffer()"
+        (declineDraw)="declineDrawOffer()"
+        (claimDraw)="claimDraw()"
+        (openResignConfirm)="openResignConfirm($event)"
+        (cancelResignConfirm)="cancelResignConfirm()"
+        (confirmResign)="confirmResign()"></app-chess-board-status-card>
+    </div>
 
-    <app-chess-board-tools-card
-      [activeTool]="activeTool"
-      [isBoardFlipped]="isBoardFlipped"
-      [canPromote]="chessBoardStateService.boardHelper.canPromote !== null"
-      [suggestedMoves]="suggestedMoves"
-      [suggestedMoveQualityByMove]="suggestionQualityByMoveMap"
-      [suggestedMoveEvalByMove]="suggestionEvalTextByMoveMap"
-      [openingRecognition]="getOpeningRecognition()"
-      [endgameRecognition]="getEndgameRecognition()"
-      (promotePiece)="promotePiece($event)"
-      (showThreats)="showThreats($event)"
-      (showProtected)="showProtected($event)"
-      (showHangingPieces)="showHangingPieces($event)"
-      (showForkIdeas)="showForkIdeas()"
-      (showPinIdeas)="showPinIdeas()"
-      (toggleBoardFlip)="toggleBoardFlip()"
-      (exportPgn)="exportPgn()"
-      (exportBoardImage)="exportBoardImage()"
-      (exportFen)="exportFen()"
-      (previewMove)="previewSuggestedMoveArrows($event)"
-      (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-tools-card>
+    <div class="sidebar-stack sidebar-stack--tools">
+      <app-chess-board-tools-card
+        [activeTool]="activeTool"
+        [isBoardFlipped]="isBoardFlipped"
+        [canPromote]="chessBoardStateService.boardHelper.canPromote !== null"
+        [suggestedMoves]="suggestedMoves"
+        [suggestedMoveQualityByMove]="suggestionQualityByMoveMap"
+        [suggestedMoveEvalByMove]="suggestionEvalTextByMoveMap"
+        [openingRecognition]="getOpeningRecognition()"
+        [endgameRecognition]="getEndgameRecognition()"
+        (promotePiece)="promotePiece($event)"
+        (showThreats)="showThreats($event)"
+        (showProtected)="showProtected($event)"
+        (showHangingPieces)="showHangingPieces($event)"
+        (showForkIdeas)="showForkIdeas()"
+        (showPinIdeas)="showPinIdeas()"
+        (toggleBoardFlip)="toggleBoardFlip()"
+        (exportPgn)="exportPgn()"
+        (exportBoardImage)="exportBoardImage()"
+        (exportFen)="exportFen()"
+        (previewMove)="previewSuggestedMoveArrows($event)"
+        (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-tools-card>
+    </div>
 
-    <app-chess-board-history-card
-      #historyLog
-      [history]="chessBoardStateService.history"
-      [historyCursor]="historyCursor"
-      [maxMoveIndex]="getHistoryMaxMoveIndex()"
-      [evaluations]="allHistoryEvaluations"
-      [analysisClampPawns]="analysisClampPawnsLimit"
-      (undo)="undoMove()"
-      (redo)="redoMove()"></app-chess-board-history-card>
+    <div class="sidebar-stack sidebar-stack--bottom">
+      <app-chess-board-history-card
+        #historyLog
+        [history]="chessBoardStateService.history"
+        [historyCursor]="historyCursor"
+        [maxMoveIndex]="getHistoryMaxMoveIndex()"
+        [evaluations]="allHistoryEvaluations"
+        [analysisClampPawns]="analysisClampPawnsLimit"
+        (undo)="undoMove()"
+        (redo)="redoMove()"></app-chess-board-history-card>
 
-    <app-chess-board-cct-card
-      [captures]="getCctRecommendations(cctCategory.Captures)"
-      [checks]="getCctRecommendations(cctCategory.Checks)"
-      [threats]="getCctRecommendations(cctCategory.Threats)"
-      [moveQualityByMove]="suggestionQualityByMoveMap"
-      [moveEvalByMove]="suggestionEvalTextByMoveMap"
-      (previewMove)="previewSuggestedMoveArrows($event)"
-      (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-cct-card>
+      <app-chess-board-cct-card
+        [captures]="getCctRecommendations(cctCategory.Captures)"
+        [checks]="getCctRecommendations(cctCategory.Checks)"
+        [threats]="getCctRecommendations(cctCategory.Threats)"
+        [moveQualityByMove]="suggestionQualityByMoveMap"
+        [moveEvalByMove]="suggestionEvalTextByMoveMap"
+        (previewMove)="previewSuggestedMoveArrows($event)"
+        (clearPreview)="clearSuggestedMoveArrows()"></app-chess-board-cct-card>
+    </div>
   </section>
 </div>
 
